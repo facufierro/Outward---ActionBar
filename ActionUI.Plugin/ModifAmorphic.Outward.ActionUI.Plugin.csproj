@@ -73,8 +73,11 @@
       <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.InputModule.dll</HintPath>
 	  <Private>false</Private>
       <CopyLocal>false</CopyLocal>		
-    </Reference>
-    <Reference Include="UnityEngine.TextRenderingModule">
+    </Reference>    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>    <Reference Include="UnityEngine.TextRenderingModule">
       <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
 	  <Private>false</Private>
       <CopyLocal>false</CopyLocal>

@@ -2,7 +2,7 @@
 
 **Project:** Outward Mod - ActionBar (formerly ActionUI)  
 **Author:** fierrof  
-**Current Version:** 1.0.5  
+**Current Version:** 1.1.2  
 **Purpose:** Expand QuickSlots with configurable Action Slots, customize hotbar layout, reposition HUD elements
 
 ## Build & Distribution

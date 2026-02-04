@@ -1,5 +1,6 @@
 ﻿using BepInEx;
 using HarmonyLib;
+using ModifAmorphic.Outward.ActionUI.Config;
 using ModifAmorphic.Outward.ActionUI.Patches;
 using ModifAmorphic.Outward.Logging;
 using System;
@@ -20,6 +21,9 @@ namespace ModifAmorphic.Outward.ActionUI
         internal void Awake()
         {
             Instance = this;
+
+            // Initialize ConfigurationManager Config
+            ActionUIConfig.Init(Config);
 
             IModifLogger logger = null;
 

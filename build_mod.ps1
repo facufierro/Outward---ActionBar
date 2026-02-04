@@ -46,6 +46,15 @@ if (Test-Path $assetBundleSource) {
     Write-Error "Asset bundle not found at $assetBundleSource"
 }
 
+# Copy Profiles folder
+$profilesSource = "$solutionDir\Assets\Profiles"
+if (Test-Path $profilesSource) {
+    Copy-Item $profilesSource -Destination $publishDir -Recurse
+    Write-Host "Copied Profiles directory"
+} else {
+    Write-Warning "Profiles directory not found at $profilesSource"
+}
+
 Write-Host "Preparing output directories..."
 if (-not (Test-Path $binDir)) {
     New-Item -ItemType Directory -Path $binDir -Force

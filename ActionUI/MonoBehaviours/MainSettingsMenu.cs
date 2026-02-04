@@ -143,7 +143,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             }
         }
 
-        private void ShowMenu(ActionSettingsMenus menuType)
+        public void ShowMenu(ActionSettingsMenus menuType)
         {
             _menus[menuType].Show();
             var hideMenus = _menus.Where(kvp => kvp.Key != menuType).Select(kvp => kvp.Value);

@@ -305,6 +305,13 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         {
             var keyMap = _player.controllers.maps.GetMap<KeyboardMap>(0, RewiredConstants.ActionSlots.CategoryMapId, 0);
             var mouseMap = _player.controllers.maps.GetMap<MouseMap>(0, RewiredConstants.ActionSlots.CategoryMapId, 0);
+
+            if (keyMap == null || mouseMap == null)
+            {
+                Logger.LogWarning($"SetProfileHotkeys: Controller maps not found for player {_player.id}. Skipping hotkey configuration. (KeyMap: {keyMap != null}, MouseMap: {mouseMap != null})");
+                return;
+            }
+
             var profileData = (HotbarProfileData)profile;
             profileData.NextHotkey = keyMap.ButtonMaps.FirstOrDefault(m => m.actionId == profileData.NextRewiredActionId)?.elementIdentifierName;
             if (string.IsNullOrWhiteSpace(profileData.NextHotkey))

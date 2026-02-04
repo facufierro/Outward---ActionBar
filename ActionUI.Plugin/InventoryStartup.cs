@@ -37,7 +37,14 @@ namespace ModifAmorphic.Outward.ActionUI
             Logger.LogInfo("Starting Inventory Mods...");
             
             // Register localizations after game systems are ready
-            _localizationsModule.RegisterLocalization(InventorySettings.MoveToStashKey, "Move to Stash");
+            try
+            {
+                _localizationsModule.RegisterLocalization(InventorySettings.MoveToStashKey, "Move to Stash");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"Failed to register localizations in InventoryStartup. This is likely due to LocalizationManager not being ready yet. Proceeding with startup. Error: {ex.Message}");
+            }
 
             _harmony.PatchAll(typeof(CharacterInventoryPatches));
             _harmony.PatchAll(typeof(EquipmentMenuPatches));

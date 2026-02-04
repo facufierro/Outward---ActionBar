@@ -269,8 +269,10 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             {
                 UnityEngine.Object.Destroy(actionUiButton.gameObject);
             }
+            // Button creation disabled in v1.1.0 in favor of BepInEx ConfigurationManager
+            /*
             var settingsBtn = buttons.First(b => b.name.Equals("btnOptions", StringComparison.InvariantCultureIgnoreCase));
-
+            
             _actionUiGo = UnityEngine.Object.Instantiate(settingsBtn);
             _actionUiGo.name = "btnActionUiSettings";
             var localScale = _actionUiGo.transform.localScale;
@@ -286,6 +288,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
             //get the PauseMenu component so the PauseMenu UI can be hidden later
             var pauseMenu = splitPlayer.CharUI.transform.Find("Canvas/PauseMenu").GetComponent<PauseMenu>();
+            
             _actionUiGo.onClick.RemoveAllListeners();
             //This removes any persistent (set in Unity Editor) onClick listeners.
             _actionUiGo.onClick = new Button.ButtonClickedEvent();
@@ -295,6 +298,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 pauseMenu.Hide();
                 actionMenus.MainSettingsMenu.Show();
             });
+            */
         }
 
         private IEnumerator ResizePauseMenu(PauseMenu pauseMenu)
