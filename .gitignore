@@ -13,6 +13,9 @@ publish/
 ## Temp and output folders
 temp_zip_check/
 
+## Copied dependencies (use NuGet/external references instead)
+Outward.Shared/
+
 ## Visual Studio
 .vs/
 *.user
