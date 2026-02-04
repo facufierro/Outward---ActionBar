@@ -1,0 +1,12 @@
+{
+    "name": "ActionUI_Modified",
+    "version_number": "1.2.0",
+    "website_url": "",
+    "description": "Modified ActionUI with BepInEx Config and refined UI.",
+    "dependencies": [
+        "BepInEx-BepInExPack_Outward-5.4.19",
+        "sinai-dev-SideLoader-3.8.4",
+        "Mefino-Outward_Config_Manager-17.2.0"
+    ],
+    "author": "fierrof"
+}

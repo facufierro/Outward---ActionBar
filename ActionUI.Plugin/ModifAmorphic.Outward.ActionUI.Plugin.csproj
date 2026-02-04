@@ -1,0 +1,94 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>ModifAmorphic.Outward.ActionUI</RootNamespace>
+    <DebugType>portable</DebugType>
+    <Configurations>Debug;Release</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Outward.Shared\ModifAmorphic.Outward.Shared\ModifAmorphic.Outward.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ActionUI\ModifAmorphic.Outward.ActionUI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>C:\Users\fierr\AppData\Roaming\r2modmanPlus-local\OutwardDe\profiles\OutHard\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>C:\Users\fierr\AppData\Roaming\r2modmanPlus-local\OutwardDe\profiles\OutHard\BepInEx\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <Reference Include="Rewired_Core">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\Rewired_Core.dll</HintPath>
+      <EmbedInteropTypes></EmbedInteropTypes>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+      <EmbedInteropTypes></EmbedInteropTypes>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+	  <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <Reference Include="UnityEngine.InputModule">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.InputModule.dll</HintPath>
+	  <Private>false</Private>
+      <CopyLocal>false</CopyLocal>		
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+	  <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
+  </ItemGroup>
+
+</Project>

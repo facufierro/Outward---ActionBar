@@ -1,0 +1,7 @@
+ManifestFileVersion: 0
+CRC: 2672811234
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: action-ui
+      Dependencies: {}

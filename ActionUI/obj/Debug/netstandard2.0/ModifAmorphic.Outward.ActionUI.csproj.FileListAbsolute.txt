@@ -1,0 +1,14 @@
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.csproj.AssemblyReference.cache
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.AssemblyInfoInputs.cache
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.AssemblyInfo.cs
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.csproj.CoreCompileInputs.cache
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.sourcelink.json
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\bin\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.deps.json
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\bin\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.dll
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\bin\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.pdb
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\bin\Debug\netstandard2.0\ModifAmorphic.Outward.Shared.v0_0_0_9.dll
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\bin\Debug\netstandard2.0\ModifAmorphic.Outward.Shared.v0_0_0_9.pdb
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\obj\Debug\netstandard2.0\ModifAmo.335373BC.Up2Date
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.dll
+D:\Projects\Games\Outward\outward\ActionUI\ActionUI\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.pdb
