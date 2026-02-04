@@ -78,11 +78,7 @@ namespace ModifAmorphic.Outward.ActionUI
                                 services.GetService<IModifLogger>));
 
             services
-                .AddSingleton(new DurabilityDisplayStartup(
-                    services
-                    , services.GetService<ModifGoService>()
-                    , services.GetService<LevelCoroutines>()
-                    , _loggerFactory))
+                // DurabilityDisplayStartup removed in v1.0.1
                 .AddSingleton(new InventoryStartup(
                     services
                     , services.GetService<PlayerMenuService>()

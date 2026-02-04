@@ -122,6 +122,12 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             var playerMenu = playerMenuGo.GetComponent<PlayerActionMenus>();
             usp.AddSingleton(playerMenu);
 
+            // Disable durability display feature (removed in v1.0.1)
+            if (playerMenu.DurabilityDisplay != null)
+            {
+                playerMenu.DurabilityDisplay.gameObject.SetActive(false);
+            }
+
             Logger.LogDebug($"{nameof(PlayerMenuService)}::{nameof(TryInjectMenus)}(): Injecting Positionable UI component.");
             _positionsService.InjectPositionableUIs(splitPlayer.CharUI);
 

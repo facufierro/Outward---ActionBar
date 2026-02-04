@@ -23,7 +23,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private static readonly HashSet<string> _positionBlocklist = new HashSet<string>()
         {
-            "CorruptionSmog", "PanicOverlay", "TargetingFlare", "CharacterBars", "LowHealth", "LowStamina", "Chat - Panel"
+            "CorruptionSmog", "PanicOverlay", "TargetingFlare", "CharacterBars", "LowHealth", "LowStamina", "Chat - Panel", "Durability"
         };
 
         public PositionsService(
