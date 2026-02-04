@@ -26,10 +26,22 @@ if (-not (Test-Path $publishDir)) {
     New-Item -ItemType Directory -Path $publishDir -Force
 }
 Copy-Item "$projectDir\manifest.json" -Destination $publishDir
-if (Test-Path "$projectDir\icon.png") {
-    Copy-Item "$projectDir\icon.png" -Destination $publishDir
+
+# Copy icon from Thunderstore/Assets folder
+$iconSource = "$solutionDir\Thunderstore\Assets\icon.png"
+if (Test-Path $iconSource) {
+    Copy-Item $iconSource -Destination $publishDir
 } else {
-    Write-Warning "icon.png not found in $projectDir"
+    Write-Warning "icon.png not found at $iconSource"
+}
+
+# Copy asset bundle
+$assetBundleSource = "$solutionDir\Assets\asset-bundles\action-ui"
+if (Test-Path $assetBundleSource) {
+    Copy-Item $assetBundleSource -Destination $publishDir
+    Write-Host "Copied asset bundle: action-ui"
+} else {
+    Write-Error "Asset bundle not found at $assetBundleSource"
 }
 
 Write-Host "Zipping to $zipName ..."
