@@ -30,12 +30,14 @@ namespace ModifAmorphic.Outward.ActionUI
             (_services, _playerMenuService, _modifGoService, _coroutines, _loggerFactory) = (services, playerMenuService, modifGoService, coroutines, loggerFactory);
             _harmony = new Harmony(ModId);
             _localizationsModule = ModifModules.GetLocalizationModule(ModId);
-            _localizationsModule.RegisterLocalization(InventorySettings.MoveToStashKey, "Move to Stash");
         }
 
         public void Start()
         {
             Logger.LogInfo("Starting Inventory Mods...");
+            
+            // Register localizations after game systems are ready
+            _localizationsModule.RegisterLocalization(InventorySettings.MoveToStashKey, "Move to Stash");
 
             _harmony.PatchAll(typeof(CharacterInventoryPatches));
             _harmony.PatchAll(typeof(EquipmentMenuPatches));

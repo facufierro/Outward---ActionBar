@@ -54,6 +54,12 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "<Pending>")]
         private void Start()
         {
+            // Hide durability display toggle (feature disabled)
+            if (DurabilityToggle != null && DurabilityToggle.gameObject != null)
+            {
+                DurabilityToggle.gameObject.SetActive(false);
+            }
+            
             SetControls();
             HookControls();
         }
@@ -96,7 +102,8 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             SetProfiles();
 
             ActionSlotsToggle.SetIsOnWithoutNotify(_profile?.ActionSlotsEnabled ?? false);
-            DurabilityToggle.SetIsOnWithoutNotify(_profile?.DurabilityDisplayEnabled ?? false);
+            if (DurabilityToggle != null)
+                DurabilityToggle.SetIsOnWithoutNotify(_profile?.DurabilityDisplayEnabled ?? false);
             EquipmentSetsToggle.SetIsOnWithoutNotify(_profile?.EquipmentSetsEnabled ?? false);
             SkillChainsToggle.SetIsOnWithoutNotify(_profile?.SkillChainsEnabled ?? false);
         }
@@ -120,12 +127,15 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                 DebugLogger.Log($"After Save: isOn == {isOn}; ActionSlotsEnabled == {_profile.ActionSlotsEnabled}");
             });
 
-            DurabilityToggle.onValueChanged.AddListener(isOn =>
+            if (DurabilityToggle != null)
             {
-                DebugLogger.Log($"DurabilityToggle changed from {!isOn} to {isOn}. Saving profile.");
-                _profile.DurabilityDisplayEnabled = isOn;
-                _profileService.Save();
-            });
+                DurabilityToggle.onValueChanged.AddListener(isOn =>
+                {
+                    DebugLogger.Log($"DurabilityToggle changed from {!isOn} to {isOn}. Saving profile.");
+                    _profile.DurabilityDisplayEnabled = isOn;
+                    _profileService.Save();
+                });
+            }
 
             EquipmentSetsToggle.onValueChanged.AddListener(isOn =>
             {

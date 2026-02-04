@@ -1,6 +1,6 @@
 # ![Action UI](https://github.com/ModifAmorphic/outward/blob/master/ActionUI/WikiReadmeAssets/Banner.png?raw=true)
 
-## Expand Quickslots, Create Equipment Sets, Show Equipment Durability, Reposition HUD UI Elements, Stash and Storage Improvements
+## Expand Quickslots, Create Equipment Sets, Reposition HUD UI Elements, Stash and Storage Improvements
 
 ***
 
@@ -11,7 +11,6 @@
   - See [wiki](https://github.com/ModifAmorphic/outward/wiki/Action-UI#hotbar-settings) for more.
 - Create Weapon and Armor Sets. Equip entire sets with a single hotkey.
 - Reposition UI Elements with Drag and Drop
-- Equipment Durability UI displays when equipment is damaged.
 - Use stash while crafting, selling, equiping gear or in the character menu.
 - See the [Action UI Wiki](https://github.com/ModifAmorphic/outward/wiki/Action-UI) for more details
 - For Manual Installations, download the latest "ModifAmorphic-ActionUI-*.Standalone-BepInEx.zip" version under [ModifAmorphic Releases](https://github.com/ModifAmorphic/outward/releases)
@@ -50,12 +49,6 @@
 
 ***
 
-## Equipment Durability UI
-
-![Durability Display](https://github.com/ModifAmorphic/outward/blob/master/ActionUI/WikiReadmeAssets/DurabilityDisplay.png?raw=true)
-
-***
-
 ## Storage Improvements
 
 ![Storage Settings](https://github.com/ModifAmorphic/outward/blob/master/ActionUI/WikiReadmeAssets/StorageSettingsView_small.png?raw=true)
@@ -78,9 +71,6 @@
   - Clicking on an item in the stash will now move it to the backpack or pouch.
   - Fix food decay in multiplayer. Client's will now have food decay based on the hosts configuration.
     - Previously, food in client stashes was decaying at it's base rate, using neither client nor hosts stash configuration.
-- Durability Display fixes
-  - Durability display should now track equipment when first loading, without needing to unequip and equip.
-  - Fix for Durability Display not displaying after first save is loaded without switching gear.
 - Action Slots Updates and Fixes
   - Added new "Hide Left Navigation" option in the Hotkey Settings menu that hides the UI element left of the hotbar which displays the current hotbar number and hotkeys.
   - "Show HUD" in Outward's setting menu will now also hide Hotbars when disabled.
@@ -152,7 +142,6 @@
   - Fixed bug where equipment showed the broken icon in an action slot if the scene was loaded without the item in the characters inventory.
   - Switching to controller and back to keyboard should no longer cause action slots to stop updating cooldowns, stack counts, and enabled status.
   - Fixed several issues when transitioning between the main menu and continuing other saves after the first character save is loaded.
-  - Durability Display should no properly track equipped boots.
   - Fixed issue where items could not be drag and dropped from the inventory menu.
 
 ## Release 1.0.1
@@ -164,5 +153,4 @@
 ## Initial Release 1.0.0
   - Initial Release
   - Keyboard Quickslots replaced with Custom Hotbar and Action Slots
-  - Durability Display UI
   - Drag and Drop Positioning of UI

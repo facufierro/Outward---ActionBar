@@ -97,7 +97,8 @@ namespace ModifAmorphic.Outward.ActionUI
                     , _loggerFactory));
 
             Starter.TryStart(services.GetService<HotbarsStartup>());
-            Starter.TryStart(services.GetService<DurabilityDisplayStartup>());
+            // Durability Display disabled
+            // Starter.TryStart(services.GetService<DurabilityDisplayStartup>());
             Starter.TryStart(services.GetService<InventoryStartup>());
         }
         public GameObject ConfigureAssetBundle()

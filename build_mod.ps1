@@ -2,6 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $solutionDir = "$PSScriptRoot"
 $projectDir = "$solutionDir\ActionUI.Plugin"
+$binDir = "$solutionDir\bin"
+$tempDir = "$binDir\temp"
 $publishDir = "$projectDir\bin\Debug\netstandard2.0\publish"
 
 # Read version from manifest
@@ -44,8 +46,16 @@ if (Test-Path $assetBundleSource) {
     Write-Error "Asset bundle not found at $assetBundleSource"
 }
 
+Write-Host "Preparing output directories..."
+if (-not (Test-Path $binDir)) {
+    New-Item -ItemType Directory -Path $binDir -Force
+}
+if (-not (Test-Path $tempDir)) {
+    New-Item -ItemType Directory -Path $tempDir -Force
+}
+
 Write-Host "Zipping to $zipName ..."
-$zipPath = "$solutionDir\$zipName"
+$zipPath = "$binDir\$zipName"
 if (Test-Path $zipPath) { Remove-Item $zipPath }
 Compress-Archive -Path "$publishDir\*" -DestinationPath $zipPath
 

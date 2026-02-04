@@ -1,6 +1,0 @@
-D:\Projects\Games\Outward\outward\ActionUI\ActionUI.Plugin\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.Plugin.csproj.AssemblyReference.cache
-D:\Projects\Games\Outward\outward\ActionUI\ActionUI.Plugin\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.Plugin.GeneratedMSBuildEditorConfig.editorconfig
-D:\Projects\Games\Outward\outward\ActionUI\ActionUI.Plugin\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.Plugin.AssemblyInfoInputs.cache
-D:\Projects\Games\Outward\outward\ActionUI\ActionUI.Plugin\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.Plugin.AssemblyInfo.cs
-D:\Projects\Games\Outward\outward\ActionUI\ActionUI.Plugin\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.Plugin.csproj.CoreCompileInputs.cache
-D:\Projects\Games\Outward\outward\ActionUI\ActionUI.Plugin\obj\Debug\netstandard2.0\ModifAmorphic.Outward.ActionUI.Plugin.sourcelink.json
