@@ -624,24 +624,58 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             var hotbarProfile = (HotbarProfileData)_hotbarProfileService.GetProfile();
 
             string defaultKeyMapFile;
+            string fallbackKeyMapFile; // Fallback to root plugin folder for older installs
 
             if (controllerType == ControllerType.Keyboard)
+            {
                 defaultKeyMapFile = RewiredConstants.ActionSlots.DefaultKeyboardMapFile;
+                fallbackKeyMapFile = Path.Combine(ActionUISettings.PluginPath, "Default-Keyboard-Map_ActionSlots.xml");
+            }
             else if (controllerType == ControllerType.Mouse)
+            {
                 defaultKeyMapFile = RewiredConstants.ActionSlots.DefaultMouseMapFile;
+                fallbackKeyMapFile = Path.Combine(ActionUISettings.PluginPath, "Default-Mouse-Map_ActionSlots.xml");
+            }
             else if (controllerType == ControllerType.Joystick)
+            {
                 defaultKeyMapFile = RewiredConstants.ActionSlots.DefaultJoystickMapFile;
+                fallbackKeyMapFile = string.Empty;
+            }
             else
                 return String.Empty;
 
-            var keyMapFile = defaultKeyMapFile;
+            // Check primary location, then fallback to root plugin folder
+            string sourceKeyMapFile = defaultKeyMapFile;
+            if (!File.Exists(sourceKeyMapFile) && !string.IsNullOrEmpty(fallbackKeyMapFile) && File.Exists(fallbackKeyMapFile))
+            {
+                Logger.LogDebug($"Default keymap not found at '{defaultKeyMapFile}', using fallback at '{fallbackKeyMapFile}'.");
+                sourceKeyMapFile = fallbackKeyMapFile;
+            }
+
+            var keyMapFile = sourceKeyMapFile;
 
             if (hotbarProfile != null)
             {
                 keyMapFile = Path.Combine(GetProfileFolder(), MapFiles[controllerType]);
 
                 if (!File.Exists(keyMapFile))
-                    File.Copy(defaultKeyMapFile, keyMapFile);
+                {
+                    // Ensure directory exists before copying
+                    var keyMapDir = Path.GetDirectoryName(keyMapFile);
+                    if (!Directory.Exists(keyMapDir))
+                        Directory.CreateDirectory(keyMapDir);
+
+                    if (File.Exists(sourceKeyMapFile))
+                    {
+                        File.Copy(sourceKeyMapFile, keyMapFile);
+                        Logger.LogDebug($"Copied default keymap from '{sourceKeyMapFile}' to '{keyMapFile}'.");
+                    }
+                    else
+                    {
+                        Logger.LogWarning($"No default keymap file found. Checked: '{defaultKeyMapFile}' and '{fallbackKeyMapFile}'. Cannot create profile keymap.");
+                        return String.Empty;
+                    }
+                }
             }
 
             Logger.LogDebug($"Loading ActionSlots {controllerType} ControllerMap for player {_player.id} at location '{keyMapFile}'.");
