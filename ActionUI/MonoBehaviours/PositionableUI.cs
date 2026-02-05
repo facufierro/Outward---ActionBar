@@ -16,6 +16,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         public Button ResetButton;
 
         public string TransformPath => transform.GetPath();
+        public string NormalizedTransformPath => transform.GetNormalizedPath();
 
         public RectTransform RectTransform => GetComponent<RectTransform>();
 
@@ -150,7 +151,9 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
 
         public void SetPositionFromProfile(PositionsProfile profile)
         {
-            var position = profile.Positions?.FirstOrDefault(p => p.TransformPath == TransformPath);
+            // Use normalized path for matching so positions work across different characters
+            var normalizedPath = NormalizedTransformPath;
+            var position = profile.Positions?.FirstOrDefault(p => TransformExtensions.NormalizePath(p.TransformPath) == normalizedPath);
             if (position != default)
             {
                 DebugLogger.Log($"[Debug  :ActionMenus] PositionableUI{{{name}}}: Setting position of PositionableUI {name} to modified position of ({position.ModifiedPosition.AnchoredPosition.X}, {position.ModifiedPosition.AnchoredPosition.Y}).");
@@ -214,7 +217,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
           {
               ModifiedPosition = RectTransform.ToRectTransformPosition(),
               OriginPosition = _originPosition,
-              TransformPath = transform.GetPath()
+              TransformPath = transform.GetNormalizedPath()  // Use normalized path for global matching
           };
     }
 }

@@ -684,8 +684,10 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private string GetProfileFolder()
         {
-            var activeProfile = (ActionUIProfile)_profileService.GetActiveProfile();
-            return activeProfile.Path;
+            // Use global keymaps folder so hotkey settings persist across all characters
+            if (!Directory.Exists(ActionUISettings.GlobalKeymapsPath))
+                Directory.CreateDirectory(ActionUISettings.GlobalKeymapsPath);
+            return ActionUISettings.GlobalKeymapsPath;
         }
 
         private ModifierKeyFlags GetModifierKeyFlags(IEnumerable<KeyCode> modifiers)

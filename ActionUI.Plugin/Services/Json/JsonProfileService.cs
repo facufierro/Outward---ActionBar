@@ -1,4 +1,5 @@
-﻿using ModifAmorphic.Outward.Logging;
+﻿using ModifAmorphic.Outward.ActionUI.Settings;
+using ModifAmorphic.Outward.Logging;
 using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using Newtonsoft.Json;
 using System;
@@ -52,9 +53,18 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             CachedProfile = default;
         }
 
+        protected virtual string GetGlobalSettingsPath()
+        {
+            // Use global settings folder so all settings persist across all characters
+            if (!Directory.Exists(ActionUISettings.GlobalSettingsPath))
+                Directory.CreateDirectory(ActionUISettings.GlobalSettingsPath);
+            return ActionUISettings.GlobalSettingsPath;
+        }
+
         protected virtual T LoadProfile()
         {
-            string profileFile = Path.Combine(ProfileService.GetActiveActionUIProfile().Path, FileName);
+            // Use global path for all settings
+            string profileFile = Path.Combine(GetGlobalSettingsPath(), FileName);
 
             if (!File.Exists(profileFile))
             {
@@ -98,9 +108,9 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         protected virtual void SaveProfile(T profile)
         {
-            var activeProfile = ProfileService.GetActiveActionUIProfile();
-            var profileFile = Path.Combine(activeProfile.Path, FileName);
-            Logger.LogInfo($"Saving {typeof(T).Name} for profile {activeProfile.Name} to '{profileFile}'.");
+            // Use global path for all settings
+            var profileFile = Path.Combine(GetGlobalSettingsPath(), FileName);
+            Logger.LogInfo($"Saving {typeof(T).Name} to global path '{profileFile}'.");
             var json = JsonConvert.SerializeObject(profile, Formatting.Indented);
             File.WriteAllText(profileFile, json);
             CachedProfile = default;
