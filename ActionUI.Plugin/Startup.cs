@@ -1,6 +1,7 @@
 ﻿
 using BepInEx;
 using HarmonyLib;
+using ModifAmorphic.Outward.ActionUI.Config;
 using ModifAmorphic.Outward.ActionUI.Plugin.Services;
 using ModifAmorphic.Outward.ActionUI.Services;
 using ModifAmorphic.Outward.ActionUI.Services.Injectors;
@@ -30,6 +31,9 @@ namespace ModifAmorphic.Outward.ActionUI
             _services = services;
             var settingsService = new SettingsService(services.GetService<BaseUnityPlugin>(), ModInfo.MinimumConfigVersion);
             var confSettings = settingsService.ConfigureSettings();
+            
+            // Initialize Config AFTER SettingsService has potentially cleared it
+            ActionUIConfig.Init(_services.GetService<BaseUnityPlugin>().Config);
 
             services
                 .AddSingleton(confSettings)

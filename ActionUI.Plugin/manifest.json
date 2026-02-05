@@ -1,7 +1,7 @@
 {
     "name": "ActionBar",
     "author": "fierrof",
-    "version_number": "1.1.2",
+    "version_number": "1.2.1",
     "website_url": "https://github.com/ModifAmorphic/outward/wiki/Action-UI",
     "description": "Expand QuickSlots with highly configurable Action Slots. Customize hotbar layout and reposition HUD elements.",
     "dependencies": [

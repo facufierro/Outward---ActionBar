@@ -29,7 +29,7 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
 
             if (!MeetsMinimumVersion(_minConfigVersion))
             {
-                _configService.RemoveAllSettings();
+                //_configService.RemoveAllSettings();
             }
 
             #region Main Section
