@@ -320,6 +320,22 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             return GetProfile();
         }
 
+        public IHotbarProfile UpdateDimensions(int rows, int slotsPerRow)
+        {
+            var profile = GetProfile();
+            if (profile.Rows == rows && profile.SlotsPerRow == slotsPerRow)
+                return profile;
+
+            Logger.LogDebug($"UpdateDimensions: Resizing from {profile.Rows}x{profile.SlotsPerRow} to {rows}x{slotsPerRow}");
+
+            while (profile.Rows < rows) AddRow();
+            while (profile.Rows > rows) RemoveRow();
+            while (profile.SlotsPerRow < slotsPerRow) AddSlot();
+            while (profile.SlotsPerRow > slotsPerRow) RemoveSlot();
+
+            return GetProfile();
+        }
+
         private void ReindexSlots(List<ISlotData> slots)
         {
             for (int i = 0; i < slots.Count; i++)

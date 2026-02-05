@@ -63,6 +63,20 @@ if (-not (Test-Path $tempDir)) {
     New-Item -ItemType Directory -Path $tempDir -Force
 }
 
+# Verify DLL exists
+$dllPath = "$publishDir\ModifAmorphic.Outward.ActionUI.Plugin.dll"
+if (-not (Test-Path $dllPath)) {
+    Write-Host "Contents of publish dir:"
+    Get-ChildItem $publishDir | Select-Object Name
+    Write-Error "Main DLL not found at $dllPath"
+} else {
+    Write-Host "Found Main DLL at $dllPath"
+}
+$libPath = "$publishDir\ModifAmorphic.Outward.ActionUI.dll"
+if (-not (Test-Path $libPath)) {
+     Write-Warning "Library DLL not found at $libPath - Is this expected?"
+}
+
 Write-Host "Zipping to $zipName ..."
 $zipPath = "$binDir\$zipName"
 if (Test-Path $zipPath) { Remove-Item $zipPath }

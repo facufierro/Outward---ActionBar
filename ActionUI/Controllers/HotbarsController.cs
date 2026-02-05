@@ -267,6 +267,12 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             {
                 slot.Controller.ToggleHotkeyEditMode(editMode);
             }
+
+            if (editMode)
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
         }
     }
 }

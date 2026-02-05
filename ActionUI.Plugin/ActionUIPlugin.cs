@@ -24,7 +24,8 @@ namespace ModifAmorphic.Outward.ActionUI
 
             // Initialize ConfigurationManager Config
             // Initialize ConfigurationManager Config
-            // ActionUIConfig.Init(Config);
+            // Initialize ConfigurationManager Config
+            ActionUIConfig.Init(Config);
 
             IModifLogger logger = null;
 

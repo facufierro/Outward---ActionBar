@@ -1,6 +1,7 @@
 using BepInEx.Configuration;
 using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using ModifAmorphic.Outward.Unity.ActionMenus;
+using ModifAmorphic.Outward.Unity.ActionUI;
 using System.Linq;
 using UnityEngine;
 
@@ -31,8 +32,7 @@ namespace ModifAmorphic.Outward.ActionUI.Config
         public static void Init(ConfigFile config)
         {
             // General
-            ActionSlotsEnabled = config.Bind("General", "ActionSlotsEnabled", true, 
-                new ConfigDescription("Enable or disable custom action slots.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
+            // ActionSlotsEnabled removed as requested
 
             // Hotbar
             Rows = config.Bind("Hotbar", "Rows", 1, new ConfigDescription("Number of action bar rows.", new AcceptableValueRange<int>(1, 4), new ConfigurationManagerAttributes { IsAdvanced = false }));
@@ -62,7 +62,6 @@ namespace ModifAmorphic.Outward.ActionUI.Config
                 new ConfigurationManagerAttributes { CustomDrawer = DrawHotkeyModeButton, HideDefaultButton = true, IsAdvanced = false }));
 
             // Events
-            ActionSlotsEnabled.SettingChanged += (s, e) => ApplyGlobalSettings();
             Rows.SettingChanged += (s, e) => ApplyHotbarSettings();
             SlotsPerRow.SettingChanged += (s, e) => ApplyHotbarSettings();
             Scale.SettingChanged += (s, e) => ApplyHotbarSettings();
@@ -72,11 +71,35 @@ namespace ModifAmorphic.Outward.ActionUI.Config
             PreciseCooldownTime.SettingChanged += (s, e) => ApplyHotbarSettings();
             EmptySlotOption.SettingChanged += (s, e) => ApplyHotbarSettings();
         }
+        private static void CloseConfigWindow()
+        {
+            // Use reflection to avoid hard dependency on ConfigurationManager dll which causes build errors if missing
+            try 
+            {
+                var configManagerType = System.Type.GetType("ConfigurationManager.ConfigurationManager, ConfigurationManager");
+                if (configManagerType == null) return;
+
+                var configManager = Object.FindObjectOfType(configManagerType);
+                if (configManager != null)
+                {
+                    var prop = configManagerType.GetProperty("DisplayingWindow");
+                    if (prop != null)
+                    {
+                        prop.SetValue(configManager, false, null);
+                    }
+                }
+            }
+            catch (System.Exception)
+            {
+                // Ignore errors if config manager is not present or compatible
+            }
+        }
 
         private static void DrawPositionButton(ConfigEntryBase entry)
         {
             if (GUILayout.Button("Open Visual Editor", GUILayout.ExpandWidth(true)))
             {
+                CloseConfigWindow();
                 var menus = Object.FindObjectsOfType<PlayerActionMenus>();
                 foreach(var menu in menus)
                 {
@@ -109,14 +132,10 @@ namespace ModifAmorphic.Outward.ActionUI.Config
         {
             if (GUILayout.Button("Enter Hotkey Mode", GUILayout.ExpandWidth(true)))
             {
+                CloseConfigWindow();
                 var menus = Object.FindObjectsOfType<PlayerActionMenus>();
                 foreach (var menu in menus)
                 {
-                     // Toggle via HotbarsController logic if possible, or just open the menu?
-                     // Controller has ToggleHotkeyEdits.
-                     // Accessing via HotbarsContainer seems hardest part.
-                     // PlayerActionMenus has ActionsViewer, but maybe not direct Ref to controller?
-                     // Searching for HotbarsContainer in children.
                      var container = menu.GetComponentInChildren<HotbarsContainer>();
                      if (container != null && container.Controller != null)
                      {
@@ -126,47 +145,9 @@ namespace ModifAmorphic.Outward.ActionUI.Config
             }
         }
 
-        public static void ApplyToProfile(IHotbarProfile profile)
-        {
-            if (profile == null) return;
-
-            profile.Rows = Rows.Value;
-            profile.SlotsPerRow = SlotsPerRow.Value;
-            profile.Scale = Scale.Value;
-            profile.HideLeftNav = HideLeftNav.Value;
-            profile.CombatMode = CombatMode.Value;
-            
-            // Note: These settings are per-slot in existing system or spread across other configs
-            // We need to verify where ActionConfig lives or if it's cleaner to just update active controllers
-        }
-
-        public static void ApplySettingsToActiveProfile()
-        {
-            ApplyGlobalSettings();
-            ApplyHotbarSettings();
-        }
-
         private static void ApplyGlobalSettings()
         {
-            // Find active players and update their profiles
-            var pspInstance = Psp.Instance;
-            if (pspInstance == null) return;
-            
-            // This part is tricky without direct access to PlayerMenuService or iterating players.
-            // We'll try finding PlayerActionMenus in the scene which handles active players.
-            var menus = Object.FindObjectsOfType<PlayerActionMenus>();
-            foreach (var menu in menus)
-            {
-                if (menu.ProfileManager != null && menu.ProfileManager.ProfileService != null)
-                {
-                    var profile = menu.ProfileManager.ProfileService.GetActiveProfile();
-                    if (profile != null)
-                    {
-                        profile.ActionSlotsEnabled = ActionSlotsEnabled.Value;
-                        menu.ProfileManager.ProfileService.Save();
-                    }
-                }
-            }
+            // ActionSlotsEnabled removed
         }
 
         private static void ApplyHotbarSettings()
@@ -174,19 +155,32 @@ namespace ModifAmorphic.Outward.ActionUI.Config
             var menus = Object.FindObjectsOfType<PlayerActionMenus>();
             foreach (var menu in menus)
             {
-                if (menu.ProfileManager != null && menu.ProfileManager.HotbarProfileService != null)
+                if (menu.ProfileManager != null && menu.ProfileManager.HotbarProfileService is Services.HotbarProfileJsonService jsonService)
                 {
-                    var profile = menu.ProfileManager.HotbarProfileService.GetProfile();
+                    var profile = jsonService.GetProfile();
                     if (profile != null)
                     {
-                        profile.Rows = Rows.Value;
-                        profile.SlotsPerRow = SlotsPerRow.Value;
+                        // Safely resize
+                        jsonService.UpdateDimensions(Rows.Value, SlotsPerRow.Value);
+
                         profile.Scale = Scale.Value;
                         profile.HideLeftNav = HideLeftNav.Value;
                         profile.CombatMode = CombatMode.Value;
+
+                        // Apply new settings
+                        jsonService.SetCooldownTimer(ShowCooldownTimer.Value, PreciseCooldownTime.Value);
+                        jsonService.SetHideLeftNav(HideLeftNav.Value);
+                        jsonService.SetCombatMode(CombatMode.Value);
+                        jsonService.SetScale(Scale.Value);
+                        
+                        // Parse EmptySlotOption enum from string
+                        if (System.Enum.TryParse<EmptySlotOptions>(EmptySlotOption.Value, out var option))
+                        {
+                            jsonService.SetEmptySlotView(option);
+                        }
                         
                         // Update individual hotbars if needed, or trigger save which usually refreshes UI
-                        menu.ProfileManager.HotbarProfileService.Save();
+                        jsonService.Save();
                     }
                 }
             }
