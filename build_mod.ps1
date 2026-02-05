@@ -30,8 +30,8 @@ if (-not (Test-Path $publishDir)) {
 Copy-Item "$projectDir\manifest.json" -Destination $publishDir
 Copy-Item "$solutionDir\README.md" -Destination $publishDir
 
-# Copy icon from bin folder
-$iconSource = "$binDir\icon.png"
+# Copy icon from solution root
+$iconSource = "$solutionDir\icon.png"
 if (Test-Path $iconSource) {
     Copy-Item $iconSource -Destination $publishDir
 } else {
