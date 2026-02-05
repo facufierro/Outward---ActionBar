@@ -12,6 +12,8 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
     {
         private readonly HotbarsContainer _hbc;
         public HotbarsContainer HotbarsContainer => _hbc;
+        public bool IsInHotkeyEditMode => _hbc.IsInHotkeyEditMode;
+        public bool JustExitedHotkeyMode { get; set; }
 
         private bool _resizeNeeded = false;
 
@@ -199,6 +201,19 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             {
                  Cursor.visible = true;
                  Cursor.lockState = CursorLockMode.None;
+                 
+                 // If Capture Menu is open, allow it to handle Esc (it will close itself).
+                 // We only handle Esc if we are at the top level (Mode Active, No Dialog).
+                 var captureMenu = _hbc.PlayerActionMenus.MainSettingsMenu.HotkeyCaptureMenu;
+                 if (captureMenu != null && captureMenu.IsShowing)
+                 {
+                     // Do nothing, let captureMenu handle it
+                 }
+                 else if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Escape))
+                 {
+                     JustExitedHotkeyMode = true;
+                     ToggleHotkeyEdits(false);
+                 }
             }
 
             if (_resizeNeeded)

@@ -86,6 +86,12 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             //Check for any keys down, and if found add them to the list of keys being held down
             if (Input.anyKeyDown)
             {
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    HideDialog();
+                    return;
+                }
+
                 foreach (var key in Enum.GetValues(typeof(KeyCode)).Cast<KeyCode>())
                 {
                     if (Input.GetKeyDown(key) && _keyGroup.KeyCode != key && !_keyGroup.Modifiers.Contains(key))
@@ -236,6 +242,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             DebugLogger.Log($"Capturing Hotkey for slot index {slotIndex} in category {category}.");
             _slotIndex = slotIndex;
             _category = category;
+            gameObject.SetActive(true);
             Dialog.SetActive(true);
             _monitorKeys = true;
         }
