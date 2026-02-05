@@ -24,8 +24,6 @@ This version specifically streamlines the mod and fixes key issues:
 
 ***
 
-# ![Action UI](https://github.com/ModifAmorphic/outward/blob/master/ActionUI/WikiReadmeAssets/Banner.png?raw=true)
-
 ## Highly Configurable Hotbars and Action Slots
 
 ![Hotbars](https://github.com/ModifAmorphic/outward/blob/master/ActionUI/WikiReadmeAssets/Hotbar.png?raw=true)

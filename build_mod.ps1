@@ -28,9 +28,10 @@ if (-not (Test-Path $publishDir)) {
     New-Item -ItemType Directory -Path $publishDir -Force
 }
 Copy-Item "$projectDir\manifest.json" -Destination $publishDir
+Copy-Item "$solutionDir\README.md" -Destination $publishDir
 
-# Copy icon from Thunderstore/Assets folder
-$iconSource = "$solutionDir\Thunderstore\Assets\icon.png"
+# Copy icon from bin folder
+$iconSource = "$binDir\icon.png"
 if (Test-Path $iconSource) {
     Copy-Item $iconSource -Destination $publishDir
 } else {

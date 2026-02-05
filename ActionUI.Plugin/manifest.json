@@ -1,8 +1,8 @@
 {
     "name": "ActionBar",
     "author": "fierrof",
-    "version_number": "1.0.0",
-    "website_url": "https://github.com/ModifAmorphic/outward/wiki/Action-UI",
+    "version_number": "1.0.1",
+    "website_url": "https://github.com/facufierro/Outward---ActionBar",
     "description": "Expand QuickSlots with highly configurable Action Slots. Customize hotbar layout and reposition HUD elements.",
     "dependencies": [
         "BepInEx-BepInExPack_Outward-5.4.19",
