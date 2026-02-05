@@ -7,6 +7,7 @@
         bool PreciseCooldownTime { get; set; }
         bool ShowZeroStackAmount { get; set; }
         EmptySlotOptions EmptySlotOption { get; set; }
+        bool IsDisabled { get; set; }
     }
     public enum EmptySlotOptions
     {

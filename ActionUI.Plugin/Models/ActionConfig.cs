@@ -11,5 +11,6 @@ namespace ModifAmorphic.Outward.ActionUI.Models
         public EmptySlotOptions EmptySlotOption { get; set; }
         public string RewiredActionName { get; set; }
         public int RewiredActionId { get; set; }
+        public bool IsDisabled { get; set; }
     }
 }
