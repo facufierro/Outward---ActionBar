@@ -251,10 +251,26 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
         public void ToggleHotkeyEditMode(bool toggle)
         {
             ActionSlot.KeyButton.gameObject.SetActive(toggle);
-            if (toggle && ActionSlot.CanvasGroup.alpha == 0f)
-                ActionSlot.CanvasGroup.alpha = 1;
-            else if (!toggle && ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden && ActionSlot.SlotAction == null)
-                ActionSlot.CanvasGroup.alpha = 0;
+            if (toggle)
+            {
+               if (ActionSlot.CanvasGroup.alpha == 0f)
+                   ActionSlot.CanvasGroup.alpha = 1;
+               
+               ActionSlot.CanvasGroup.interactable = true;
+               ActionSlot.CanvasGroup.blocksRaycasts = true;
+               if (ActionSlot.KeyButton != null) ActionSlot.KeyButton.interactable = true;
+            }
+            else
+            {
+                // Restore canvas group state when exiting edit mode
+                ActionSlot.CanvasGroup.interactable = true;
+                ActionSlot.CanvasGroup.blocksRaycasts = true;
+                
+                if (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden && ActionSlot.SlotAction == null)
+                {
+                    ActionSlot.CanvasGroup.alpha = 0;
+                }
+            }
 
             ActionSlot.ActionButton.enabled = !toggle;
         }

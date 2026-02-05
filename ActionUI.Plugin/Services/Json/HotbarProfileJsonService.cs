@@ -1,4 +1,5 @@
-﻿using ModifAmorphic.Outward.ActionUI.DataModels;
+﻿using ModifAmorphic.Outward.ActionUI.Config;
+using ModifAmorphic.Outward.ActionUI.DataModels;
 using ModifAmorphic.Outward.ActionUI.Extensions;
 using ModifAmorphic.Outward.ActionUI.Models;
 using ModifAmorphic.Outward.ActionUI.Settings;
@@ -85,13 +86,29 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             _hotbarProfile = null;
         }
 
+        private string GetGlobalSettingsPath()
+        {
+            // Use global settings folder so hotbar settings persist across all characters
+            if (!System.IO.Directory.Exists(ActionUISettings.GlobalSettingsPath))
+                System.IO.Directory.CreateDirectory(ActionUISettings.GlobalSettingsPath);
+            return ActionUISettings.GlobalSettingsPath;
+        }
+
         private void Save(IHotbarProfile hotbarProfile)
         {
-            var profileFile = Path.Combine(_profileService.GetActiveActionUIProfile().Path, HotbarsConfigFile);
-            Logger.LogInfo($"Saving Hotbar profile to file '{profileFile}'.");
-
-            var json = JsonConvert.SerializeObject(hotbarProfile, Formatting.Indented);
-            File.WriteAllText(profileFile, json);
+            // Sync hotbar profile settings back to BepInEx config (global settings)
+            Logger.LogInfo($"Syncing Hotbar profile to BepInEx config.");
+            
+            if (ActionUIConfig.Rows != null && ActionUIConfig.Rows.Value != hotbarProfile.Rows)
+                ActionUIConfig.Rows.Value = hotbarProfile.Rows;
+            if (ActionUIConfig.SlotsPerRow != null && ActionUIConfig.SlotsPerRow.Value != hotbarProfile.SlotsPerRow)
+                ActionUIConfig.SlotsPerRow.Value = hotbarProfile.SlotsPerRow;
+            if (ActionUIConfig.Scale != null && ActionUIConfig.Scale.Value != hotbarProfile.Scale)
+                ActionUIConfig.Scale.Value = hotbarProfile.Scale;
+            if (ActionUIConfig.HideLeftNav != null && ActionUIConfig.HideLeftNav.Value != hotbarProfile.HideLeftNav)
+                ActionUIConfig.HideLeftNav.Value = hotbarProfile.HideLeftNav;
+            if (ActionUIConfig.CombatMode != null && ActionUIConfig.CombatMode.Value != hotbarProfile.CombatMode)
+                ActionUIConfig.CombatMode.Value = hotbarProfile.CombatMode;
         }
 
         public void Update(HotbarsContainer hotbar)
@@ -370,16 +387,68 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private HotbarProfileData GetProfileData()
         {
-            string profileFile = Path.Combine(_profileService.GetActiveActionUIProfile().Path, HotbarsConfigFile);
-
-            if (!File.Exists(profileFile))
+            // Create profile from BepInEx config values (global settings)
+            Logger.LogDebug($"Creating Hotbar profile from BepInEx config values.");
+            
+            // Start with default profile as base (contains default slot configuration)
+            // Use defaults for Rows/SlotsPerRow initially to match the cloned list, then resize.
+            var profile = new HotbarProfileData()
             {
-                Logger.LogDebug($"Profile file '{profileFile}' not found.");
-                return null;
+                Rows = HotbarSettings.DefaulHotbarProfile.Rows,
+                SlotsPerRow = HotbarSettings.DefaulHotbarProfile.SlotsPerRow,
+                Scale = ActionUIConfig.Scale?.Value ?? 100,
+                HideLeftNav = ActionUIConfig.HideLeftNav?.Value ?? false,
+                CombatMode = ActionUIConfig.CombatMode?.Value ?? true,
+                Hotbars = DeepCloneHotbars(HotbarSettings.DefaulHotbarProfile.Hotbars),
+                NextRewiredActionId = RewiredConstants.ActionSlots.NextHotbarAction.id,
+                NextRewiredActionName = RewiredConstants.ActionSlots.NextHotbarAction.name,
+                PrevRewiredActionId = RewiredConstants.ActionSlots.PreviousHotbarAction.id,
+                PrevRewiredActionName = RewiredConstants.ActionSlots.PreviousHotbarAction.name,
+                NextRewiredAxisActionName = RewiredConstants.ActionSlots.NextHotbarAxisAction.name,
+                NextRewiredAxisActionId = RewiredConstants.ActionSlots.NextHotbarAxisAction.id,
+                PrevRewiredAxisActionName = RewiredConstants.ActionSlots.PreviousHotbarAxisAction.name,
+                PrevRewiredAxisActionId = RewiredConstants.ActionSlots.PreviousHotbarAxisAction.id,
+            };
+
+            // Temporarily set the internal profile so UpdateDimensions can access it via GetProfile()
+            _hotbarProfile = profile;
+
+            // Resize the list to match the saved config
+            int targetRows = ActionUIConfig.Rows?.Value ?? 1;
+            int targetSlots = ActionUIConfig.SlotsPerRow?.Value ?? 11;
+            
+            if (targetRows != profile.Rows || targetSlots != profile.SlotsPerRow)
+            {
+                Logger.LogDebug($"GetProfileData: Resizing new profile from default {profile.Rows}x{profile.SlotsPerRow} to config {targetRows}x{targetSlots}");
+                UpdateDimensions(targetRows, targetSlots);
             }
-            Logger.LogDebug($"Loading profile file '{profileFile}'.");
-            string json = File.ReadAllText(profileFile);
-            return JsonConvert.DeserializeObject<HotbarProfileData>(json);
+            
+            return _hotbarProfile; // return the updated profile
+        }
+
+        private List<IHotbarSlotData> DeepCloneHotbars(List<IHotbarSlotData> original)
+        {
+            var clone = new List<IHotbarSlotData>();
+            foreach (var bar in original)
+            {
+                var barData = bar as HotbarData;
+                var newBar = new HotbarData()
+                {
+                    HotbarIndex = barData.HotbarIndex,
+                    RewiredActionId = barData.RewiredActionId,
+                    RewiredActionName = barData.RewiredActionName,
+                    HotbarHotkey = barData.HotbarHotkey,
+                    Slots = new List<ISlotData>()
+                };
+
+                foreach (var slot in barData.Slots)
+                {
+                    // CreateSlotDataFrom clones the slot correctly
+                    newBar.Slots.Add(CreateSlotDataFrom(slot, slot.SlotIndex));
+                }
+                clone.Add(newBar);
+            }
+            return clone;
         }
 
         protected virtual void Dispose(bool disposing)

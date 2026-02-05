@@ -27,6 +27,8 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
 
         void ToggleActionSlotEdits(bool enabled, bool showHidden = false);
         void ToggleHotkeyEdits(bool enabled);
+        bool IsInHotkeyEditMode { get; }
+        bool JustExitedHotkeyMode { get; set; }
 
     }
 }
