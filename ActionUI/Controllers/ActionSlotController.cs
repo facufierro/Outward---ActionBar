@@ -298,7 +298,7 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
 
         private void OnHotkeyEditRequested()
         {
-            if (ActionSlot.ParentCanvas != null && ActionSlot.ParentCanvas.enabled && ActionSlot.ActionButton.interactable)
+            if (ActionSlot.ParentCanvas != null && ActionSlot.ParentCanvas.enabled)
                 ActionSlot.HotbarsContainer.PlayerActionMenus.MainSettingsMenu.HotkeyCaptureMenu.ShowDialog(ActionSlot.SlotIndex, HotkeyCategories.ActionSlot);
         }
 

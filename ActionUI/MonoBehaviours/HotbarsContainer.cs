@@ -143,7 +143,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         private void SetComponents()
         {
             _actionBarsCanvas = transform.parent.GetComponent<Canvas>();
-            //_leftHotbarNav = GetComponentInChildren<LeftHotbarNav>();
+            LeftHotbarNav = GetComponentInChildren<LeftHotbarNav>();
             _leftDisplay = transform.Find("LeftDisplay").GetComponent<RectTransform>();
             //_settingsButton = _leftDisplay.Find("Settings").GetComponent<Button>();
 

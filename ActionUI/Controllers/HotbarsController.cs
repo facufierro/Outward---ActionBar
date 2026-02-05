@@ -283,11 +283,13 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             {
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
+                Time.timeScale = 0f;
             }
             else
             {
                  Cursor.visible = false;
                  Cursor.lockState = CursorLockMode.Locked;
+                 Time.timeScale = 1f;
             }
         }
     }
