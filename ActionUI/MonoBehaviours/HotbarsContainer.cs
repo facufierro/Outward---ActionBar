@@ -111,9 +111,13 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
 
         private void OnPlayerAssigned(PlayerActionMenus menus)
         {
-             if (menus == PlayerActionMenus && menus.ProfileManager?.HotbarProfileService != null)
+             if (menus == PlayerActionMenus)
              {
-                 menus.ProfileManager.HotbarProfileService.OnProfileChanged += OnProfileChanged;
+                 var hotbarService = menus.ServicesProvider.GetService<IHotbarProfileService>();
+                 if (hotbarService != null)
+                 {
+                     hotbarService.OnProfileChanged += OnProfileChanged;
+                 }
              }
         }
 

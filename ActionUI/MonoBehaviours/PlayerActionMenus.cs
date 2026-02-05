@@ -24,9 +24,6 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         private UnityServicesProvider _servicesProvider;
         public UnityServicesProvider ServicesProvider => _servicesProvider;
 
-        private ProfileManager _profileManager;
-        public ProfileManager ProfileManager => _profileManager;
-
         private IActionMenu[] _actionMenus;
 
         //private Func<bool> _exitRequested;
@@ -45,10 +42,10 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         {
             (_playerID) = (playerID);
             _servicesProvider = Psp.Instance.GetServicesProvider(playerID);
-            _profileManager = new ProfileManager(playerID);
+            var positionsService = _servicesProvider.GetService<IPositionsProfileService>();
             var positionables = GetPositionableUIs();
             foreach (var ui in positionables)
-                ui.SetProfileManager(_profileManager);
+                ui.SetPositionsService(positionsService);
 
             _isPlayerAssigned = true;
             _onPlayerIdAssigned.Invoke(this);

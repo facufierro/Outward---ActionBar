@@ -27,12 +27,14 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         public SkillChainPrefabricator(InventoryServicesInjector inventoryServicesInjector, ModifCoroutine coroutines, Func<IModifLogger> getLogger)
         {
             (_inventoryServicesInjector, _coroutines, _getLogger) = (inventoryServicesInjector, coroutines, getLogger);
-            _inventoryServicesInjector.SkillChainsProfilesLoaded += TryAddSkillChains;
+            (_inventoryServicesInjector, _coroutines, _getLogger) = (inventoryServicesInjector, coroutines, getLogger);
             Instance = this;
         }
 
-        private void TryAddSkillChains(int playerID, string characterUID, SkillChainsJsonService skillChainsService)
+        private void TryAddSkillChains(int playerID, string characterUID, object skillChainsService)
         {
+            // Skill Chains disabled for BepInEx migration
+            /*
             try
             {
                 AddSkillChains(skillChainsService.GetSkillChainProfile().SkillChains, characterUID);
@@ -41,6 +43,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             {
                 Logger.LogException($"Failed to add {nameof(SkillChain)}s for player {playerID}, character {characterUID}", ex);
             }
+            */
         }
 
         private void AddSkillChains(IEnumerable<SkillChain> skillChains, string characterUID)

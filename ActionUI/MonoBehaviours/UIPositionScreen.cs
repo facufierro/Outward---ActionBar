@@ -1,5 +1,6 @@
 using ModifAmorphic.Outward.Unity.ActionUI;
 using ModifAmorphic.Outward.Unity.ActionUI.Extensions;
+using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -77,7 +78,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         private void DisableAndSavePositions()
         {
             var uis = MainSettingsMenu.PlayerMenu.GetPositionableUIs();
-            var positonService = MainSettingsMenu.PlayerMenu.ProfileManager.PositionsProfileService;
+            var positonService = MainSettingsMenu.PlayerMenu.ServicesProvider.GetService<IPositionsProfileService>();
             var positions = positonService.GetProfile();
             bool saveNeeded = false;
             DebugLogger.Log($"Checking {uis.Length} UI Element positons for changes.");

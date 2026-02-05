@@ -37,11 +37,22 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
         private void AddPositionsServices(PlayerActionMenus actionMenus, SplitPlayer splitPlayer)
         {
             var usp = Psp.Instance.GetServicesProvider(splitPlayer.RewiredID);
-            var profileService = (ProfileService)usp.GetService<IActionUIProfileService>();
+            // var profileService = (ProfileService)usp.GetService<IActionUIProfileService>(); // Unused
 
-            usp
-                .AddSingleton<IPositionsProfileService>(
-                    new PositionsProfileJsonService(_services.GetService<GlobalProfileService>(), profileService, splitPlayer.AssignedCharacter.UID, _getLogger));
+            usp.AddSingleton<IPositionsProfileService>(_services.GetService<IPositionsProfileService>()); // Register Global service for player scope usage (redundant if already added in Shared? Shared adds it.)
+
+            // Actually, SharedServicesInjector added IPositionsProfileService in my previous edit?
+            // Let's check SharedServicesInjector content in my mind.. 
+            // Yes, "usp.AddSingleton(_services.GetService<IPositionsProfileService>());" was added in SharedServicesInjector.
+            // So this might be redundant or we can just ensure it's there.
+            // But if PositionsServiceInjector is responsible for it, we should do it here or let Shared handle it.
+            // SharedServicesInjector runs on "SetCharacterAfter", Positions likely runs when UI created?
+            // SharedServicesInjector adds "IActionUIProfileService" "IHotbarProfileService" and "IPositionsProfileService" in my previous step.
+            // So we don't need to add it here, or we can just do nothing if it's already there
+            if (!usp.ContainsService<IPositionsProfileService>())
+            {
+                 usp.AddSingleton<IPositionsProfileService>(_services.GetService<IPositionsProfileService>());
+            }
         }
     }
 }

@@ -43,9 +43,9 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
 
         public UnityEvent OnHide { get; } = new UnityEvent();
 
-        private IHotbarProfile _hotbarProfile => MainSettingsMenu.PlayerMenu.ProfileManager.HotbarProfileService.GetProfile();
-
-        private IHotbarProfileService _hotbarService => MainSettingsMenu.PlayerMenu.ProfileManager.HotbarProfileService;
+        private IHotbarProfileService _hotbarService => MainSettingsMenu.PlayerMenu.ServicesProvider.GetService<IHotbarProfileService>();
+        
+        private IHotbarProfile _hotbarProfile => _hotbarService.GetProfile();
 
         private bool _eventsAdded;
 

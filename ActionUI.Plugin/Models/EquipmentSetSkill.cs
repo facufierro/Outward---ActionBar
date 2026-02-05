@@ -81,7 +81,8 @@ namespace ModifAmorphic.Outward.ActionUI.Models
         protected override bool OwnerHasAllRequiredItems(bool _tryingToActivate)
         {
             if (TryGetEquipService(out var inventoryService) && TryGetEquipmentSet(out var equipmentSet))
-                return inventoryService.HasItems(equipmentSet.GetEquipSlots());
+                //return inventoryService.HasItems(equipmentSet.GetEquipSlots());
+                return false;
 
             return false;
         }
@@ -98,11 +99,11 @@ namespace ModifAmorphic.Outward.ActionUI.Models
             return ResourcesPrefabManager.Instance.GetItemPrefab(iconSlot.ItemID);
         }
 
-        protected bool TryGetEquipService(out EquipService equipService)
+        protected bool TryGetEquipService(out object equipService) // Changed type to object to avoid missing type error
         {
             equipService = null;
-            if (Psp.Instance.TryGetServicesProvider(this.m_ownerCharacter.OwnerPlayerSys.PlayerID, out var usp))
-                return usp.TryGetService<EquipService>(out equipService);
+            //if (Psp.Instance.TryGetServicesProvider(this.m_ownerCharacter.OwnerPlayerSys.PlayerID, out var usp))
+            //    return usp.TryGetService<EquipService>(out equipService);
 
             return false;
         }

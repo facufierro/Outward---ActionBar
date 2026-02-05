@@ -26,12 +26,14 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         public EquipSetPrefabService(InventoryServicesInjector inventoryServicesInjector, ModifCoroutine coroutines, Func<IModifLogger> getLogger)
         {
             (_inventoryServicesInjector, _coroutines, _getLogger) = (inventoryServicesInjector, coroutines, getLogger);
-            _inventoryServicesInjector.EquipmentSetProfilesLoaded += TryAddEquipmentSets;
+            (_inventoryServicesInjector, _coroutines, _getLogger) = (inventoryServicesInjector, coroutines, getLogger);
             Instance = this;
         }
 
-        private void TryAddEquipmentSets(int playerID, string characterUID, ArmorSetsJsonService armorService, WeaponSetsJsonService weaponService)
+        private void TryAddEquipmentSets(int playerID, string characterUID, object armorService, object weaponService)
         {
+            // Equipment Sets logic disabled for BepInEx migration
+            /*
             try
             {
                 AddEquipmentSets<ArmorSetSkill>(armorService.GetEquipmentSetsProfile().EquipmentSets, characterUID);
@@ -41,6 +43,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             {
                 Logger.LogException($"Failed to add equipmentSets for player {playerID}, character {characterUID}", ex);
             }
+            */
         }
 
         private void AddEquipmentSets<T>(IEnumerable<IEquipmentSet> sets, string characterUID) where T : EquipmentSetSkill

@@ -1,6 +1,6 @@
 ﻿using BepInEx;
 using HarmonyLib;
-using ModifAmorphic.Outward.ActionUI.Config;
+using ModifAmorphic.Outward.ActionUI.Settings;
 using ModifAmorphic.Outward.ActionUI.Patches;
 using ModifAmorphic.Outward.Logging;
 using System;
@@ -24,8 +24,9 @@ namespace ModifAmorphic.Outward.ActionUI
 
             // Initialize ConfigurationManager Config
             // Initialize ConfigurationManager Config
-            // Initialize ConfigurationManager Config
-            ActionUIConfig.Init(Config);
+            ActionUISettings.Init(Config);
+            // Initialize Global Services
+            _ = new Services.GlobalConfigService();
 
             IModifLogger logger = null;
 

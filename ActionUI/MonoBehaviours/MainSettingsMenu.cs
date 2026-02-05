@@ -24,7 +24,6 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
     {
         public PlayerActionMenus PlayerMenu;
         public SettingsView SettingsView;
-        public ProfileInput ProfileInput;
         public HotbarSettingsView HotbarSettingsView;
         public HotkeyCaptureMenu HotkeyCaptureMenu;
         public UIPositionScreen UIPositionScreen;
@@ -36,7 +35,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         public Toggle EquipmentSetViewToggle;
         public Toggle StashViewToggle;
 
-        public bool IsShowing => gameObject.activeSelf || HotkeyCaptureMenu.IsShowing || ProfileInput.IsShowing || UIPositionScreen.IsShowing;
+        public bool IsShowing => gameObject.activeSelf || HotkeyCaptureMenu.IsShowing || UIPositionScreen.IsShowing;
 
         public UnityEvent OnShow { get; } = new UnityEvent();
 
@@ -47,7 +46,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         private Dictionary<ActionSettingsMenus, ISettingsView> _settingsViews;
 
         private SelectableTransitions[] _selectables;
-        public bool MenuItemSelected => (_selectables != null && _selectables.Any(s => s.Selected) || ProfileInput.gameObject.activeSelf);
+        public bool MenuItemSelected => (_selectables != null && _selectables.Any(s => s.Selected));
 
         private bool _isInit;
 
@@ -59,7 +58,6 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             _menus.Add(ActionSettingsMenus.Settings, SettingsView);
             _menus.Add(ActionSettingsMenus.ActionSlots, HotbarSettingsView);
             _menus.Add(ActionSettingsMenus.EquipmentSets, EquipmentSetsSettingsView);
-            _menus.Add(ActionSettingsMenus.ProfileName, ProfileInput);
             _menus.Add(ActionSettingsMenus.HotkeyCapture, HotkeyCaptureMenu);
             _menus.Add(ActionSettingsMenus.UIPosition, UIPositionScreen);
             _menus.Add(ActionSettingsMenus.Stash, StorageSettingsView);

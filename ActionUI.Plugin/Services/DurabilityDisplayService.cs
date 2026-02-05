@@ -3,6 +3,7 @@ using ModifAmorphic.Outward.ActionUI.Patches;
 using ModifAmorphic.Outward.Coroutines;
 using ModifAmorphic.Outward.Logging;
 using ModifAmorphic.Outward.Unity.ActionMenus;
+using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using ModifAmorphic.Outward.Unity.ActionUI;
 using System;
 using System.Collections.Generic;
@@ -59,9 +60,9 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private void ConfigureShowHide(PlayerActionMenus actionMenus, SplitPlayer splitPlayer)
         {
-            //var psp = Psp.Instance.GetServicesProvider(splitPlayer.RewiredID);
+            var psp = Psp.Instance.GetServicesProvider(splitPlayer.RewiredID);
             //var actionMenus = psp.GetService<PlayerActionMenus>();
-            var profileService = actionMenus.ProfileManager.ProfileService;
+            var profileService = psp.GetService<IActionUIProfileService>();
 
             //if (_configured)
             //    return;

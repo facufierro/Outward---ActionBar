@@ -25,7 +25,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         private readonly Player _player;
         private readonly Character _character;
         private readonly CharacterUI _characterUI;
-        private readonly ProfileManager _profileManager;
+        private readonly IHotbarProfileService _hotbarProfileService;
+        private readonly IActionUIProfileService _profileService;
         private readonly SlotDataService _slotData;
 
         private readonly LevelCoroutines _levelCoroutines;
@@ -35,14 +36,16 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private bool disposedValue;
 
-        public HotbarService(HotbarsContainer hotbarsContainer, Player player, Character character, ProfileManager profileManager, SlotDataService slotData, LevelCoroutines levelCoroutines, Func<IModifLogger> getLogger)
+        public HotbarService(HotbarsContainer hotbarsContainer, Player player, Character character, IHotbarProfileService hotbarProfileService, IActionUIProfileService profileService, SlotDataService slotData, LevelCoroutines levelCoroutines, Func<IModifLogger> getLogger)
         {
             if (hotbarsContainer == null)
                 throw new ArgumentNullException(nameof(hotbarsContainer));
             if (character == null)
                 throw new ArgumentNullException(nameof(character));
-            if (profileManager == null)
-                throw new ArgumentNullException(nameof(profileManager));
+            if (hotbarProfileService == null)
+                throw new ArgumentNullException(nameof(hotbarProfileService));
+            if (profileService == null)
+                throw new ArgumentNullException(nameof(profileService));
             if (slotData == null)
                 throw new ArgumentNullException(nameof(slotData));
 
@@ -51,7 +54,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             _player = player;
             _character = character;
             _characterUI = character.CharacterUI;
-            _profileManager = profileManager;
+            _hotbarProfileService = hotbarProfileService;
+            _profileService = profileService;
             _slotData = slotData;
             _levelCoroutines = levelCoroutines;
             _getLogger = getLogger;
@@ -88,7 +92,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 var profile = GetOrCreateActiveProfile();
                 TryConfigureHotbars(profile, HotbarProfileChangeTypes.ProfileRefreshed);
                 _hotbars.ClearChanges();
-                _profileManager.HotbarProfileService.OnProfileChanged += TryConfigureHotbars;
+                _hotbarProfileService.OnProfileChanged += TryConfigureHotbars;
                 _hotbars.OnHasChanges.AddListener(Save);
                 CharacterUIPatches.AfterRefreshHUDVisibility += ShowHideHotbars;
 
@@ -112,7 +116,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private void SetSkillsMovable(ItemListDisplay itemListDisplay)
         {
-            if (!_profileManager?.ProfileService?.GetActiveProfile()?.ActionSlotsEnabled ?? false)
+            if (!_profileService.GetActiveProfile()?.ActionSlotsEnabled ?? false)
                 return;
 
             var displays = itemListDisplay.GetComponentsInChildren<ItemDisplay>();
@@ -187,7 +191,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 {
                     var profile = GetOrCreateActiveProfile();
                     Logger.LogDebug($"{nameof(HotbarService)}_{InstanceID}: Hotbar changes detected. Saving.");
-                    _profileManager.HotbarProfileService.Update(_hotbars);
+                    _hotbarProfileService.Update(_hotbars);
                     _hotbars.ClearChanges();
                 }
             }
@@ -241,14 +245,14 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private IHotbarProfile GetOrCreateActiveProfile()
         {
-            var activeProfile = _profileManager.ProfileService.GetActiveProfile();
+            var activeProfile = _profileService.GetActiveProfile();
 
-            var hotbarProfile = _profileManager.HotbarProfileService.GetProfile();
-            if (hotbarProfile == null)
-                _profileManager.HotbarProfileService.SaveNew(HotbarSettings.DefaulHotbarProfile);
+            var hotbarProfile = _hotbarProfileService.GetProfile();
+            //if (hotbarProfile == null)
+            //    _hotbarProfileService.SaveNew(HotbarSettings.DefaulHotbarProfile);
 
             Logger.LogDebug($"Got or Created Active Profile '{activeProfile.Name}'");
-            return _profileManager.HotbarProfileService.GetProfile();
+            return hotbarProfile;
         }
 
         public void AssignSlotActions() => AssignSlotActions(GetOrCreateActiveProfile());
@@ -377,8 +381,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                         _hotbars.OnHasChanges.RemoveListener(Save);
                         _hotbars.OnAwake -= StartNextFrame;
                     }
-                    if (_profileManager?.HotbarProfileService != null)
-                        _profileManager.HotbarProfileService.OnProfileChanged -= TryConfigureHotbars;
+                    if (_hotbarProfileService != null)
+                        _hotbarProfileService.OnProfileChanged -= TryConfigureHotbars;
                 }
 
                 disposedValue = true;

@@ -163,7 +163,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             Logger.LogDebug($"{nameof(PlayerMenuService)}::{nameof(ConfigureCharacterUI)}(): Activating {playerMenuGo.name} for rewired ID {splitPlayer.RewiredID}.");
             playerMenuGo.SetActive(true);
 
-            var profile = GetActiveProfile(playerMenu.ProfileManager);
+            var profileService = psp.GetService<IActionUIProfileService>();
+            var profile = profileService.GetActiveProfile();
             _positionsService.ToggleQuickslotsPositonable(profile, playerMenu, character.CharacterUI);
 
             var player = ReInput.players.GetPlayer(splitPlayer.RewiredID);
@@ -194,7 +195,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
             }
 
-            var isActionSlotsEnabled = playerMenu.ProfileManager.ProfileService.GetActiveProfile().ActionSlotsEnabled;
+            var isActionSlotsEnabled = profile.ActionSlotsEnabled;
             if (!CharacterQuickSlotManagerPatches.AllowItemDestroyed.ContainsKey(splitPlayer.RewiredID))
                 CharacterQuickSlotManagerPatches.AllowItemDestroyed.Add(splitPlayer.RewiredID,
                     (requestingPlayerId) => ShouldQuickslotItemBeDestroyed(
@@ -216,7 +217,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             };
         }
 
-        private ActionUIProfile GetActiveProfile(ProfileManager profileManager) => (ActionUIProfile)profileManager.ProfileService.GetActiveProfile();
+        //private ActionUIProfile GetActiveProfile(ProfileManager profileManager) => (ActionUIProfile)profileManager.ProfileService.GetActiveProfile();
 
         private void AddSplitScreenScaler(PlayerActionMenus actionMenus, CharacterUI characterUI)
         {

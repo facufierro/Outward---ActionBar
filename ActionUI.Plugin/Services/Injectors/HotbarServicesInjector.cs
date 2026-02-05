@@ -45,10 +45,10 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
                 return;
             }
 
-            var profileService = usp.GetService<IActionUIProfileService>() as ProfileService;
-            var activeProfile = profileService.GetActiveActionUIProfile();
+            var profileService = usp.GetService<IActionUIProfileService>();
+            // var activeProfile = profileService.GetActiveActionUIProfile(); // Not using this check anymore or checking global default
 
-            if (!activeProfile.ActionSlotsEnabled)
+            if (!profileService.GetActiveProfile().ActionSlotsEnabled) // Check global setting
             {
                 return;
             }
@@ -61,12 +61,14 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
                 .AddSingleton(new HotbarService(hotbars
                                         , player
                                         , splitPlayer.AssignedCharacter
-                                        , actionMenus.ProfileManager
+                                        , usp.GetService<IHotbarProfileService>()
+                                        , usp.GetService<IActionUIProfileService>()
                                         , usp.GetService<SlotDataService>()
                                         , _levelCoroutines
                                         , _getLogger))
                 .AddSingleton(new ControllerMapService(usp.GetService<HotkeyCaptureMenu>()
-                                        , actionMenus.ProfileManager
+                                        , usp.GetService<IHotbarProfileService>()
+                                        , usp.GetService<IActionUIProfileService>()
                                         , usp.GetService<HotbarService>()
                                         , player
                                         , _levelCoroutines
@@ -74,8 +76,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
                 .AddSingleton<IActionViewData>(new SlotActionViewData(player
                                         , splitPlayer.AssignedCharacter
                                         , usp.GetService<SlotDataService>()
-                                        , (ProfileService)usp.GetService<IActionUIProfileService>()
-                                        , (HotbarProfileJsonService)usp.GetService<IHotbarProfileService>()
+                                        , usp.GetService<IActionUIProfileService>()
                                         , _getLogger))
                 .AddSingleton<IHotbarNavActions>(new HotbarKeyListener(player));
 
@@ -93,7 +94,6 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
             usp.TryDispose<ControllerMapService>();
             usp.TryDispose<HotbarService>();
             usp.TryDispose<SlotDataService>();
-            usp.TryDispose<HotbarProfileJsonService>();
             usp.TryDispose<IHotbarProfileService>();
             usp.TryRemove<HotbarsContainer>();
         }

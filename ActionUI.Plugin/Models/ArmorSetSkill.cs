@@ -28,7 +28,8 @@ namespace ModifAmorphic.Outward.ActionUI.Models
                 return false;
 
             if (TryGetEquipService(out var inventoryService) && TryGetEquipmentSet(out var equipmentSet))
-                return inventoryService.HasItems(_armorSet.GetEquipSlots()) && !inventoryService.IsArmorSetEquipped(_armorSet);
+                //return inventoryService.HasItems(_armorSet.GetEquipSlots()) && !inventoryService.IsArmorSetEquipped(_armorSet);
+                return false;
 
             return false;
         }
@@ -38,8 +39,8 @@ namespace ModifAmorphic.Outward.ActionUI.Models
             if (_armorSet == null)
                 return;
 
-            if (TryGetEquipService(out var inventoryService))
-                inventoryService.TryEquipArmorSet(_armorSet);
+            if (TryGetEquipService(out var inventoryService)) { }
+                //inventoryService.TryEquipArmorSet(_armorSet);
         }
 
         protected override bool TryGetEquipmentSet(out IEquipmentSet equipmentSet)

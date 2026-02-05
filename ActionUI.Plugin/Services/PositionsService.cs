@@ -1,4 +1,5 @@
 ﻿using ModifAmorphic.Outward.ActionUI.DataModels;
+using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using ModifAmorphic.Outward.Coroutines;
 using ModifAmorphic.Outward.Extensions;
 using ModifAmorphic.Outward.GameObjectResources;
@@ -79,7 +80,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             bg.GetComponentInChildren<Text>().text = transform.name;
         }
 
-        public void ToggleQuickslotsPositonable(ActionUIProfile profile, PlayerActionMenus actionMenus, CharacterUI characterUI)
+        public void ToggleQuickslotsPositonable(IActionUIProfile profile, PlayerActionMenus actionMenus, CharacterUI characterUI)
         {
             if (!profile.ActionSlotsEnabled)
             {

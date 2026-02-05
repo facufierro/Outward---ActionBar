@@ -30,7 +30,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         private bool _positioningEnabled = false;
         public bool IsPositionable => _positioningEnabled;
 
-        private ProfileManager _profileManager;
+        private IPositionsProfileService _positionsProfileService;
         private bool profileChangeEventNeeded = false;
         private bool _buttonInit;
         private bool _raycasterAdded;
@@ -67,8 +67,8 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             // Capture origin BEFORE applying profile if not already set or if it was set to current position which might be wrong
              StartPosition = new Vector2(RectTransform.anchoredPosition.x, RectTransform.anchoredPosition.y);
 
-            if (_profileManager != null && _profileManager.PositionsProfileService != null)
-                SetPositionFromProfile(_profileManager.PositionsProfileService.GetProfile());
+            if (_positionsProfileService != null)
+                SetPositionFromProfile(_positionsProfileService.GetProfile());
 
 
             if (BackgroundImage != null)
@@ -78,24 +78,24 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "<Pending>")]
         private void Update()
         {
-            if (profileChangeEventNeeded && _profileManager != null && _profileManager.PositionsProfileService != null)
+            if (profileChangeEventNeeded && _positionsProfileService != null)
             {
                 profileChangeEventNeeded = false;
                 DebugLogger.Log($"[Debug  :ActionMenus] PositionableUI{{{name}}}::Update: Adding OnProfileChanged listener.");
-                _profileManager.PositionsProfileService.OnProfileChanged += OnProfileChanged;
+                _positionsProfileService.OnProfileChanged += OnProfileChanged;
             }
         }
 
-        public void SetProfileManager(ProfileManager profileManager)
+        public void SetPositionsService(IPositionsProfileService positionsProfileService)
         {
-            _profileManager = profileManager;
+            _positionsProfileService = positionsProfileService;
             profileChangeEventNeeded = true;
-            if (_profileManager.PositionsProfileService != null)
+            if (_positionsProfileService != null)
             {
-                DebugLogger.Log($"[Debug  :ActionMenus] PositionableUI{{{name}}}::SetProfileManager: Adding OnProfileChanged listener.");
-                _profileManager.PositionsProfileService.OnProfileChanged += OnProfileChanged;
+                DebugLogger.Log($"[Debug  :ActionMenus] PositionableUI{{{name}}}::SetPositionsService: Adding OnProfileChanged listener.");
+                _positionsProfileService.OnProfileChanged += OnProfileChanged;
                 profileChangeEventNeeded = false;
-                SetPositionFromProfile(_profileManager.PositionsProfileService.GetProfile());
+                SetPositionFromProfile(_positionsProfileService.GetProfile());
             }
         }
 

@@ -19,14 +19,14 @@ using UnityEngine;
 
 namespace ModifAmorphic.Outward.ActionUI.Services
 {
-    internal class ControllerMapService : IDisposable, ISavableProfile
+    internal class ControllerMapService : IDisposable
     {
         private IModifLogger Logger => _getLogger.Invoke();
         private readonly Func<IModifLogger> _getLogger;
 
         private readonly HotkeyCaptureMenu _captureDialog;
-        private readonly ProfileService _profileService;
-        private readonly HotbarProfileJsonService _hotbarProfileService;
+        private readonly IHotbarProfileService _hotbarProfileService;
+        private readonly IActionUIProfileService _profileService;
         private readonly HotbarService _hotbarService;
         private readonly Player _player;
         private readonly ModifCoroutine _coroutine;
@@ -34,7 +34,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         //private readonly static HashSet<string> ActionUIMapKeys = new HashSet<string>()
         //{
         //    "RewiredData&playerName=Player0&dataType=ControllerMap&controllerMapType=KeyboardMap&categoryId=131000&layoutId=0&hardwareIdentifier=Keyboard",
-        //    "RewiredData&playerName=Player0&dataType=ControllerMap&controllerMapType=MouseMap&categoryId=131000&layoutId=0&hardwareIdentifier=Mouse",
+        //    "RewiredData&playerName=Player1&dataType=ControllerMap&controllerMapType=MouseMap&categoryId=131000&layoutId=0&hardwareIdentifier=Mouse",
         //    "RewiredData&playerName=Player1&dataType=ControllerMap&controllerMapType=KeyboardMap&categoryId=131000&layoutId=0&hardwareIdentifier=Keyboard",
         //    "RewiredData&playerName=Player1&dataType=ControllerMap&controllerMapType=MouseMap&categoryId=131000&layoutId=0&hardwareIdentifier=Mouse",
         //};
@@ -86,7 +86,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
 
         public ControllerMapService(HotkeyCaptureMenu captureDialog,
-                                ProfileManager profileManager,
+                                IHotbarProfileService hotbarProfileService,
+                                IActionUIProfileService profileService,
                                 HotbarService hotbarService,
                                 Player player,
                                 ModifCoroutine coroutine,
@@ -94,13 +95,11 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         {
             (_captureDialog, _hotbarService, _player, _coroutine, _getLogger) = (captureDialog, hotbarService, player, coroutine, getLogger);
 
-            _profileService = (ProfileService)profileManager.ProfileService;
-            _hotbarProfileService = (HotbarProfileJsonService)profileManager.HotbarProfileService;
-
+            _hotbarProfileService = hotbarProfileService;
+            _profileService = profileService;
+ 
             RewiredInputsPatches.AfterSaveAllMaps += TryRemoveActionUIMaps;
             RewiredInputsPatches.AfterExportXmlData += RewiredInputsPatches_AfterExportXmlData;
-            _profileService.OnActiveProfileSwitching += TrySaveCurrentProfile;
-            _profileService.OnActiveProfileSwitched += TryLoadConfigMaps;
             _hotbarProfileService.OnProfileChanged += SlotAmountChanged;
 
             _captureDialog.OnKeysSelected += CaptureDialog_OnKeysSelected;
@@ -153,29 +152,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         }
 
-        private void TrySaveCurrentProfile(IActionUIProfile profile)
-        {
-            try
-            {
-                Save();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException($"Failed to save current Keyboard and Mouse Controller Maps to profile '{profile?.Name}'.", ex);
-            }
-        }
 
-        private void TryLoadConfigMaps(IActionUIProfile profile)
-        {
-            try
-            {
-                _ = LoadConfigMaps(true);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException($"{this.GetType()} failed load rewired config maps for profile {profile?.Name}.", ex);
-            }
-        }
 
         public (KeyboardMap keyboardMap, MouseMap mouseMap) LoadConfigMaps(bool forceRefresh = false)
         {
@@ -714,11 +691,6 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 {
                     RewiredInputsPatches.AfterSaveAllMaps -= TryRemoveActionUIMaps;
                     RewiredInputsPatches.AfterExportXmlData -= RewiredInputsPatches_AfterExportXmlData;
-                    if (_profileService != null)
-                    {
-                        _profileService.OnActiveProfileSwitching -= TrySaveCurrentProfile;
-                        _profileService.OnActiveProfileSwitched -= TryLoadConfigMaps;
-                    }
                     if (_hotbarProfileService != null)
                         _hotbarProfileService.OnProfileChanged -= SlotAmountChanged;
                     if (_captureDialog != null)

@@ -22,17 +22,17 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         private readonly int _playerID;
         private CharacterInventory _characterInventory => _character.Inventory;
         private CharacterEquipment _characterEquipment => _character.Inventory.Equipment;
-        private readonly ProfileManager _profileManager;
+        private readonly IActionUIProfileService _profileService;
         private bool _isRemoved;
-        private IActionUIProfile _profile => _profileManager.ProfileService.GetActiveProfile();
+        private IActionUIProfile _profile => _profileService.GetActiveProfile();
         private readonly LevelCoroutines _coroutines;
 
         private bool disposedValue;
 
-        public InventoryService(Character character, ProfileManager profileManager, LevelCoroutines coroutines, Func<IModifLogger> getLogger)
+        public InventoryService(Character character, IActionUIProfileService profileService, LevelCoroutines coroutines, Func<IModifLogger> getLogger)
         {
             _character = character;
-            _profileManager = profileManager;
+            _profileService = profileService;
             _coroutines = coroutines;
             _getLogger = getLogger;
 
@@ -49,8 +49,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 ItemDisplayOptionPanelPatches.PlayersPressedAction.Add(_playerID, StashContextButtonPressed);
                 ItemDisplayPatches.PlayersUpdateValueDisplay.Add(_playerID, TryAddCurrencyValue);
                 MenuPanelPatches.AfterOnHideInventoryMenu += HideCurrencyValues;
-                _profileManager.ProfileService.OnActiveProfileChanged += TryConfigureStashPreserver;
-                _profileManager.ProfileService.OnActiveProfileSwitched += TryConfigureStashPreserver;
+                _profileService.OnActiveProfileChanged += TryConfigureStashPreserver;
+                _profileService.OnActiveProfileSwitched += TryConfigureStashPreserver;
                 //ItemPatches.GetAdjustedReduceDurability.Add(_playerID, CalculateDurabilityReduction);
 
                 _coroutines.DoWhen(() => _characterInventory.Stash != null, () => TryConfigureStashPreserver(_profile), 180);
@@ -392,10 +392,10 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 {
                     CharacterInventoryPatches.AfterInventoryIngredients -= AddStashIngredients;
                     CharacterManagerPatches.AfterAddCharacter -= ConfigureStashPreserverDelayed;
-                    if (_profileManager?.ProfileService != null)
+                    if (_profileService != null)
                     {
-                        _profileManager.ProfileService.OnActiveProfileChanged -= TryConfigureStashPreserver;
-                        _profileManager.ProfileService.OnActiveProfileSwitched -= TryConfigureStashPreserver;
+                        _profileService.OnActiveProfileChanged -= TryConfigureStashPreserver;
+                        _profileService.OnActiveProfileSwitched -= TryConfigureStashPreserver;
                     }
                     ItemDisplayOptionPanelPatches.TryGetActiveActions.TryRemove(_playerID, out _);
                     ItemDisplayOptionPanelPatches.PlayersPressedAction.TryRemove(_playerID, out _);

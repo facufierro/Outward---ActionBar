@@ -1,7 +1,6 @@
 ﻿
 using BepInEx;
 using HarmonyLib;
-using ModifAmorphic.Outward.ActionUI.Config;
 using ModifAmorphic.Outward.ActionUI.Plugin.Services;
 using ModifAmorphic.Outward.ActionUI.Services;
 using ModifAmorphic.Outward.ActionUI.Services.Injectors;
@@ -12,6 +11,7 @@ using ModifAmorphic.Outward.GameObjectResources;
 using ModifAmorphic.Outward.Logging;
 using ModifAmorphic.Outward.Unity.ActionMenus;
 using ModifAmorphic.Outward.Unity.ActionUI;
+using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using System;
 using System.IO;
 using System.Linq;
@@ -33,7 +33,7 @@ namespace ModifAmorphic.Outward.ActionUI
             var confSettings = settingsService.ConfigureSettings();
             
             // Initialize Config AFTER SettingsService has potentially cleared it
-            ActionUIConfig.Init(_services.GetService<BaseUnityPlugin>().Config);
+            ActionUISettings.Init(_services.GetService<BaseUnityPlugin>().Config);
 
             services
                 .AddSingleton(confSettings)
@@ -50,14 +50,14 @@ namespace ModifAmorphic.Outward.ActionUI
                                                    services.GetService<LevelCoroutines>(),
                                                    confSettings,
                                                    services.GetService<IModifLogger>))
-                .AddSingleton(new GlobalProfileService(ActionUISettings.CharactersProfilesPath,
-                                                    ActionUISettings.CharactersProfilesPath,
-                                                    services.GetService<IModifLogger>));
+                .AddSingleton<IActionUIProfileService>(new GlobalActionUIProfileService())
+                .AddSingleton<IHotbarProfileService>(new GlobalHotbarService())
+                .AddSingleton<IPositionsProfileService>(new GlobalPositionsService());
 
 
             _loggerFactory = services.GetServiceFactory<IModifLogger>();
             //Retrieve the global profile early on to clean up any orphaned equipment sets.
-            _ = services.GetService<GlobalProfileService>().GetGlobalProfile();
+            //_ = services.GetService<GlobalProfileService>().GetGlobalProfile();
 
             var actionUIPrefab = ConfigureAssetBundle();
 

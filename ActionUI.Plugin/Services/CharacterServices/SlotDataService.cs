@@ -2,6 +2,7 @@
 using ModifAmorphic.Outward.ActionUI.Models;
 using ModifAmorphic.Outward.Logging;
 using ModifAmorphic.Outward.Unity.ActionUI;
+using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using Rewired;
 using System;
 using System.Linq;
@@ -16,10 +17,10 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         private readonly Player _rewiredPlayer;
         private readonly Character _character;
         private readonly CharacterInventory _inventory;
-        private readonly HotbarProfileJsonService _profileService;
+        private readonly IHotbarProfileService _profileService;
         private bool disposedValue;
 
-        public SlotDataService(Player rewiredPlayer, Character character, HotbarProfileJsonService profileService, Func<IModifLogger> getLogger)
+        public SlotDataService(Player rewiredPlayer, Character character, IHotbarProfileService profileService, Func<IModifLogger> getLogger)
         {
             if (rewiredPlayer == null)
                 throw new ArgumentNullException(nameof(rewiredPlayer));

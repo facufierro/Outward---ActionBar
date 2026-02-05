@@ -2,6 +2,7 @@
 using ModifAmorphic.Outward.ActionUI.Settings;
 using ModifAmorphic.Outward.Logging;
 using ModifAmorphic.Outward.Unity.ActionUI;
+using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using Rewired;
 using System;
 using System.Collections.Generic;
@@ -18,10 +19,9 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         private readonly Character _character;
         private readonly CharacterInventory _inventory;
         private readonly SlotDataService _slotData;
-        private readonly ProfileService _profileService;
-        private readonly HotbarProfileJsonService _hotbarsProfileService;
+        private readonly IActionUIProfileService _profileService;
 
-        public SlotActionViewData(Player player, Character character, SlotDataService slotData, ProfileService profileService, HotbarProfileJsonService hotbarsProfileService, Func<IModifLogger> getLogger)
+        public SlotActionViewData(Player player, Character character, SlotDataService slotData, IActionUIProfileService profileService, Func<IModifLogger> getLogger)
         {
             if (player == null)
                 throw new ArgumentNullException(nameof(player));
@@ -34,7 +34,6 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             _slotData = slotData;
             _inventory = character.Inventory;
             _profileService = profileService;
-            _hotbarsProfileService = hotbarsProfileService;
             _getLogger = getLogger;
         }
         public IEnumerable<IActionsDisplayTab> GetActionsTabData()
@@ -62,7 +61,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 GetSlotActionsQuery = () => GetDeployables()
             });
 
-            if (_profileService.GetActiveActionUIProfile().EquipmentSetsEnabled)
+            if (ActionUISettings.EquipmentSetsEnabled.Value)
             {
                 displays.Add(new ActionsDisplayTab()
                 {

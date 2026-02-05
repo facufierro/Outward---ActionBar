@@ -18,10 +18,10 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
         private readonly ModifGoService _modifGoService;
         private readonly LevelCoroutines _coroutines;
 
-        public delegate void EquipmentSetProfilesLoadedDelegate(int playerID, string characterUID, ArmorSetsJsonService armorService, WeaponSetsJsonService weaponService);
-        public event EquipmentSetProfilesLoadedDelegate EquipmentSetProfilesLoaded;
-        public delegate void SkillChainsProfilesLoadedDelegate(int playerID, string characterUID, SkillChainsJsonService skillChainsService);
-        public event SkillChainsProfilesLoadedDelegate SkillChainsProfilesLoaded;
+        //public delegate void EquipmentSetProfilesLoadedDelegate(int playerID, string characterUID, ArmorSetsJsonService armorService, WeaponSetsJsonService weaponService);
+        //public event EquipmentSetProfilesLoadedDelegate EquipmentSetProfilesLoaded;
+        //public delegate void SkillChainsProfilesLoadedDelegate(int playerID, string characterUID, SkillChainsJsonService skillChainsService);
+        //public event SkillChainsProfilesLoadedDelegate SkillChainsProfilesLoaded;
 
         public InventoryServicesInjector(ServicesProvider services, PlayerMenuService playerMenuService, ModifGoService modifGoService, LevelCoroutines coroutines, Func<IModifLogger> getLogger)
         {
@@ -45,8 +45,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
         private void AddServiceProfiles(int playerID, string characterUID)
         {
             var usp = Psp.Instance.GetServicesProvider(playerID);
-            var profileManager = usp.GetService<ProfileManager>();
-
+            //var profileManager = usp.GetService<ProfileManager>();
+            
             //usp
                 //.AddSingleton<IEquipmentSetService<WeaponSet>>(new WeaponSetsJsonService(
                 //    _services.GetService<GlobalProfileService>(),
@@ -71,30 +71,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
                 //    _getLogger
                 //    ));
 
-            try
-            {
-                //EquipmentSetProfilesLoaded?.Invoke(
-                //    playerID,
-                //    characterUID,
-                //    (ArmorSetsJsonService)usp.GetService<IEquipmentSetService<ArmorSet>>(),
-                //    (WeaponSetsJsonService)usp.GetService<IEquipmentSetService<WeaponSet>>());
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException($"Invocation of event {nameof(EquipmentSetProfilesLoaded)} failed.", ex);
-            }
 
-            try
-            {
-                //SkillChainsProfilesLoaded?.Invoke(
-                //    playerID,
-                //    characterUID,
-                //    (SkillChainsJsonService)usp.GetService<ISkillChainService>());
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException($"Invocation of event {nameof(SkillChainsProfilesLoaded)} failed.", ex);
-            }
         }
 
         private void TryAddInventoryServices(PlayerActionMenus actionMenus, SplitPlayer splitPlayer)
@@ -114,12 +91,12 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
             Logger.LogDebug($"Adding Inventory Services for player {splitPlayer.RewiredID}");
 
             var usp = Psp.Instance.GetServicesProvider(splitPlayer.RewiredID);
-            var profileManager = usp.GetService<ProfileManager>();
+            //var profileManager = usp.GetService<ProfileManager>();
 
             usp
                 .AddSingleton(new InventoryService(
                                                     splitPlayer.AssignedCharacter,
-                                                    profileManager,
+                                                    usp.GetService<IActionUIProfileService>(),
                                                     _coroutines,
                                                     _getLogger));
                 //.AddSingleton(new EquipService(

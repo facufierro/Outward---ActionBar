@@ -40,79 +40,24 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             }
         }
 
+        /*
         private void SaveProfiles(CharacterUI characterUI, int rewiredId)
         {
-            var charUID = characterUI.TargetCharacter.UID;
-            Logger.LogInfo($"Saving active profile data for character {charUID}");
-
-            if (!Psp.Instance.TryGetServicesProvider(rewiredId, out var usp))
-            {
-                Logger.LogWarning($"Could not find profile data to save for character {charUID}. No profiles saved.");
-                return;
-            }
-
-            if (usp.TryGetService<IPositionsProfileService>(out var posService))
-                SaveProfile((PositionsProfileJsonService)posService, charUID);
-            else
-                Logger.LogWarning($"Could not find Positions Profile to save for character {charUID}. Profile will not be saved.");
-
-            if (usp.TryGetService<IHotbarProfileService>(out var hotbarService))
-                SaveProfile((HotbarProfileJsonService)hotbarService, charUID);
-            else
-                Logger.LogWarning($"Could not find Hotbars Profile to save for character {charUID}. Profile will not be saved.");
-
-            if (usp.TryGetService<ControllerMapService>(out var controllerService))
-                SaveProfile(controllerService, charUID);
-            else
-                Logger.LogWarning($"Could not find Rewired Map Profile to save for character {charUID}. Profile will not be saved.");
-
-            if (usp.TryGetService<IEquipmentSetService<ArmorSet>>(out var armorService))
-                SaveProfile((ArmorSetsJsonService)armorService, charUID);
-            else
-                Logger.LogWarning($"Could not find Armor Sets Profile to save for character {charUID}. Profile will not be saved.");
-
-            if (usp.TryGetService<IEquipmentSetService<WeaponSet>>(out var weaponService))
-                SaveProfile((WeaponSetsJsonService)weaponService, charUID);
-            else
-                Logger.LogWarning($"Could not find Weapon Sets Profile to save for character {charUID}. Profile will not be saved.");
-
-            if (usp.TryGetService<IActionUIProfileService>(out var profileService))
-            {
-                try
-                {
-                    ((ProfileService)profileService).SaveProfile(profileService.GetActiveProfile(), true);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogException($"Failed to save active profile for character {charUID}.", ex);
-                }
-            }
-            else
-                Logger.LogWarning($"Could not find Action UI Profile to save for character {charUID}. Profile will not be saved.");
-
-            if (_services.TryGetService<GlobalProfileService>(out var globalService))
-                SaveProfile(globalService, charUID);
-            else
-                Logger.LogWarning($"Could not find Global Profile to save for character {charUID}. Profile will not be saved.");
+            // Implementation commented out due to removal of ProfileManager and JSON services.
+            // Saving is now handled by BepInEx ConfigurationManager.
         }
 
         private void SaveProfile(ISavableProfile profileService, string characterUID)
         {
-            try
-            {
-                profileService.Save();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException($"Failed to save profile {profileService.GetType()} for character {characterUID}.", ex);
-            }
+             // Implementation commented out.
         }
+        */
 
         private void ResetUIs(CharacterUI characterUI, int rewiredId)
         {
             try
             {
-                SaveProfiles(characterUI, rewiredId);
+                //SaveProfiles(characterUI, rewiredId);
             }
             catch (Exception ex)
             {

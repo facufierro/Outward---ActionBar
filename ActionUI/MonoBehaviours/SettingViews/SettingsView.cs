@@ -15,8 +15,8 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
     {
         public MainSettingsMenu MainSettingsMenu;
 
-        public Dropdown ProfileDropdown;
-        public Button ProfileRenameButton;
+        //public Dropdown ProfileDropdown;
+        //public Button ProfileRenameButton;
 
         public Toggle ActionSlotsToggle;
         public Toggle DurabilityToggle;
@@ -26,15 +26,14 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         public Button MoveUIButton;
         public Button ResetUIButton;
 
-        public bool IsShowing => gameObject.activeSelf && !MainSettingsMenu.ProfileInput.IsShowing;
+        public bool IsShowing => gameObject.activeSelf;
 
         public UnityEvent OnShow { get; } = new UnityEvent();
 
         public UnityEvent OnHide { get; } = new UnityEvent();
 
-        private IActionUIProfile _profile => MainSettingsMenu.PlayerMenu.ProfileManager.ProfileService.GetActiveProfile();
-
-        private IActionUIProfileService _profileService => MainSettingsMenu.PlayerMenu.ProfileManager.ProfileService;
+        private IActionUIProfileService _profileService => MainSettingsMenu.PlayerMenu.ServicesProvider.GetService<IActionUIProfileService>();
+        private IActionUIProfile _profile => _profileService.GetActiveProfile();
 
         private SelectableTransitions[] _selectables;
         private Selectable _lastSelected;
@@ -71,35 +70,17 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             SetControls();
             StartCoroutine(SelectNextFrame(MainSettingsMenu.SettingsViewToggle));
 
-            //if (_selectables != null && _selectables.Any())
-            //{
-            //    _selectables.First().Selectable.Select();
-            //    EventSystem.current.SetSelectedGameObject(_selectables.First().gameObject, MainSettingsMenu.PlayerMenu.PlayerID);
-            //}
-            //else
-            //{
-
-            //    MainSettingsMenu.SettingsViewToggle.Select();
-            //    EventSystem.current.SetSelectedGameObject(MainSettingsMenu.SettingsViewToggle.gameObject, MainSettingsMenu.PlayerMenu.PlayerID);
-
-            //}
-
             OnShow?.Invoke();
         }
         public void Hide()
         {
             DebugLogger.Log("SettingsView::Hide");
-            if (MainSettingsMenu.ProfileInput.IsShowing)
-            {
-                MainSettingsMenu.ProfileInput.Hide();
-                return;
-            }
             gameObject.SetActive(false);
             OnHide?.Invoke();
         }
         private void SetControls()
         {
-            SetProfiles();
+            //SetProfiles();
 
             ActionSlotsToggle.SetIsOnWithoutNotify(_profile?.ActionSlotsEnabled ?? false);
             if (DurabilityToggle != null)
@@ -109,13 +90,8 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         }
         private void HookControls()
         {
-            ProfileDropdown.onValueChanged.AddListener(SelectProfile);
-            ProfileRenameButton.onClick.AddListener(RenameProfile);
-            MainSettingsMenu.ProfileInput.OnHide.AddListener(() =>
-            {
-                ProfileDropdown.Select();
-                SetProfiles();
-            });
+            //ProfileDropdown.onValueChanged.AddListener(SelectProfile);
+            //ProfileRenameButton.onClick.AddListener(RenameProfile);
 
             ActionSlotsToggle.onValueChanged.AddListener(isOn =>
             {
@@ -155,38 +131,6 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             ResetUIButton.onClick.AddListener(ResetUIPositions);
         }
 
-        private void SetProfiles()
-        {
-            const string defaultName = "Default";
-            ProfileDropdown.ClearOptions();
-            var profiles = MainSettingsMenu.PlayerMenu.ProfileManager.ProfileService.GetProfileNames();
-            var profileOptions = profiles.Where(p => !p.Equals(defaultName, StringComparison.InvariantCultureIgnoreCase)).OrderBy(p => p).Select(p => new Dropdown.OptionData(p)).ToList();
-            if (profiles.Any(p => p.Equals("Default", StringComparison.InvariantCultureIgnoreCase)))
-                profileOptions.Insert(0, new Dropdown.OptionData(defaultName));
-
-            profileOptions.Add(new Dropdown.OptionData("[New Profile]"));
-            ProfileDropdown.AddOptionSilent(profileOptions);
-            ProfileDropdown.SetValue(profileOptions.FindIndex(o => o.text.Equals(_profile.Name, StringComparison.InvariantCultureIgnoreCase)));
-        }
-        private void SelectProfile(int profileIndex)
-        {
-
-            if (profileIndex < ProfileDropdown.options.Count - 1)
-            {
-                MainSettingsMenu.PlayerMenu.ProfileManager.ProfileService.SetActiveProfile(ProfileDropdown.options[profileIndex].text);
-                SetControls();
-            }
-            else
-            {
-                MainSettingsMenu.ProfileInput.Show();
-            }
-        }
-
-        private void RenameProfile()
-        {
-            MainSettingsMenu.ProfileInput.Show(MainSettingsMenu.PlayerMenu.ProfileManager.ProfileService.GetActiveProfile().Name);
-        }
-
         private void ShowPositionScreen()
         {
             MainSettingsMenu.gameObject.SetActive(false);
@@ -197,7 +141,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         {
             var uis = MainSettingsMenu.PlayerMenu.GetPositionableUIs();
 
-            var positonService = MainSettingsMenu.PlayerMenu.ProfileManager.PositionsProfileService;
+            var positonService = MainSettingsMenu.PlayerMenu.ServicesProvider.GetService<IPositionsProfileService>();
             var positions = positonService.GetProfile();
             bool saveNeeded = false;
 
