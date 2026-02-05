@@ -21,6 +21,7 @@ namespace ModifAmorphic.Outward.ActionUI.Config
         public static ConfigEntry<bool> ShowCooldownTimer;
         public static ConfigEntry<bool> PreciseCooldownTime;
         public static ConfigEntry<string> EmptySlotOption;
+        public static ConfigEntry<string> DisabledSlots;
 
         // UI Positioning
         public static ConfigEntry<bool> OpenPositioningUI;
@@ -47,6 +48,9 @@ namespace ModifAmorphic.Outward.ActionUI.Config
             EmptySlotOption = config.Bind("Hotbar", "EmptySlotDisplay", "Transparent", 
                 new ConfigDescription("How empty slots should look.", 
                 new AcceptableValueList<string>("Transparent", "Image", "Hidden"), new ConfigurationManagerAttributes { IsAdvanced = false }));
+
+            DisabledSlots = config.Bind("Hotbar", "DisabledSlots", "",
+                new ConfigDescription("Internal list of disabled slot indices.", null, new ConfigurationManagerAttributes { Browsable = false, IsAdvanced = true }));
 
             // UI Positioning
             OpenPositioningUI = config.Bind("UI Positioning", "Open Visual Editor", false,

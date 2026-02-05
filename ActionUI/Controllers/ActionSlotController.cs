@@ -325,9 +325,10 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
                  }
                  else
                  {
-                     ActionSlot.CanvasGroup.alpha = 1f;
-                     if (ActionSlot.SlotAction == null)
-                         ActionSlot.EmptyImage.gameObject.SetActive(true); // Show empty if needed
+                     Refresh();
+                     // In Hotkey Edit Mode, we want to see the slot even if it is normally hidden/transparent
+                     if (ActionSlot.CanvasGroup.alpha == 0f)
+                         ActionSlot.CanvasGroup.alpha = 1f;
                  }
                  return;
             }

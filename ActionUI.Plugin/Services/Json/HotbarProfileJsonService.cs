@@ -109,6 +109,27 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 ActionUIConfig.HideLeftNav.Value = hotbarProfile.HideLeftNav;
             if (ActionUIConfig.CombatMode != null && ActionUIConfig.CombatMode.Value != hotbarProfile.CombatMode)
                 ActionUIConfig.CombatMode.Value = hotbarProfile.CombatMode;
+
+            // Save Disabled Slots
+            if (ActionUIConfig.DisabledSlots != null)
+            {
+                var disabledIndices = new List<int>();
+                foreach (var bar in hotbarProfile.Hotbars)
+                {
+                    foreach (var slot in bar.Slots)
+                    {
+                        if (slot.Config.IsDisabled)
+                        {
+                            disabledIndices.Add(slot.SlotIndex);
+                        }
+                    }
+                }
+                var disabledString = string.Join(",", disabledIndices);
+                if (ActionUIConfig.DisabledSlots.Value != disabledString)
+                {
+                    ActionUIConfig.DisabledSlots.Value = disabledString;
+                }
+            }
         }
 
         public void Update(HotbarsContainer hotbar)
@@ -371,6 +392,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 ShowZeroStackAmount = source.Config.ShowZeroStackAmount,
                 PreciseCooldownTime = source.Config.PreciseCooldownTime,
                 ShowCooldownTime = source.Config.ShowCooldownTime,
+                IsDisabled = source.Config.IsDisabled
             };
 
             config.RewiredActionName = RewiredConstants.ActionSlots.Actions[slotIndex].name;
@@ -409,6 +431,28 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 PrevRewiredAxisActionName = RewiredConstants.ActionSlots.PreviousHotbarAxisAction.name,
                 PrevRewiredAxisActionId = RewiredConstants.ActionSlots.PreviousHotbarAxisAction.id,
             };
+
+            // Apply disabled slots from ID list
+            var disabledString = ActionUIConfig.DisabledSlots?.Value;
+            if (!string.IsNullOrEmpty(disabledString))
+            {
+                var disabledIndices = new HashSet<int>();
+                foreach (var idx in disabledString.Split(','))
+                {
+                    if (int.TryParse(idx, out var val)) disabledIndices.Add(val);
+                }
+
+                foreach (var bar in profile.Hotbars)
+                {
+                    foreach (var slot in bar.Slots)
+                    {
+                        if (disabledIndices.Contains(slot.SlotIndex))
+                        {
+                            slot.Config.IsDisabled = true;
+                        }
+                    }
+                }
+            }
 
             // Temporarily set the internal profile so UpdateDimensions can access it via GetProfile()
             _hotbarProfile = profile;
