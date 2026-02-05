@@ -136,11 +136,12 @@ namespace ModifAmorphic.Outward.ActionUI.Config
                 var menus = Object.FindObjectsOfType<PlayerActionMenus>();
                 foreach (var menu in menus)
                 {
-                     var container = menu.GetComponentInChildren<HotbarsContainer>();
-                     if (container != null && container.Controller != null)
-                     {
-                         container.Controller.ToggleHotkeyEdits(true);
-                     }
+                    // Show the HotkeyCaptureMenu properly instead of just toggling edits
+                    // This ensures the dialog can be shown when users click hotkey buttons
+                    if (menu.MainSettingsMenu != null && menu.MainSettingsMenu.HotkeyCaptureMenu != null)
+                    {
+                        menu.MainSettingsMenu.HotkeyCaptureMenu.Show();
+                    }
                 }
             }
         }

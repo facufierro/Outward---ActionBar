@@ -260,9 +260,16 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
                ActionSlot.CanvasGroup.blocksRaycasts = true;
                if (ActionSlot.KeyButton != null) ActionSlot.KeyButton.interactable = true;
             }
-            else if (!toggle && ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden && ActionSlot.SlotAction == null)
+            else
             {
-                ActionSlot.CanvasGroup.alpha = 0;
+                // Restore canvas group state when exiting edit mode
+                ActionSlot.CanvasGroup.interactable = true;
+                ActionSlot.CanvasGroup.blocksRaycasts = true;
+                
+                if (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden && ActionSlot.SlotAction == null)
+                {
+                    ActionSlot.CanvasGroup.alpha = 0;
+                }
             }
 
             ActionSlot.ActionButton.enabled = !toggle;

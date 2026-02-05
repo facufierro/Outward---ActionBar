@@ -75,6 +75,14 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "<Pending>")]
         private void Update()
         {
+            // Handle Escape when in hotkey mode but dialog is not open
+            // This allows exiting hotkey mode entirely by pressing Escape
+            if (!_monitorKeys && IsShowing && Input.GetKeyDown(KeyCode.Escape))
+            {
+                Hide();
+                return;
+            }
+            
             if (!_monitorKeys)
                 return;
 
@@ -240,9 +248,16 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         public void ShowDialog(int slotIndex, HotkeyCategories category)
         {
             DebugLogger.Log($"Capturing Hotkey for slot index {slotIndex} in category {category}.");
+            
+            // Reset state from any previous capture
+            _modifierUp = false;
+            _keyGroup.KeyCode = default;
+            _keyGroup.Modifiers.Clear();
+            _keyGroup.AxisDirection = AxisDirections.None;
+            _text.text = string.Empty;
+            
             _slotIndex = slotIndex;
             _category = category;
-            gameObject.SetActive(true);
             Dialog.SetActive(true);
             _monitorKeys = true;
         }
