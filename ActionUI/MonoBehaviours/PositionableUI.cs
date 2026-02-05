@@ -63,10 +63,12 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                 _originPosition = RectTransform.ToRectTransformPosition();
             }
 
+            // Capture origin BEFORE applying profile if not already set or if it was set to current position which might be wrong
+             StartPosition = new Vector2(RectTransform.anchoredPosition.x, RectTransform.anchoredPosition.y);
+
             if (_profileManager != null && _profileManager.PositionsProfileService != null)
                 SetPositionFromProfile(_profileManager.PositionsProfileService.GetProfile());
 
-            StartPosition = new Vector2(RectTransform.anchoredPosition.x, RectTransform.anchoredPosition.y);
 
             if (BackgroundImage != null)
                 BackgroundImage.gameObject.SetActive(_positioningEnabled);

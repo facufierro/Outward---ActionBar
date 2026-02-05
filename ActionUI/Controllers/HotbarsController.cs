@@ -43,6 +43,11 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             _hbc.LeftHotbarNav.SetHotkeys(profile.Hotbars.Select(b => b.HotbarHotkey));
             _hbc.LeftHotbarNav.SetBarText((_hbc.SelectedHotbar + 1).ToString());
 
+            if (profile.HideLeftNav)
+                _hbc.LeftHotbarNav.Hide();
+            else
+                _hbc.LeftHotbarNav.Show();
+
             for (int h = 0; h < profile.Hotbars.Count; h++)
             {
                 var barCanvas = UnityEngine.Object.Instantiate(_hbc.BaseHotbarCanvas);
@@ -190,6 +195,12 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
 
         public void HotbarsContainerUpdate()
         {
+            if (_hbc.IsInHotkeyEditMode)
+            {
+                 Cursor.visible = true;
+                 Cursor.lockState = CursorLockMode.None;
+            }
+
             if (_resizeNeeded)
             {
                 ResizeLayoutGroup();
@@ -272,6 +283,11 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             {
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
+            }
+            else
+            {
+                 Cursor.visible = false;
+                 Cursor.lockState = CursorLockMode.Locked;
             }
         }
     }

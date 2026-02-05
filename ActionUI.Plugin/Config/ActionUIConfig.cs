@@ -36,7 +36,7 @@ namespace ModifAmorphic.Outward.ActionUI.Config
 
             // Hotbar
             Rows = config.Bind("Hotbar", "Rows", 1, new ConfigDescription("Number of action bar rows.", new AcceptableValueRange<int>(1, 4), new ConfigurationManagerAttributes { IsAdvanced = false }));
-            SlotsPerRow = config.Bind("Hotbar", "SlotsPerRow", 8, new ConfigDescription("Number of slots per row.", new AcceptableValueRange<int>(1, 20), new ConfigurationManagerAttributes { IsAdvanced = false }));
+            SlotsPerRow = config.Bind("Hotbar", "SlotsPerRow", 11, new ConfigDescription("Number of slots per row.", new AcceptableValueRange<int>(1, 20), new ConfigurationManagerAttributes { IsAdvanced = false }));
             Scale = config.Bind("Hotbar", "Scale", 100, new ConfigDescription("Scale of the action bars in percent.", new AcceptableValueRange<int>(50, 200), new ConfigurationManagerAttributes { IsAdvanced = false }));
             
             HideLeftNav = config.Bind("Hotbar", "HideLeftNav", false, new ConfigDescription("Hide the left navigation arrows.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
@@ -162,10 +162,6 @@ namespace ModifAmorphic.Outward.ActionUI.Config
                     {
                         // Safely resize
                         jsonService.UpdateDimensions(Rows.Value, SlotsPerRow.Value);
-
-                        profile.Scale = Scale.Value;
-                        profile.HideLeftNav = HideLeftNav.Value;
-                        profile.CombatMode = CombatMode.Value;
 
                         // Apply new settings
                         jsonService.SetCooldownTimer(ShowCooldownTimer.Value, PreciseCooldownTime.Value);

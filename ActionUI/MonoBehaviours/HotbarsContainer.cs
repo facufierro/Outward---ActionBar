@@ -1,5 +1,6 @@
 using ModifAmorphic.Outward.Unity.ActionUI;
 using ModifAmorphic.Outward.Unity.ActionUI.Controllers;
+using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -97,6 +98,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         {
             SetComponents();
             _controller = new HotbarsController(this);
+            PlayerActionMenus.OnPlayerIdAssigned.AddListener(OnPlayerAssigned);
 
             //posText = transform.parent.GetComponentsInChildren<Text>().First(t => t.name == "HotbarsPosText");
             //rectTransform = GetComponent<RectTransform>();
@@ -105,6 +107,19 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             //gridPosText = transform.parent.GetComponentsInChildren<Text>().First(t => t.name == "Hotbar0GridPosText");
             IsAwake = true;
             OnAwake?.Invoke();
+        }
+
+        private void OnPlayerAssigned(PlayerActionMenus menus)
+        {
+             if (menus == PlayerActionMenus && menus.ProfileManager?.HotbarProfileService != null)
+             {
+                 menus.ProfileManager.HotbarProfileService.OnProfileChanged += OnProfileChanged;
+             }
+        }
+
+        private void OnProfileChanged(IHotbarProfile profile, HotbarProfileChangeTypes type)
+        {
+            _controller.ConfigureHotbars(profile);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "<Pending>")]

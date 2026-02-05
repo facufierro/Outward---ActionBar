@@ -131,7 +131,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             DebugLogger.Log($"MainSettingsMenu::Hide: hideMenus.Count == {hideMenus?.Count()}");
             if (showMe)
             {
-                Show();
+               // Show(); // Dont show, just go back to nothing.
             }
             else if (gameObject.activeSelf)
             {

@@ -41,6 +41,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         {
             RemoveOriginPositions(positonsProfile);
             base.SaveProfile(positonsProfile);
+            OnProfileChanged?.TryInvoke(GetProfile());
         }
 
         protected override void RefreshCachedProfile(IActionUIProfile actionMenusProfile, bool suppressChangeEvent = false)
