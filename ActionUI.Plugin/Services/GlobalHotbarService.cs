@@ -69,6 +69,21 @@ namespace ModifAmorphic.Outward.ActionUI.Services
              profile.HideLeftNav = ActionUISettings.HideLeftNav.Value;
              profile.CombatMode = ActionUISettings.CombatMode.Value;
              
+             // Sync per-slot settings from Config to all slot configs
+             var emptySlotOption = Enum.TryParse<EmptySlotOptions>(ActionUISettings.EmptySlotOption.Value, out var parsedOption) 
+                 ? parsedOption 
+                 : EmptySlotOptions.Transparent;
+             
+             foreach (var bar in profile.Hotbars)
+             {
+                 foreach (var slot in bar.Slots)
+                 {
+                     slot.Config.EmptySlotOption = emptySlotOption;
+                     slot.Config.ShowCooldownTime = ActionUISettings.ShowCooldownTimer.Value;
+                     slot.Config.PreciseCooldownTime = ActionUISettings.PreciseCooldownTime.Value;
+                 }
+             }
+             
              // Check dimensions
              EnsureDimensions(profile, profile.Rows, profile.SlotsPerRow);
         }
