@@ -10,6 +10,23 @@ This is a modified version of the original **Action UI** mod by **ModifAmorphic*
 ## License
 This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**, consistent with the original project's license. Source code must remain open.
 
+## Changes in 1.2.0
+
+This version fixes several critical UI refresh and settings bugs:
+
+**UI Bug Fixes:**
+- **Fixed Persistent UI Element**: Removed lingering "Skill Chain" UI window by implementing recursive GameObject destruction in PlayerActionMenus.
+- **Fixed Disabled Slot Visual Bug**: Disabled slots now correctly remain hidden when keybinds are changed by prioritizing IsDisabled check in AssignEmptyAction.
+- **Fixed UI Refresh Loop**: Prevented infinite refresh loop that was blocking inputs by adding recursion guard in GlobalHotbarService.
+- **Fixed Disabled Slots Blinking**: Disabled slots no longer flicker when pausing the game by adding alpha change guards in AssignEmptyAction.
+
+**Settings Fixes:**
+- **Fixed "Hide Left Nav" Setting**: Now properly updates by implementing complete settings synchronization in SaveNew.
+- **Fixed "Empty Slot Display" Setting**: Fixed both the initial sync issue and dropdown update issue by implementing complete settings sync and per-slot propagation.
+
+**Code Cleanup:**
+- Removed obsolete ChainedSkill.cs file that was causing build errors.
+
 ## Changes in 1.0.0
 This version specifically streamlines the mod and fixes key issues:
 

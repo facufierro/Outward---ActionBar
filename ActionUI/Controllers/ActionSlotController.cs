@@ -56,7 +56,8 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             {
                 ActionSlot.EmptyImage.gameObject.SetActive(true);
                 ActionSlot.EmptyImage.color = Color.white; // Reset color
-                ActionSlot.CanvasGroup.alpha = 0;
+                if (ActionSlot.CanvasGroup.alpha != 0)
+                    ActionSlot.CanvasGroup.alpha = 0;
             }
             else if (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Transparent)
             {
@@ -65,13 +66,15 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
                 ActionSlot.EmptyImage.gameObject.SetActive(false);
                 var emptyImage = ActionSlot.ActionImages.AddOrUpdateImage(new ActionSlotIcon() { Name = "emptyTransparentAction", Icon = null });
                 emptyImage.color = color;
-                ActionSlot.CanvasGroup.alpha = 1;
+                if (ActionSlot.CanvasGroup.alpha != 1)
+                    ActionSlot.CanvasGroup.alpha = 1;
             }
             else if (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Image)
             {
                 ActionSlot.EmptyImage.gameObject.SetActive(true);
                 ActionSlot.EmptyImage.color = Color.white; // Reset color
-                ActionSlot.CanvasGroup.alpha = 1;
+                if (ActionSlot.CanvasGroup.alpha != 1)
+                    ActionSlot.CanvasGroup.alpha = 1;
             }
 
         }
