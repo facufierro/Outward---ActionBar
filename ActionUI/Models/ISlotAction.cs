@@ -7,6 +7,8 @@ namespace ModifAmorphic.Outward.Unity.ActionUI
     public interface ISlotAction
     {
         string DisplayName { get; }
+        int ActionId { get; }
+        string ActionUid { get; }
         ICooldown Cooldown { get; }
         IStackable Stack { get; }
         Dictionary<BarPositions, IBarProgress> ActiveBars { get; }

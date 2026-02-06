@@ -9,6 +9,10 @@ namespace ModifAmorphic.Outward.ActionUI.Models
     public class EquipSkillPreview : ISlotAction, IDisposable
     {
         public string DisplayName { get; internal set; }
+        
+        // Preview actions don't have persistent item IDs
+        public int ActionId => -1;
+        public string ActionUid => null;
 
         public ICooldown Cooldown { get; internal set; }
 

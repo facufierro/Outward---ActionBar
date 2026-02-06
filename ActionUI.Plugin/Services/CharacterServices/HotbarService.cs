@@ -90,6 +90,13 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 SwapCanvasGroup();
 
                 var profile = GetOrCreateActiveProfile();
+                
+                // Load character-specific slot assignments
+                if (_hotbarProfileService is GlobalHotbarService globalService)
+                {
+                    globalService.LoadCharacterSlots(_character.UID);
+                }
+                
                 TryConfigureHotbars(profile, HotbarProfileChangeTypes.ProfileRefreshed);
                 _hotbars.ClearChanges();
                 _hotbarProfileService.OnProfileChanged += TryConfigureHotbars;
@@ -192,6 +199,13 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                     var profile = GetOrCreateActiveProfile();
                     Logger.LogDebug($"{nameof(HotbarService)}_{InstanceID}: Hotbar changes detected. Saving.");
                     _hotbarProfileService.Update(_hotbars);
+                    
+                    // Save character-specific slot assignments
+                    if (_hotbarProfileService is GlobalHotbarService globalService)
+                    {
+                        globalService.SaveCharacterSlots(_character.UID);
+                    }
+                    
                     _hotbars.ClearChanges();
                 }
             }

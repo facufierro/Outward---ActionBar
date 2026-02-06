@@ -257,8 +257,39 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         public void Update(HotbarsContainer hotbar)
         {
-            // Update profile from container state
-            // Re-implement if necessary
+            // Sync slot assignments from UI container to profile
+            if (hotbar?.Hotbars != null && _cachedProfile?.Hotbars != null)
+            {
+                for (int barIndex = 0; barIndex < hotbar.Hotbars.Length && barIndex < _cachedProfile.Hotbars.Count; barIndex++)
+                {
+                    var uiBar = hotbar.Hotbars[barIndex];
+                    var profileBar = _cachedProfile.Hotbars[barIndex];
+                    
+                    for (int slotIndex = 0; slotIndex < uiBar.Length && slotIndex < profileBar.Slots.Count; slotIndex++)
+                    {
+                        var uiSlot = uiBar[slotIndex];
+                        var profileSlot = profileBar.Slots[slotIndex];
+                        
+                        if (uiSlot.SlotAction != null)
+                        {
+                            profileSlot.ItemID = uiSlot.SlotAction.ActionId;
+                            profileSlot.ItemUID = uiSlot.SlotAction.ActionUid;
+                        }
+                        else
+                        {
+                            profileSlot.ItemID = -1;
+                            profileSlot.ItemUID = null;
+                        }
+                        
+                        // Sync disabled state from UI config
+                        if (uiSlot.Config != null)
+                        {
+                            profileSlot.Config.IsDisabled = uiSlot.Config.IsDisabled;
+                        }
+                    }
+                }
+            }
+            
             Save();
         }
 
@@ -392,5 +423,142 @@ namespace ModifAmorphic.Outward.ActionUI.Services
              // implementation
              return new List<IHotbarSlotData>(original); // Placeholder, needs deep clone
         }
+        
+        #region Per-Character Slot Data
+        
+        /// <summary>
+        /// Loads slot assignments from a character-specific JSON file and applies them to the current profile.
+        /// </summary>
+        public void LoadCharacterSlots(string characterUID)
+        {
+            if (string.IsNullOrEmpty(characterUID))
+            {
+                Logger.LogWarning("LoadCharacterSlots called with empty characterUID");
+                return;
+            }
+            
+            var filePath = GetCharacterSlotFilePath(characterUID);
+            if (!System.IO.File.Exists(filePath))
+            {
+                Logger.LogDebug($"No character slot file found for {characterUID} at {filePath}. Starting with empty slots.");
+                return;
+            }
+            
+            try
+            {
+                var json = System.IO.File.ReadAllText(filePath);
+                var charData = JsonConvert.DeserializeObject<CharacterSlotData>(json);
+                
+                if (charData == null || charData.Slots == null)
+                    return;
+                
+                // Apply slot assignments to current profile
+                foreach (var bar in _cachedProfile.Hotbars)
+                {
+                    var barIndex = _cachedProfile.Hotbars.IndexOf(bar);
+                    foreach (var slot in bar.Slots)
+                    {
+                        var slotIndex = bar.Slots.IndexOf(slot);
+                        var key = $"{barIndex}_{slotIndex}";
+                        
+                        if (charData.Slots.TryGetValue(key, out var slotEntry))
+                        {
+                            slot.ItemID = slotEntry.ItemID;
+                            slot.ItemUID = slotEntry.ItemUID;
+                        }
+                        else
+                        {
+                            // Clear slot if not in character data
+                            slot.ItemID = -1;
+                            slot.ItemUID = null;
+                        }
+                        
+                        // Apply disabled state
+                        slot.Config.IsDisabled = charData.DisabledSlots?.Contains(key) ?? false;
+                    }
+                }
+                
+                Logger.LogDebug($"Loaded character slots for {characterUID} from {filePath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException($"Failed to load character slots for {characterUID}", ex);
+            }
+        }
+        
+        /// <summary>
+        /// Saves slot assignments to a character-specific JSON file.
+        /// </summary>
+        public void SaveCharacterSlots(string characterUID)
+        {
+            if (string.IsNullOrEmpty(characterUID))
+            {
+                Logger.LogWarning("SaveCharacterSlots called with empty characterUID");
+                return;
+            }
+            
+            try
+            {
+                // Ensure directory exists
+                var dirPath = ActionUISettings.CharacterHotbarsPath;
+                if (!System.IO.Directory.Exists(dirPath))
+                {
+                    System.IO.Directory.CreateDirectory(dirPath);
+                }
+                
+                var charData = new CharacterSlotData
+                {
+                    CharacterUID = characterUID,
+                    Slots = new System.Collections.Generic.Dictionary<string, SlotDataEntry>(),
+                    DisabledSlots = new System.Collections.Generic.HashSet<string>()
+                };
+                
+                // Extract slot assignments from current profile
+                foreach (var bar in _cachedProfile.Hotbars)
+                {
+                    var barIndex = _cachedProfile.Hotbars.IndexOf(bar);
+                    foreach (var slot in bar.Slots)
+                    {
+                        var slotIndex = bar.Slots.IndexOf(slot);
+                        var key = $"{barIndex}_{slotIndex}";
+                        
+                        // Only save if there's an item assigned
+                        if (slot.ItemID > 0 || !string.IsNullOrEmpty(slot.ItemUID))
+                        {
+                            charData.Slots[key] = new SlotDataEntry
+                            {
+                                ItemID = slot.ItemID,
+                                ItemUID = slot.ItemUID
+                            };
+                        }
+                        
+                        // Save disabled state
+                        if (slot.Config.IsDisabled)
+                        {
+                            charData.DisabledSlots.Add(key);
+                        }
+                    }
+                }
+                
+                var filePath = GetCharacterSlotFilePath(characterUID);
+                var json = JsonConvert.SerializeObject(charData, Formatting.Indented);
+                System.IO.File.WriteAllText(filePath, json);
+                
+                Logger.LogDebug($"Saved character slots for {characterUID} to {filePath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException($"Failed to save character slots for {characterUID}", ex);
+            }
+        }
+        
+        private string GetCharacterSlotFilePath(string characterUID)
+        {
+            // Sanitize UID for use as filename
+            var sanitized = characterUID.Replace("\\", "_").Replace("/", "_").Replace(":", "_");
+            return System.IO.Path.Combine(ActionUISettings.CharacterHotbarsPath, $"{sanitized}.json");
+        }
+        
+        #endregion
     }
 }

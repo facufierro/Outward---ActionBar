@@ -10,6 +10,14 @@ This is a modified version of the original **Action UI** mod by **ModifAmorphic*
 ## License
 This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**, consistent with the original project's license. Source code must remain open.
 
+## Changes in 1.2.1
+
+**Per-Character Slot Saving:**
+- Skills and items assigned to action bar slots are now saved per-character instead of globally
+- Each character's slot assignments are stored in `BepInEx/config/ActionUI_CharacterSlots/{characterUID}.json`
+- Disabled slot states are also saved per-character
+- Layout settings (rows, slots, scale, etc.) remain global
+
 ## Changes in 1.2.0
 
 This version fixes several critical UI refresh and settings bugs:

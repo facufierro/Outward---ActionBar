@@ -13,6 +13,7 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
         public static readonly string PluginPath = Path.GetDirectoryName(ActionUIPlugin.Instance.Info.Location);
         public static readonly string ConfigPath = Path.GetDirectoryName(ActionUIPlugin.Instance.Config.ConfigFilePath);
         public static readonly string GlobalKeymapsPath = Path.Combine(ConfigPath, "ActionUI_Keymaps");
+        public static readonly string CharacterHotbarsPath = Path.Combine(ConfigPath, "ActionUI_CharacterSlots");
 
         public static class ActionViewer
         {
