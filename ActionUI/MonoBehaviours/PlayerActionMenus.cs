@@ -15,7 +15,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         public MainSettingsMenu MainSettingsMenu;
         public DurabilityDisplay DurabilityDisplay;
         public EquipmentSetMenu EquipmentSetMenus;
-        public SkillChainMenu SkillChainMenu;
+
         //public SettingsView SettingsView;
         //public HotkeyCaptureMenu HotkeyCaptureMenu;
         //public HotbarSettingsView HotbarSettingsViewer;
@@ -62,6 +62,16 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
 
             //canvasPosText = GetComponentsInChildren<Text>().First(t => t.name == "ActionCanvasPosText");
             //canvasRectTransform = GetComponentInChildren<Canvas>().GetComponent<RectTransform>();
+            var childTransforms = GetComponentsInChildren<Transform>(true);
+            foreach (var t in childTransforms)
+            {
+                if (t != null && t.gameObject != null && t.name.Contains("SkillChain"))
+                {
+                    DebugLogger.Log($"Destroying persistent SkillChain object: {t.name}");
+                    Destroy(t.gameObject);
+                }
+            }
+            
             _actionMenus = GetComponentsInChildren<IActionMenu>(true);
 
             for (int i = 0; i < _actionMenus.Length; i++)

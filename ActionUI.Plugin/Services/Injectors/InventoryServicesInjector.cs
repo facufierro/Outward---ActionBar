@@ -20,8 +20,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
 
         //public delegate void EquipmentSetProfilesLoadedDelegate(int playerID, string characterUID, ArmorSetsJsonService armorService, WeaponSetsJsonService weaponService);
         //public event EquipmentSetProfilesLoadedDelegate EquipmentSetProfilesLoaded;
-        //public delegate void SkillChainsProfilesLoadedDelegate(int playerID, string characterUID, SkillChainsJsonService skillChainsService);
-        //public event SkillChainsProfilesLoadedDelegate SkillChainsProfilesLoaded;
+        //public delegate void EquipmentSetProfilesLoadedDelegate(int playerID, string characterUID, ArmorSetsJsonService armorService, WeaponSetsJsonService weaponService);
+        //public event EquipmentSetProfilesLoadedDelegate EquipmentSetProfilesLoaded;
 
         public InventoryServicesInjector(ServicesProvider services, PlayerMenuService playerMenuService, ModifGoService modifGoService, LevelCoroutines coroutines, Func<IModifLogger> getLogger)
         {

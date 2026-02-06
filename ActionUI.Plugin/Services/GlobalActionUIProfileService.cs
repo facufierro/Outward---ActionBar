@@ -52,7 +52,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 set => ActionUISettings.EquipmentSetsEnabled.Value = value; 
             }
             
-            public bool SkillChainsEnabled { get; set; } = true;
+
 
             // These sub-profiles might need their own global settings handling if used
             // For now, returning defaults or empty

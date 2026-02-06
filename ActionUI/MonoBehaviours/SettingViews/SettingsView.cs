@@ -21,7 +21,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         public Toggle ActionSlotsToggle;
         public Toggle DurabilityToggle;
         public Toggle EquipmentSetsToggle;
-        public Toggle SkillChainsToggle;
+
 
         public Button MoveUIButton;
         public Button ResetUIButton;
@@ -86,7 +86,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             if (DurabilityToggle != null)
                 DurabilityToggle.SetIsOnWithoutNotify(_profile?.DurabilityDisplayEnabled ?? false);
             EquipmentSetsToggle.SetIsOnWithoutNotify(_profile?.EquipmentSetsEnabled ?? false);
-            SkillChainsToggle.SetIsOnWithoutNotify(_profile?.SkillChainsEnabled ?? false);
+
         }
         private void HookControls()
         {
@@ -120,12 +120,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                 _profileService.Save();
             });
 
-            SkillChainsToggle.onValueChanged.AddListener(isOn =>
-            {
-                DebugLogger.Log($"SkillChainsToggle changed from {!isOn} to {isOn}. Saving profile.");
-                _profile.SkillChainsEnabled = isOn;
-                _profileService.Save();
-            });
+
 
             MoveUIButton.onClick.AddListener(ShowPositionScreen);
             ResetUIButton.onClick.AddListener(ResetUIPositions);
