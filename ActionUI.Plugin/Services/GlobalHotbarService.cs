@@ -436,11 +436,21 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 Logger.LogWarning("LoadCharacterSlots called with empty characterUID");
                 return;
             }
-            
+
             var filePath = GetCharacterSlotFilePath(characterUID);
             if (!System.IO.File.Exists(filePath))
             {
                 Logger.LogDebug($"No character slot file found for {characterUID} at {filePath}. Starting with empty slots.");
+                // Clear all slots to prevent leaking data from previous character
+                foreach (var bar in _cachedProfile.Hotbars)
+                {
+                    foreach (var slot in bar.Slots)
+                    {
+                        slot.ItemID = -1;
+                        slot.ItemUID = null;
+                        slot.Config.IsDisabled = false;
+                    }
+                }
                 return;
             }
             

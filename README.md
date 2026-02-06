@@ -10,6 +10,10 @@ This is a modified version of the original **Action UI** mod by **ModifAmorphic*
 ## License
 This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**, consistent with the original project's license. Source code must remain open.
 
+## Changes in 1.2.2
+
+- **Fixed Character Slot Leakage**: Fixed issue where creating a new character would inherit action bar slots from the previous character.
+
 ## Changes in 1.2.1
 
 **Per-Character Slot Saving:**
