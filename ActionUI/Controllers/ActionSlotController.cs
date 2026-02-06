@@ -52,7 +52,13 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             foreach (var bar in ActionSlot.ProgressBars.Values)
                 bar.gameObject.SetActive(false);
 
-            if (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Transparent)
+            if (ActionSlot.Config.IsDisabled || ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden)
+            {
+                ActionSlot.EmptyImage.gameObject.SetActive(true);
+                ActionSlot.EmptyImage.color = Color.white; // Reset color
+                ActionSlot.CanvasGroup.alpha = 0;
+            }
+            else if (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Transparent)
             {
                 var color = Color.grey;
                 color.a = .18f;
@@ -66,12 +72,6 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
                 ActionSlot.EmptyImage.gameObject.SetActive(true);
                 ActionSlot.EmptyImage.color = Color.white; // Reset color
                 ActionSlot.CanvasGroup.alpha = 1;
-            }
-            else if (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden || ActionSlot.Config.IsDisabled)
-            {
-                ActionSlot.EmptyImage.gameObject.SetActive(true);
-                ActionSlot.EmptyImage.color = Color.white; // Reset color
-                ActionSlot.CanvasGroup.alpha = 0;
             }
 
         }

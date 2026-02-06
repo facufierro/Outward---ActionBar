@@ -126,16 +126,37 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         public void SaveNew(IHotbarProfile hotbarProfile)
         {
-            // Sync specific properties back to Config Entries
-            if (ActionUISettings.Rows.Value != hotbarProfile.Rows) ActionUISettings.Rows.Value = hotbarProfile.Rows;
-            if (ActionUISettings.SlotsPerRow.Value != hotbarProfile.SlotsPerRow) ActionUISettings.SlotsPerRow.Value = hotbarProfile.SlotsPerRow;
-            // ... etc
-            
-            var json = JsonConvert.SerializeObject(hotbarProfile, Formatting.None);
-            if (ActionUISettings.SerializedHotbars.Value != json)
+            if (_isSaving) return;
+            _isSaving = true;
+
+            try
             {
-                ActionUISettings.SerializedHotbars.Value = json;
-                // ActionUISettings.Config.Save(); // BepInEx auto-saves
+                // Sync specific properties back to Config Entries
+                if (ActionUISettings.Rows.Value != hotbarProfile.Rows) ActionUISettings.Rows.Value = hotbarProfile.Rows;
+                if (ActionUISettings.SlotsPerRow.Value != hotbarProfile.SlotsPerRow) ActionUISettings.SlotsPerRow.Value = hotbarProfile.SlotsPerRow;
+                if (ActionUISettings.Scale.Value != hotbarProfile.Scale) ActionUISettings.Scale.Value = hotbarProfile.Scale;
+                if (ActionUISettings.HideLeftNav.Value != hotbarProfile.HideLeftNav) ActionUISettings.HideLeftNav.Value = hotbarProfile.HideLeftNav;
+                if (ActionUISettings.CombatMode.Value != hotbarProfile.CombatMode) ActionUISettings.CombatMode.Value = hotbarProfile.CombatMode;
+                
+                // Note: ShowCooldownTimer/EmptySlotOption are per-slot in profile but global in settings. 
+                // We sync the global setting to match the first slot of the first hotbar as a proxy.
+                if (hotbarProfile.Hotbars.Count > 0 && hotbarProfile.Hotbars[0].Slots.Count > 0)
+                {
+                    var config = hotbarProfile.Hotbars[0].Slots[0].Config;
+                    if (ActionUISettings.ShowCooldownTimer.Value != config.ShowCooldownTime) ActionUISettings.ShowCooldownTimer.Value = config.ShowCooldownTime;
+                    if (ActionUISettings.PreciseCooldownTime.Value != config.PreciseCooldownTime) ActionUISettings.PreciseCooldownTime.Value = config.PreciseCooldownTime;
+                    if (ActionUISettings.EmptySlotOption.Value != config.EmptySlotOption.ToString()) ActionUISettings.EmptySlotOption.Value = config.EmptySlotOption.ToString();
+                }
+
+                var json = JsonConvert.SerializeObject(hotbarProfile, Formatting.None);
+                if (ActionUISettings.SerializedHotbars.Value != json)
+                {
+                    ActionUISettings.SerializedHotbars.Value = json;
+                }
+            }
+            finally
+            {
+                _isSaving = false;
             }
         }
         
@@ -303,8 +324,12 @@ namespace ModifAmorphic.Outward.ActionUI.Services
              }
         }
 
+        private bool _isSaving = false;
+
         private void UpdateFromSettings(HotbarProfileChangeTypes type)
         {
+            if (_isSaving) return;
+
             // Called when settings change (e.g. Rows changed in config menu)
             // Reload simple values
              SyncSettingsToProfile(_cachedProfile);

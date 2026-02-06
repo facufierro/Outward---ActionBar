@@ -56,6 +56,13 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         private void Awake()
         {
             SetHotkeys.onClick.AddListener(EnableHotkeyEdits);
+            
+            // Reorder UI: Move Precise Time below Show Cooldown Time
+            if (ShowPrecisionTime != null && ShowCooldownTimer != null)
+            {
+                ShowPrecisionTime.transform.SetParent(ShowCooldownTimer.transform.parent);
+                ShowPrecisionTime.transform.SetSiblingIndex(ShowCooldownTimer.transform.GetSiblingIndex() + 1);
+            }
 
             _selectables = GetComponentsInChildren<SelectableTransitions>();
             for (int i = 0; i < _selectables.Length; i++)
