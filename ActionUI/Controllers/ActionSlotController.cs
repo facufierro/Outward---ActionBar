@@ -357,7 +357,7 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             if (ActionSlot.ParentCanvas != null && ActionSlot.ParentCanvas.enabled && ActionSlot.ActionButton.interactable)
             {
                 AssignEmptyAction();
-                ActionSlot.HotbarsContainer.HasChanges = true;
+                // ActionSlot.HotbarsContainer.HasChanges = true; // PREVENT PREMATURE SAVE which wipes profile!
             }
         }
 

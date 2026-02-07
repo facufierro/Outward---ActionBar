@@ -25,6 +25,9 @@ A modified version of **Action UI** by **ModifAmorphic**, focused on the Action 
 - Right-click "Add Skill" context menu
 
 ### Fixed
+- **Critical Fix**: Fixed inability to add items to slots if assignment fails (v1.2.18)
+- **Critical Fix**: Improved stability to prevent bar reset/wipe bugs (v1.2.17)
+- **Critical Fix**: Fixed bar resetting/emptying when changing hotkeys or loading new characters (v1.2.16)
 - Disabled slots flickering when opening menus
 - Vanilla keyboard quickslots appearing over action bar
 - UI refresh loop blocking inputs

@@ -143,6 +143,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             return true;
         }
 
+        private bool _isConfiguring = false;
+
         public void TryConfigureHotbars(IHotbarProfile profile)
         {
             try
@@ -150,11 +152,25 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 if (!_hotbars.IsAwake || !_isStarted || _character?.Inventory == null)
                     return;
 
+                _isConfiguring = true; // Block saves
                 _saveDisabled = true;
 
                 SetProfileHotkeys(profile);
 
                 _hotbars.Controller.ConfigureHotbars(profile);
+
+                // Add ActionSlotDropper immediately to ensure slots are always interactive, regardless of assignment success
+                foreach(var bar in _hotbars.Hotbars)
+                {
+                    if (bar == null) continue;
+                    foreach(var slot in bar)
+                    {
+                        if (slot != null && slot.ActionButton != null)
+                        {
+                             slot.ActionButton.gameObject.GetOrAddComponent<ActionSlotDropper>().SetLogger(_getLogger);
+                        }
+                    }
+                }
 
                 if (profile.HideLeftNav)
                     _hotbars.LeftHotbarNav.Hide();
@@ -164,7 +180,6 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 if (_isProfileInit)
                 {
                     AssignSlotActions(profile);
-                    _saveDisabled = false;
                 }
 
                 ScaleHotbars(profile.Scale);
@@ -172,6 +187,11 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             catch (Exception ex)
             {
                 Logger.LogException($"Failed to configure Hotbars.", ex);
+            }
+            finally
+            {
+                _isConfiguring = false;
+                _saveDisabled = false;
             }
         }
         private void TryConfigureHotbars(IHotbarProfile profile, HotbarProfileChangeTypes changeType)
@@ -194,6 +214,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         {
             try
             {
+                if (_isConfiguring) return; // STRICTLY BLOCK SAVES DURING CONFIG
+
                 if (_hotbars.HasChanges && !_saveDisabled)
                 {
                     var profile = GetOrCreateActiveProfile();
@@ -312,46 +334,68 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             //_characterUI.HideMenu(CharacterUI.MenuScreens.Inventory);
 
             _saveDisabled = true;
-            for (int hb = 0; hb < profile.Hotbars.Count; hb++)
+            _isConfiguring = true; // Ensure blocked
+            try
             {
-                for (int s = 0; s < profile.Hotbars[hb].Slots.Count; s++)
+                for (int hb = 0; hb < profile.Hotbars.Count; hb++)
                 {
-                    try
+                    for (int s = 0; s < profile.Hotbars[hb].Slots.Count; s++)
                     {
-                        var slotData = profile.Hotbars[hb].Slots[s] as SlotData;
-                        var actionSlot = _hotbars.Controller.GetActionSlots()[hb][s];
-                        if (!_slotData.TryGetItemSlotAction(slotData, profile.CombatMode, out var slotAction))
+                        try
                         {
-                            actionSlot.Controller.AssignEmptyAction();
+                            var slotData = profile.Hotbars[hb].Slots[s] as SlotData;
+                            var actionSlot = _hotbars.Controller.GetActionSlots()[hb][s];
+                            
+                            bool assigned = false;
+                            
+                            // Validate slotData and actionSlot
+                            if (slotData != null && actionSlot != null)
+                            {
+                                if (_slotData.TryGetItemSlotAction(slotData, profile.CombatMode, out var slotAction))
+                                {
+                                    try
+                                    {
+                                        actionSlot.Controller.AssignSlotAction(slotAction);
+                                        assigned = true;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Logger.LogException($"Failed to assign slot action '{slotAction?.DisplayName}' to Bar {hb}, Slot Index {s}.", ex);
+                                    }
+                                }
+                            }
+
+                            if (!assigned)
+                            {
+                                // Ensure it's visually empty if we failed to assign something
+                                actionSlot.Controller.AssignEmptyAction();
+                            }
+                            
+                            // Dropper is now added in ActionSlot.Start(), so we don't need to do it here
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            try
-                            {
-                                actionSlot.Controller.AssignSlotAction(slotAction);
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.LogException($"Failed to assign slot action '{slotAction.DisplayName}' to Bar {hb}, Slot Index {s}.", ex);
-                            }
+                            Logger.LogException($"Failed to assign action to slot {hb}_{s}.", ex);
                         }
-                        actionSlot.ActionButton.gameObject.GetOrAddComponent<ActionSlotDropper>().SetLogger(_getLogger);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogException($"Failed to assign action to slot {hb}_{s}.", ex);
                     }
                 }
+                
+                SetProfileHotkeys(profile);
+                
+                if (!_isProfileInit)
+                {
+                    _isProfileInit = true;
+                }
+                
+                _hotbars.Controller.Refresh();
             }
-            SetProfileHotkeys(profile);
-            if (!_isProfileInit)
+            finally
             {
-                _isProfileInit = true;
+                Logger.LogDebug($"Clearing Hotbar Change Flag and enabling save.");
+                _hotbars.ClearChanges();
+                _saveDisabled = false;
+                _isConfiguring = false;
             }
-            Logger.LogDebug($"Clearing Hotbar Change Flag.");
-            _hotbars.ClearChanges();
-            _hotbars.Controller.Refresh();
-            _saveDisabled = false;
         }
         private void SetProfileHotkeys(IHotbarProfile profile)
         {
