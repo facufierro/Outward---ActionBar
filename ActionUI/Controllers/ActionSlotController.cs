@@ -269,8 +269,15 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             ActionSlot.KeyButton.gameObject.SetActive(toggle);
             if (toggle)
             {
-               if (ActionSlot.CanvasGroup.alpha == 0f)
-                   ActionSlot.CanvasGroup.alpha = 1;
+               // Show all slots, but disabled ones should be faded
+               if (ActionSlot.Config.IsDisabled)
+               {
+                   ActionSlot.CanvasGroup.alpha = 0.5f; // Faded to indicate disabled
+               }
+               else if (ActionSlot.CanvasGroup.alpha == 0f)
+               {
+                   ActionSlot.CanvasGroup.alpha = 1f;
+               }
                
                ActionSlot.CanvasGroup.interactable = true;
                ActionSlot.CanvasGroup.blocksRaycasts = true;
