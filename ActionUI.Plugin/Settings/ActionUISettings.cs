@@ -186,8 +186,26 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                 var rect = container.GetComponent<RectTransform>();
                 var parent = rect.parent as RectTransform;
                 float pWidth = parent ? parent.rect.width : Screen.width;
-                // Pivot is Right (1). Pos = -pWidth/2 + halfWidth
-                center = -(pWidth / 2f) + (rect.rect.width * container.transform.localScale.x / 2f);
+                
+                // Calculate Effective Hotbar Width (Total - Nav)
+                float totalWidth = rect.rect.width * container.transform.localScale.x;
+                float navWidth = 0f;
+                
+                if (container.LeftHotbarNav != null)
+                {
+                     var navRect = container.LeftHotbarNav.GetComponent<RectTransform>();
+                     if (navRect != null) navWidth = navRect.rect.width * container.transform.localScale.x;
+                }
+                
+                float hotbarWidth = totalWidth - navWidth;
+
+                // Pivot is Right (1). 
+                // The Hotbar part ends at Pivot (0 offset from right) and starts at -hotbarWidth.
+                // Center of hotbar is at -hotbarWidth/2.
+                // We want that point to be at -pWidth/2.
+                // So Pivot Position = -pWidth/2 + hotbarWidth/2.
+                
+                center = -(pWidth / 2f) + (hotbarWidth / 2f);
             }
             DrawHotbarSetting(entry, "Center", center);
         }
