@@ -244,18 +244,18 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                     center = -(pWidth / 2f) + scaledDist;
                     
                     if (foundGrid)
-                        debugInfo = $"[P:{padL:F0}/{padR:F0}]";
+                        debugInfo = "";
                     else
-                        debugInfo = "[Def]";
+                        debugInfo = "";
                 }
             }
             catch (System.Exception ex)
             {
-                debugInfo = "[Err]";
-                UnityEngine.Debug.LogException(ex);
+                // Silent catch for release
+                // UnityEngine.Debug.LogException(ex);
             }
 
-            DrawHotbarSetting(entry, "Center " + debugInfo, center);
+            DrawHotbarSetting(entry, "Center", center);
         }
 
         private static void DrawHotbarY(ConfigEntryBase entry)
