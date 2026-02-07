@@ -177,8 +177,36 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
             }
         }
 
-        private static void DrawHotbarX(ConfigEntryBase entry) => DrawHotbarSetting(entry, "Center", -960f); // -960 from Right Edge
-        private static void DrawHotbarY(ConfigEntryBase entry) => DrawHotbarSetting(entry, "Center", -Screen.height / 2f); // Dynamic Vertical Center (Inverted for slider)
+        private static void DrawHotbarX(ConfigEntryBase entry)
+        {
+            float center = -Screen.width / 2f;
+            var container = Object.FindObjectOfType<HotbarsContainer>();
+            if (container != null)
+            {
+                var rect = container.GetComponent<RectTransform>();
+                var parent = rect.parent as RectTransform;
+                float pWidth = parent ? parent.rect.width : Screen.width;
+                // Pivot is Right (1). Pos = -pWidth/2 + halfWidth
+                center = -(pWidth / 2f) + (rect.rect.width * container.transform.localScale.x / 2f);
+            }
+            DrawHotbarSetting(entry, "Center", center);
+        }
+
+        private static void DrawHotbarY(ConfigEntryBase entry)
+        {
+            float center = -Screen.height / 2f;
+            var container = Object.FindObjectOfType<HotbarsContainer>();
+            if (container != null)
+            {
+                var rect = container.GetComponent<RectTransform>();
+                var parent = rect.parent as RectTransform;
+                float pHeight = parent ? parent.rect.height : Screen.height;
+                // Pivot is Bottom (0). Pos = pHeight/2 - halfHeight
+                // Inverted Slider: Value = -Pos
+                center = -(pHeight / 2f) + (rect.rect.height * container.transform.localScale.y / 2f);
+            }
+            DrawHotbarSetting(entry, "Center", center);
+        }
 
         private static void DrawHotbarSetting(ConfigEntryBase entry, string centerLabel, float centerValue)
         {
