@@ -15,12 +15,17 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
     {
         private RectTransform _leftDisplay;
 
+        // Cached reference to the vanilla panel
+        private KeyboardQuickSlotPanel _vanillaKeyboardPanel;
+
         private IHotbarController _controller;
         public IHotbarController Controller { get => _controller; }
 
         //      private Button _settingsButton;
         //public Button SettingsButton => _settingsButton;
         public PlayerActionMenus PlayerActionMenus;
+        public List<CanvasGroup> VanillaOverlayTargets = new List<CanvasGroup>();
+        public List<GameObject> VanillaSuppressionTargets = new List<GameObject>();
         //public ActionsViewer ActionsViewer;
 
         public bool HotbarsEnabled => _actionBarsCanvas.gameObject.activeSelf;
@@ -141,6 +146,63 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             //	var grid = HotbarGrid[0].GetComponent<RectTransform>();
             //	gridPosText.text = $"HotbarsGrid0 Pos: {grid.position.x}, {grid.position.y}. Size {grid.sizeDelta.x}, {grid.sizeDelta.y}";
             //}
+
+            // Handle dynamic positioning based on vanilla UI
+            float maxOffset = 0f;
+            if (VanillaOverlayTargets != null)
+            {
+                foreach (var target in VanillaOverlayTargets)
+                {
+                    if (target != null && target.gameObject.activeInHierarchy && target.alpha > 0.01f)
+                    {
+                        var rect = target.GetComponent<RectTransform>();
+                        if (rect != null)
+                        {
+                            // Convert target height to world space then to local space to ensure correct offset regardless of scaling differences
+                            float worldHeight = rect.rect.height * target.transform.lossyScale.y;
+                            if (transform.lossyScale.y > 0.0001f)
+                                maxOffset = Mathf.Max(maxOffset, worldHeight / transform.lossyScale.y);
+                            else
+                                maxOffset = Mathf.Max(maxOffset, rect.rect.height);
+                        }
+                    }
+                }
+            }
+
+            // Brute-force override for Vanilla Keyboard Slots
+            // We search for it if we haven't found it, or if the reference was lost/destroyed
+            if (_vanillaKeyboardPanel == null)
+            {
+                // Look in parent (CharacterUI) for the panel
+                _vanillaKeyboardPanel = transform.root.GetComponentInChildren<KeyboardQuickSlotPanel>(true);
+            }
+
+            if (_vanillaKeyboardPanel != null && _vanillaKeyboardPanel.gameObject.activeSelf)
+            {
+                // Force disable it
+                _vanillaKeyboardPanel.gameObject.SetActive(false);
+            }
+
+            // Enforce suppression of other targets (like Gamepad slots if needed, or if added via Service)
+            if (VanillaSuppressionTargets != null)
+            {
+                for (int i = 0; i < VanillaSuppressionTargets.Count; i++)
+                {
+                    var target = VanillaSuppressionTargets[i];
+                    if (target != null)
+                    {
+                        if (target.activeSelf) target.SetActive(false);
+                         // Also squash it just in case
+                        if (target.transform.localScale != Vector3.zero) target.transform.localScale = Vector3.zero;
+                    }
+                }
+            }
+
+            var positionable = GetComponent<PositionableUI>();
+            if (positionable != null)
+            {
+               positionable.DynamicOffset = new Vector2(0, maxOffset);
+            }
 
             Controller.HotbarsContainerUpdate();
         }

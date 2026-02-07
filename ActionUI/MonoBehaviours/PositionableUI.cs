@@ -47,13 +47,26 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                 _startPositionSet = true;
             }
         }
+        public Vector2 DynamicOffset { get; set; } = Vector2.zero;
+        private Vector2 _logicalPosition;
+        private bool _logicalPositionInit = false;
         private Vector2 _offset;
 
         public UnityEvent<PositionableUI> UIElementMoved { get; } = new UnityEvent<PositionableUI>();
 
+        private void InitializeLogicalPosition()
+        {
+            if (!_logicalPositionInit)
+            {
+                _logicalPosition = RectTransform.anchoredPosition;
+                _logicalPositionInit = true;
+            }
+        }
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "<Pending>")]
         private void Start()
         {
+            InitializeLogicalPosition();
             if (ResetButton != null && !_buttonInit)
             {
                 ResetButton.onClick.AddListener(ResetToOrigin);
@@ -66,6 +79,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
 
             // Capture origin BEFORE applying profile if not already set or if it was set to current position which might be wrong
              StartPosition = new Vector2(RectTransform.anchoredPosition.x, RectTransform.anchoredPosition.y);
+             _logicalPosition = StartPosition;
 
             if (_positionsProfileService != null)
                 SetPositionFromProfile(_positionsProfileService.GetProfile());
@@ -78,6 +92,12 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "<Pending>")]
         private void Update()
         {
+            // Apply dynamic offset every frame to ensure smoothness and responsiveness to offset changes
+            if (_logicalPositionInit)
+            {
+                RectTransform.anchoredPosition = _logicalPosition + DynamicOffset;
+            }
+
             if (profileChangeEventNeeded && _positionsProfileService != null)
             {
                 profileChangeEventNeeded = false;
@@ -145,7 +165,12 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             OnIsPositionableChanged.Invoke(_positioningEnabled);
         }
 
-        public void SetPosition(float x, float y) => RectTransform.anchoredPosition = new Vector2(x, y);
+        public void SetPosition(float x, float y) 
+        {
+            InitializeLogicalPosition();
+            _logicalPosition = new Vector2(x, y);
+            RectTransform.anchoredPosition = _logicalPosition + DynamicOffset;
+        }
 
         public void SetPosition(UIPosition position) => SetPosition(position.AnchoredPosition.X, position.AnchoredPosition.Y);
 
@@ -181,7 +206,10 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         public void OnDrag(PointerEventData eventData)
         {
             if (_positioningEnabled)
+            {
                 transform.position = new Vector2(Input.mousePosition.x, Input.mousePosition.y) - _offset;
+                _logicalPosition = RectTransform.anchoredPosition - DynamicOffset;
+            }
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -193,7 +221,11 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                 {
                     _originPosition = RectTransform.ToRectTransformPosition();
                 }
-                StartPosition = new Vector2(RectTransform.anchoredPosition.x, RectTransform.anchoredPosition.y);
+                
+                // Keep logical position up to date
+                InitializeLogicalPosition();
+                StartPosition = _logicalPosition;
+                
                 _offset = eventData.position - new Vector2(RectTransform.position.x, RectTransform.position.y);
             }
         }

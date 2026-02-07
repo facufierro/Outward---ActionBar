@@ -307,5 +307,12 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
                  Time.timeScale = 1f;
             }
         }
+        public void Refresh()
+        {
+            foreach (var slot in _hbc.ActionSlots.Values)
+            {
+                slot.Controller.Refresh();
+            }
+        }
     }
 }

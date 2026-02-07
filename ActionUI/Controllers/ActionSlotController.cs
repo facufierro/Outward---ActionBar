@@ -160,6 +160,17 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
 
         public void ActionSlotUpdate()
         {
+            // CRITICAL: Enforce disabled slot visibility every frame
+            // This overrides any code path that might incorrectly set alpha = 1
+            if (ActionSlot.Config != null && ActionSlot.Config.IsDisabled && !ActionSlot.HotbarsContainer.IsInHotkeyEditMode)
+            {
+                if (ActionSlot.CanvasGroup.alpha != 0f)
+                {
+                    ActionSlot.CanvasGroup.alpha = 0f;
+                }
+                return; // Skip other update logic for disabled slots
+            }
+
             if (!IsUpdateEnabled)
                 return;
 
@@ -354,16 +365,13 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             ActionSlot.CooldownImage.enabled = true;
             ActionSlot.CooldownText.enabled = true;
             ActionSlot.StackText.enabled = true;
-            ActionSlot.CanvasGroup.alpha = 1;
-
             ActionSlot.CooldownText.text = String.Empty;
             ActionSlot.StackText.text = String.Empty;
 
-            if (ActionSlot.Config.IsDisabled && !ActionSlot.HotbarsContainer.IsInHotkeyEditMode)
-            {
-                ActionSlot.CanvasGroup.alpha = 0;
-            }
+            bool isHidden = ActionSlot.Config.IsDisabled && !ActionSlot.HotbarsContainer.IsInHotkeyEditMode;
+            ActionSlot.CanvasGroup.alpha = isHidden ? 0 : 1;
         }
+
 
         private void UnassignSlotAction()
         {

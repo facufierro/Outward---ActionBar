@@ -229,20 +229,53 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             try
             {
                 var controllerSwitcher = _characterUI.GetComponentsInChildren<QuickSlotControllerSwitcher>().FirstOrDefault(q => q.name == "QuickSlot");
-                var canvasGroup = controllerSwitcher.GetPrivateField<QuickSlotControllerSwitcher, CanvasGroup>("m_keyboardQuickSlots");
-
-                var hotbarCanvasGroup = _hotbars.GetComponent<CanvasGroup>();
-                controllerSwitcher.SetPrivateField("m_keyboardQuickSlots", hotbarCanvasGroup);
-
-                var keyboard = controllerSwitcher.GetComponentInChildren<KeyboardQuickSlotPanel>(true);
-                if (keyboard != null)
+                if (controllerSwitcher == null)
                 {
-                    DisableKeyboardQuickslots(keyboard);
+                    Logger.LogWarning("[HotbarService] QuickSlotControllerSwitcher not found!");
+                    return;
                 }
+                
+                // Get vanilla bars
+                var keyboardGroup = controllerSwitcher.GetPrivateField<QuickSlotControllerSwitcher, CanvasGroup>("m_keyboardQuickSlots");
+                var gamepadGroup = controllerSwitcher.GetPrivateField<QuickSlotControllerSwitcher, CanvasGroup>("m_gamepadQuickSlots");
+
+                // Disable vanilla keyboard quickslots (we replace them)
+                if (_hotbars.VanillaSuppressionTargets == null)
+                    _hotbars.VanillaSuppressionTargets = new System.Collections.Generic.List<GameObject>();
+                _hotbars.VanillaSuppressionTargets.Clear();
+
+                if (keyboardGroup != null)
+                {
+                    keyboardGroup.gameObject.SetActive(false);
+                    keyboardGroup.alpha = 0f;
+                    _hotbars.VanillaSuppressionTargets.Add(keyboardGroup.gameObject);
+                }
+
+                // Create Dummy to satisfy ControllerSwitcher
+                var dummyObj = new GameObject("DummyKeyboardSlots");
+                dummyObj.transform.SetParent(controllerSwitcher.transform);
+                var dummyGroup = dummyObj.AddComponent<CanvasGroup>();
+                dummyGroup.alpha = 0f; // Invisible
+                // Make sure it doesn't block raycasts
+                dummyGroup.blocksRaycasts = false;
+                dummyGroup.interactable = false;
+
+                // Swap references so game controls dummy instead of real keyboard slots
+                controllerSwitcher.SetPrivateField("m_keyboardQuickSlots", dummyGroup);
+
+                // Setup Dynamic Positioning Targets
+                if (_hotbars.VanillaOverlayTargets == null)
+                    _hotbars.VanillaOverlayTargets = new System.Collections.Generic.List<CanvasGroup>();
+                
+                _hotbars.VanillaOverlayTargets.Clear();
+                // Only offset for Gamepad slots, not for Keyboard (which is now Dummy/Hidden)
+                if (gamepadGroup != null) _hotbars.VanillaOverlayTargets.Add(gamepadGroup);
+                
+                Logger.LogDebug($"[HotbarService] SwapCanvasGroup Complete. KeyboardGroup found: {keyboardGroup != null}, GamepadGroup found: {gamepadGroup != null}. Swapped to Dummy.");
             }
             catch (Exception ex)
             {
-                Logger.LogException("Failed to swap in Hotbar canvas group. Action Slots will likely not automaticaly hide when a controller is used.", ex);
+                Logger.LogException("Failed to populate VanillaOverlayTargets or disable QuickSlots.", ex);
             }
 
         }
@@ -317,6 +350,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             }
             Logger.LogDebug($"Clearing Hotbar Change Flag.");
             _hotbars.ClearChanges();
+            _hotbars.Controller.Refresh();
             _saveDisabled = false;
         }
         private void SetProfileHotkeys(IHotbarProfile profile)
