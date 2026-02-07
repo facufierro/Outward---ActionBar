@@ -8,7 +8,7 @@ A complete overhaul of the Outward Action Bar functionality, focused on stabilit
 - **Hide/Disable Slots**: Right-click in Hotkey Mode to toggle slot visibility.
 - **Per-Character Skill Saving**: Each character saves their own skill/item assignments.
 - **Global Layout Config**: Rows, slots, scale, disabled slots shared across all characters.
-- **UI Positioning**: Exact X/Y coordinate configuration via Config Manager.
+- **UI Positioning**: Position Hotbars with X/Y sliders or Drag & Drop.
 - **Config Manager Integration**: Uses Mefino's Config Manager instead of custom menu.
 
 ### Removed
@@ -24,8 +24,8 @@ A complete overhaul of the Outward Action Bar functionality, focused on stabilit
 1. The old `ActionUI` mod.
 2. The old deprecated `ActionBar` mod.
 
-> **YOU MUST DELETE BOTH OF THESE OLD MODS IF INSTALLED.**
-> **FAILING TO REMOVE THEM WILL CAUSE CRITICAL CONFLICTS.**
+**YOU MUST DELETE BOTH OF THESE OLD MODS IF INSTALLED.**
+**FAILING TO REMOVE THEM WILL CAUSE CRITICAL CONFLICTS.**
 
 ## Installation
 1. Ensure you have BepInEx installed.

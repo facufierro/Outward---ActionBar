@@ -47,7 +47,9 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
         
         // Exact Positioning
         public static ConfigEntry<float> HotbarPositionX;
+
         public static ConfigEntry<float> HotbarPositionY;
+
 
         // Input
         public static ConfigEntry<bool> SetHotkeyMode;
@@ -90,10 +92,14 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                 new ConfigurationManagerAttributes { CustomDrawer = DrawResetInfo, HideDefaultButton = true, IsAdvanced = false }));
 
             HotbarPositionX = config.Bind("UI Positioning", "Hotbar X", 0f, 
-                new ConfigDescription("Horizontal position of the Hotbar.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
+                new ConfigDescription("Horizontal position of the Hotbar.", new AcceptableValueRange<float>(-1000f, 1000f), 
+                new ConfigurationManagerAttributes { IsAdvanced = false, CustomDrawer = DrawHotbarX, HideDefaultButton = true }));
 
             HotbarPositionY = config.Bind("UI Positioning", "Hotbar Y", 0f, 
-                new ConfigDescription("Vertical position of the Hotbar.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
+                new ConfigDescription("Vertical position of the Hotbar.", new AcceptableValueRange<float>(-1000f, 1000f), 
+                new ConfigurationManagerAttributes { IsAdvanced = false, CustomDrawer = DrawHotbarY, HideDefaultButton = true }));
+
+
 
             SetHotkeyMode = config.Bind("Input", "Set Hotkey Mode", false,
                 new ConfigDescription("Click to enter hotkey assignment mode.", null,
@@ -171,6 +177,50 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
             }
         }
 
+        private static void DrawHotbarX(ConfigEntryBase entry) => DrawHotbarSetting(entry, "Center", 0f);
+        private static void DrawHotbarY(ConfigEntryBase entry) => DrawHotbarSetting(entry, "Center", 0f);
+
+        private static void DrawHotbarSetting(ConfigEntryBase entry, string centerLabel, float centerValue)
+        {
+            float value = (float)entry.BoxedValue;
+            var range = (AcceptableValueRange<float>)entry.Description.AcceptableValues;
+            float min = (float)range.MinValue;
+            float max = (float)range.MaxValue;
+            
+            GUILayout.BeginHorizontal();
+            
+            // Slider
+            // We use a fixed width for the slider to leave room for other elements, or expand
+            float newValue = GUILayout.HorizontalSlider(value, min, max, GUILayout.ExpandWidth(true));
+            
+            // Number Box
+            string text = GUILayout.TextField(newValue.ToString("F1"), GUILayout.Width(50));
+            if (float.TryParse(text, out float parsed))
+            {
+                // Clamp to range just in case
+                newValue = Mathf.Clamp(parsed, min, max);
+            }
+
+            // Center Button
+            if (GUILayout.Button(centerLabel, GUILayout.ExpandWidth(false)))
+            {
+                newValue = centerValue;
+            }
+
+            // Reset Button
+            if (GUILayout.Button("Reset", GUILayout.ExpandWidth(false)))
+            {
+                newValue = (float)entry.DefaultValue;
+            }
+            
+            GUILayout.EndHorizontal();
+            
+            if (Mathf.Abs(newValue - value) > 0.001f)
+            {
+                entry.BoxedValue = newValue;
+            }
+        }
+
         private static void DrawHotkeyModeButton(ConfigEntryBase entry)
         {
             if (GUILayout.Button("Enter Hotkey Mode", GUILayout.ExpandWidth(true)))
@@ -186,6 +236,8 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                 }
             }
         }
+
+
 
         private static void ApplyHotbarSettings()
         {

@@ -225,6 +225,15 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             _baseHotbarCanvas.gameObject.SetActive(false);
             _baseGrid.gameObject.SetActive(false);
             _baseActionSlot.SetActive(false);
+            
+            // Set Anchor to Center for easier positioning
+            var rect = GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+            }
         }
 
         internal void ResetCollections()
