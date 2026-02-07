@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+- **Added**: Exact X/Y Coordinate Configuration for Hotbars (in Config Manager > UI Positioning).
+- **Added**: Two-way binding between Config Manager and Visual Drag Editor.
+
 ## 1.0.2
 - **Documentation**: Fixed README formatting and deduplication.
 - **Documentation**: Fixed Changelog display on Thunderstore.

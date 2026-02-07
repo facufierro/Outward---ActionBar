@@ -1,7 +1,7 @@
 {
     "name": "ActionBar_Redux",
     "author": "fierrof",
-    "version_number": "1.0.2",
+    "version_number": "1.1.0",
     "website_url": "https://github.com/facufierro/Outward---ActionBar",
     "description": "Expand QuickSlots with highly configurable Action Slots. Customize hotbar layout and reposition HUD elements.",
     "dependencies": [
