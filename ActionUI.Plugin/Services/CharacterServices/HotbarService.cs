@@ -504,7 +504,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             if (posUI != null)
             {
                  // Initial sync from config
-                 posUI.SetPosition(ActionUISettings.HotbarPositionX.Value, ActionUISettings.HotbarPositionY.Value);
+                 // Negate Y because Config Range is [-2160, 0] (0=Right=Bottom), but UI expects Positive Y for Up
+                 posUI.SetPosition(ActionUISettings.HotbarPositionX.Value, -ActionUISettings.HotbarPositionY.Value);
                  
                  // Listener for Config -> UI
                  ActionUISettings.HotbarPositionX.SettingChanged += OnHotbarPositionConfigChanged;
@@ -522,7 +523,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 var posUI = _hotbars.GetComponent<PositionableUI>();
                 if (posUI != null)
                 {
-                    posUI.SetPosition(ActionUISettings.HotbarPositionX.Value, ActionUISettings.HotbarPositionY.Value);
+                    posUI.SetPosition(ActionUISettings.HotbarPositionX.Value, -ActionUISettings.HotbarPositionY.Value);
                 }
             }
         }
@@ -532,8 +533,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
              if (Math.Abs(ActionUISettings.HotbarPositionX.Value - p.RectTransform.anchoredPosition.x) > 0.1f)
                 ActionUISettings.HotbarPositionX.Value = p.RectTransform.anchoredPosition.x;
                 
-             if (Math.Abs(ActionUISettings.HotbarPositionY.Value - p.RectTransform.anchoredPosition.y) > 0.1f)
-                ActionUISettings.HotbarPositionY.Value = p.RectTransform.anchoredPosition.y;
+             if (Math.Abs(ActionUISettings.HotbarPositionY.Value - (-p.RectTransform.anchoredPosition.y)) > 0.1f)
+                ActionUISettings.HotbarPositionY.Value = -p.RectTransform.anchoredPosition.y;
         }
 
         public void Dispose()

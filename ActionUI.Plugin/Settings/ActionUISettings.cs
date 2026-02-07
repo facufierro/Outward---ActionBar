@@ -96,7 +96,7 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                 new ConfigurationManagerAttributes { IsAdvanced = false, CustomDrawer = DrawHotbarX, HideDefaultButton = true }));
 
             HotbarPositionY = config.Bind("UI Positioning", "Hotbar Y", 0f, 
-                new ConfigDescription("Vertical position of the Hotbar.", new AcceptableValueRange<float>(0f, 2160f), 
+                new ConfigDescription("Vertical position of the Hotbar.", new AcceptableValueRange<float>(-2160f, 0f), 
                 new ConfigurationManagerAttributes { IsAdvanced = false, CustomDrawer = DrawHotbarY, HideDefaultButton = true }));
 
 
@@ -178,7 +178,7 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
         }
 
         private static void DrawHotbarX(ConfigEntryBase entry) => DrawHotbarSetting(entry, "Center", -960f); // -960 from Right Edge
-        private static void DrawHotbarY(ConfigEntryBase entry) => DrawHotbarSetting(entry, "Center", 540f); // 540 from Bottom Edge
+        private static void DrawHotbarY(ConfigEntryBase entry) => DrawHotbarSetting(entry, "Center", -Screen.height / 2f); // Dynamic Vertical Center (Inverted for slider)
 
         private static void DrawHotbarSetting(ConfigEntryBase entry, string centerLabel, float centerValue)
         {
