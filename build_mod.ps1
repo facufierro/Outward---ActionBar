@@ -29,6 +29,7 @@ if (-not (Test-Path $publishDir)) {
 }
 Copy-Item "$projectDir\manifest.json" -Destination $publishDir
 Copy-Item "$solutionDir\README.md" -Destination $publishDir
+Copy-Item "$solutionDir\CHANGELOG.md" -Destination $publishDir
 
 # Copy icon from solution root
 $iconSource = "$solutionDir\icon.png"

@@ -1,3 +1,9 @@
+# Changelog
+
+## 1.0.2
+- **Documentation**: Fixed README formatting and deduplication.
+- **Documentation**: Fixed Changelog display on Thunderstore.
+
 ## 1.0.1
 - **Documentation**: Added critical warning about incompatibility with legacy ActionUI mod.
 - **Documentation**: Added instructions to uninstall the old mod.
