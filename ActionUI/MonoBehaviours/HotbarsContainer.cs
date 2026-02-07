@@ -8,6 +8,8 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
+
+
 namespace ModifAmorphic.Outward.Unity.ActionMenus
 {
     [UnityScriptComponent]
@@ -112,6 +114,9 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             //gridPosText = transform.parent.GetComponentsInChildren<Text>().First(t => t.name == "Hotbar0GridPosText");
             IsAwake = true;
             OnAwake?.Invoke();
+            
+            // Link to Configs
+            // Logic moved to HotbarService to avoid circular dependency
         }
 
         private void OnPlayerAssigned(PlayerActionMenus menus)

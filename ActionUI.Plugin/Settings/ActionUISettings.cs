@@ -44,6 +44,10 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
         // UI Positioning
         public static ConfigEntry<bool> OpenPositioningUI;
         public static ConfigEntry<bool> ResetPositions;
+        
+        // Exact Positioning
+        public static ConfigEntry<float> HotbarPositionX;
+        public static ConfigEntry<float> HotbarPositionY;
 
         // Input
         public static ConfigEntry<bool> SetHotkeyMode;
@@ -84,6 +88,12 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
             ResetPositions = config.Bind("UI Positioning", "Reset UI Positions", false,
                 new ConfigDescription("Reset all UI elements to their default positions.", null,
                 new ConfigurationManagerAttributes { CustomDrawer = DrawResetInfo, HideDefaultButton = true, IsAdvanced = false }));
+
+            HotbarPositionX = config.Bind("UI Positioning", "Hotbar X", 0f, 
+                new ConfigDescription("Horizontal position of the Hotbar.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
+
+            HotbarPositionY = config.Bind("UI Positioning", "Hotbar Y", 0f, 
+                new ConfigDescription("Vertical position of the Hotbar.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
 
             SetHotkeyMode = config.Bind("Input", "Set Hotkey Mode", false,
                 new ConfigDescription("Click to enter hotkey assignment mode.", null,

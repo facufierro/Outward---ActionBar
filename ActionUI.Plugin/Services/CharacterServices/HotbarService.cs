@@ -104,7 +104,11 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 CharacterUIPatches.AfterRefreshHUDVisibility += ShowHideHotbars;
 
                 AssignSlotActions();
+                AssignSlotActions();
                 ShowHideHotbars(_characterUI);
+                
+                // Initialize Position Coupling
+                InitializePositionConfig();
             }
             catch (Exception ex)
             {
@@ -475,10 +479,61 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                     }
                     if (_hotbarProfileService != null)
                         _hotbarProfileService.OnProfileChanged -= TryConfigureHotbars;
+                        
+                    // Unsubscribe from Position events
+                    ActionUISettings.HotbarPositionX.SettingChanged -= OnHotbarPositionConfigChanged;
+                    ActionUISettings.HotbarPositionY.SettingChanged -= OnHotbarPositionConfigChanged;
+                    
+                    if (_hotbars != null)
+                    {
+                        var posUI = _hotbars.GetComponent<PositionableUI>();
+                        if (posUI != null)
+                        {
+                            posUI.UIElementMoved.RemoveListener(OnHotbarUIMoved);
+                        }
+                    }
                 }
 
                 disposedValue = true;
             }
+        }
+
+        private void InitializePositionConfig()
+        {
+            var posUI = _hotbars.GetComponent<PositionableUI>();
+            if (posUI != null)
+            {
+                 // Initial sync from config
+                 posUI.SetPosition(ActionUISettings.HotbarPositionX.Value, ActionUISettings.HotbarPositionY.Value);
+                 
+                 // Listener for Config -> UI
+                 ActionUISettings.HotbarPositionX.SettingChanged += OnHotbarPositionConfigChanged;
+                 ActionUISettings.HotbarPositionY.SettingChanged += OnHotbarPositionConfigChanged;
+                 
+                 // Listener for UI -> Config (Dragging)
+                 posUI.UIElementMoved.AddListener(OnHotbarUIMoved);
+            }
+        }
+
+        private void OnHotbarPositionConfigChanged(object sender, EventArgs e)
+        {
+            if (_hotbars != null)
+            {
+                var posUI = _hotbars.GetComponent<PositionableUI>();
+                if (posUI != null)
+                {
+                    posUI.SetPosition(ActionUISettings.HotbarPositionX.Value, ActionUISettings.HotbarPositionY.Value);
+                }
+            }
+        }
+
+        private void OnHotbarUIMoved(PositionableUI p)
+        {
+             if (Math.Abs(ActionUISettings.HotbarPositionX.Value - p.RectTransform.anchoredPosition.x) > 0.1f)
+                ActionUISettings.HotbarPositionX.Value = p.RectTransform.anchoredPosition.x;
+                
+             if (Math.Abs(ActionUISettings.HotbarPositionY.Value - p.RectTransform.anchoredPosition.y) > 0.1f)
+                ActionUISettings.HotbarPositionY.Value = p.RectTransform.anchoredPosition.y;
         }
 
         public void Dispose()
