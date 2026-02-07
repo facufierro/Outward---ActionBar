@@ -1,22 +1,14 @@
-# Action Bar (Modified by fierrof)
+# Action Bar
 
-A modified version of **Action UI** by **ModifAmorphic**, focused on the Action Bar and UI repositioning.
+A complete overhaul of the Outward Action Bar functionality, focused on stability and configuration.
 
-## Credits
-- **Original Author**: [ModifAmorphic](https://github.com/ModifAmorphic)
-- **Modified by**: fierrof
-- **Source**: [GitHub](https://github.com/facufierro/Outward---ActionBar)
-- **License**: GPL-3.0
-
----
-
-## Changes from Original Mod
+## Features
 
 ### Added
-- **Hide/Disable Slots**: Right-click in Hotkey Mode to toggle slot visibility
-- **Per-Character Skill Saving**: Each character saves their own skill/item assignments
-- **Global Layout Config**: Rows, slots, scale, disabled slots shared across all characters
-- **Config Manager Integration**: Uses Mefino's Config Manager instead of custom menu
+- **Hide/Disable Slots**: Right-click in Hotkey Mode to toggle slot visibility.
+- **Per-Character Skill Saving**: Each character saves their own skill/item assignments.
+- **Global Layout Config**: Rows, slots, scale, disabled slots shared across all characters.
+- **Config Manager Integration**: Uses Mefino's Config Manager instead of custom menu.
 
 ### Removed
 - Equipment Sets
@@ -24,21 +16,26 @@ A modified version of **Action UI** by **ModifAmorphic**, focused on the Action 
 - Durability Display functions
 - Right-click "Add Skill" context menu
 
-### Fixed
-- **Critical Fix**: Fixed inability to add items to slots if assignment fails (v1.2.18)
-- **Critical Fix**: Improved stability to prevent bar reset/wipe bugs (v1.2.17)
-- **Critical Fix**: Fixed bar resetting/emptying when changing hotkeys or loading new characters (v1.2.16)
-- Disabled slots flickering when opening menus
-- Vanilla keyboard quickslots appearing over action bar
-- UI refresh loop blocking inputs
-- Settings not persisting correctly
+## ⚠️ INCOMPATIBILITY NOTICE ⚠️
+**This mod (`ActionBar_Redux`) is a complete rewrite and replacement.**
 
----
+**It is NOT COMPATIBLE with:**
+1. The old `ActionUI` mod.
+2. The old deprecated `ActionBar` mod.
 
-## Features
-- Multiple hotbar rows and configurable slots per row
-- Drag-and-drop UI positioning (F5 in Config Manager)
-- Hotkey assignment mode (F4 in Config Manager)
-- Global scale adjustment
+> **YOU MUST DELETE BOTH OF THESE OLD MODS IF INSTALLED.**
+> **FAILING TO REMOVE THEM WILL CAUSE CRITICAL CONFLICTS.**
 
-![Hotbars](https://github.com/ModifAmorphic/outward/blob/master/ActionUI/WikiReadmeAssets/Hotbar.png?raw=true)
+## Installation
+1. Ensure you have BepInEx installed.
+2. Extract the `ActionBar` folder into your `BepInEx/plugins` directory.
+
+## Configuration
+Access the configuration menu via **Config Manager** (F5 by default) in-game.
+- **General**: Toggle the mod, adjust scale, and HUD visibility.
+- **Layout**: Configure rows and slots per row.
+- **Hotkeys**: Set up your custom keybindings.
+
+To disable/hide specific slots:
+1. Enter **Hotkey Mode** (default binding in controls).
+2. **Right-click** on any slot to toggle it disabled/hidden.

@@ -13,7 +13,7 @@ if (-not (Test-Path $manifestPath)) {
 }
 $manifest = Get-Content $manifestPath | ConvertFrom-Json
 $version = $manifest.version_number
-$modName = "ActionBar"
+$modName = $manifest.name
 $author = "fierrof"
 $zipName = "$author-$modName-$version.zip"
 
