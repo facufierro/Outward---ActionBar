@@ -213,55 +213,36 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
         private static void DrawHotbarY(ConfigEntryBase entry)
         {
             float center = -Screen.height / 2f;
-            string debugInfo = "";
+            var container = Object.FindObjectOfType<HotbarsContainer>();
             
-            try 
+            if (container != null)
             {
-                var container = Object.FindObjectOfType<HotbarsContainer>();
-                if (container != null)
-                {
-                    var rect = container.GetComponent<RectTransform>();
-                    
-                    // Safe Rebuild just in case
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+                var rect = container.GetComponent<RectTransform>();
+                
+                // Safe Rebuild
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
 
-                    // FIX: Use Root Canvas Height, not immediate parent (which is 210px HUD panel)
-                    var canvas = container.GetComponentInParent<Canvas>();
-                    // Valid check: root canvas might be null if detached, but unlikely in game
-                    RectTransform canvasRect = null;
-                    if (canvas != null && canvas.rootCanvas != null)
-                         canvasRect = canvas.rootCanvas.GetComponent<RectTransform>();
-                    else if (canvas != null)
-                         canvasRect = canvas.GetComponent<RectTransform>();
-                    else
-                         canvasRect = rect.parent as RectTransform;
-
-                    float pHeight = canvasRect ? canvasRect.rect.height : Screen.height;
-                    
-                    // Use actual Rect height (scaled)
-                    float barHeight = rect.rect.height * container.transform.localScale.y;
-
-                    // Pivot is Bottom (0). Value = -Pos
-                    center = -(pHeight / 2f) + (barHeight / 2f);
-                    
-                    debugInfo = $"[H:{barHeight:F0} / C:{pHeight:F0}]";
-                }
+                // Use Root Canvas Height (Screen Height)
+                var canvas = container.GetComponentInParent<Canvas>();
+                RectTransform canvasRect = null;
+                
+                if (canvas != null && canvas.rootCanvas != null)
+                     canvasRect = canvas.rootCanvas.GetComponent<RectTransform>();
+                else if (canvas != null)
+                     canvasRect = canvas.GetComponent<RectTransform>();
                 else
-                {
-                     // Fallback
-                     float pHeight = Screen.height;
-                     float estHeight = 60f * Rows.Value * (Scale.Value / 100f);
-                     center = -(pHeight / 2f) + (estHeight / 2f);
-                     debugInfo = $"[Est:{estHeight:F0}]";
-                }
-            }
-            catch (System.Exception ex)
-            {
-                debugInfo = "[Err]";
-                UnityEngine.Debug.LogException(ex);
+                     canvasRect = rect.parent as RectTransform;
+
+                float pHeight = canvasRect ? canvasRect.rect.height : Screen.height;
+                
+                // Use actual Rect height (scaled)
+                float barHeight = rect.rect.height * container.transform.localScale.y;
+
+                // Pivot is Bottom (0). Value = -Pos
+                center = -(pHeight / 2f) + (barHeight / 2f);
             }
 
-            DrawHotbarSetting(entry, "Center " + debugInfo, center);
+            DrawHotbarSetting(entry, "Center", center);
         }
 
         private static void DrawHotbarSetting(ConfigEntryBase entry, string centerLabel, float centerValue)
