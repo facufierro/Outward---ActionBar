@@ -441,14 +441,15 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             if (!System.IO.File.Exists(filePath))
             {
                 Logger.LogDebug($"No character slot file found for {characterUID} at {filePath}. Starting with empty slots.");
-                // Clear all slots to prevent leaking data from previous character
+                // Clear slot ASSIGNMENTS to prevent leaking data from previous character
+                // NOTE: IsDisabled is GLOBAL config, NOT per-character, so we don't reset it
                 foreach (var bar in _cachedProfile.Hotbars)
                 {
                     foreach (var slot in bar.Slots)
                     {
                         slot.ItemID = -1;
                         slot.ItemUID = null;
-                        slot.Config.IsDisabled = false;
+                        // DON'T reset IsDisabled - it's global config!
                     }
                 }
                 return;
@@ -483,12 +484,11 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                             slot.ItemUID = null;
                         }
                         
-                        // Apply disabled state
-                        slot.Config.IsDisabled = charData.DisabledSlots?.Contains(key) ?? false;
+                        // NOTE: IsDisabled is GLOBAL - don't load from per-character file
                     }
                 }
                 
-                Logger.LogDebug($"Loaded character slots for {characterUID} from {filePath}");
+                Logger.LogDebug($"Loaded character slots for {characterUID} from {filePath}.");
             }
             catch (Exception ex)
             {
@@ -542,11 +542,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                             };
                         }
                         
-                        // Save disabled state
-                        if (slot.Config.IsDisabled)
-                        {
-                            charData.DisabledSlots.Add(key);
-                        }
+                        // NOTE: IsDisabled is GLOBAL config - don't save per-character
                     }
                 }
                 
@@ -554,7 +550,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 var json = JsonConvert.SerializeObject(charData, Formatting.Indented);
                 System.IO.File.WriteAllText(filePath, json);
                 
-                Logger.LogDebug($"Saved character slots for {characterUID} to {filePath}");
+                Logger.LogDebug($"Saved character slots for {characterUID} to {filePath}.");
             }
             catch (Exception ex)
             {
