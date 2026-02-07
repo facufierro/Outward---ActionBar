@@ -182,32 +182,80 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
         private static void DrawHotbarX(ConfigEntryBase entry)
         {
             float center = -Screen.width / 2f;
-            var container = Object.FindObjectOfType<HotbarsContainer>();
-            if (container != null)
+            string debugInfo = "";
+            
+            try 
             {
-                var rect = container.GetComponent<RectTransform>();
-                
-                // Use Canvas Width instead of immediate parent
-                var canvas = container.GetComponentInParent<Canvas>();
-                var canvasRect = canvas ? canvas.GetComponent<RectTransform>() : (rect.parent as RectTransform);
-                
-                float pWidth = canvasRect ? canvasRect.rect.width : Screen.width;
-                
-                float totalWidth = rect.rect.width * container.transform.localScale.x;
-                float navWidth = 0f;
-                
-                if (container.LeftHotbarNav != null)
+                var container = Object.FindObjectOfType<HotbarsContainer>();
+                if (container != null)
                 {
-                     var navRect = container.LeftHotbarNav.GetComponent<RectTransform>();
-                     if (navRect != null) navWidth = navRect.rect.width * container.transform.localScale.x;
-                }
-                
-                float hotbarWidth = totalWidth - navWidth;
+                    // 1. Get Screen Width
+                    float pWidth = Screen.width;
+                    var canvas = container.GetComponentInParent<Canvas>();
+                    if (canvas != null && canvas.rootCanvas != null)
+                         pWidth = canvas.rootCanvas.GetComponent<RectTransform>().rect.width;
+                    
+                    // 2. Safely Read Grid Properties
+                    float padL = 0f;
+                    float padR = 0f;
+                    float slotSize = 50f;
+                    float spacing = 5f;
+                    
+                    bool foundGrid = false;
+                    
+                    // Search for BaseHotbarGrid (safest template) or any active grid
+                    var allGrids = container.GetComponentsInChildren<GridLayoutGroup>(true);
+                    var targetGrid = allGrids.FirstOrDefault(g => g.name == "BaseHotbarGrid") ?? allGrids.FirstOrDefault();
+                    
+                    if (targetGrid != null)
+                    {
+                        padL = targetGrid.padding.left;
+                        padR = targetGrid.padding.right;
+                        slotSize = targetGrid.cellSize.x;
+                        spacing = targetGrid.spacing.x;
+                        foundGrid = true;
+                    }
 
-                // Pivot is Right (1). 
-                center = -(pWidth / 2f) + (hotbarWidth / 2f);
+                    // 3. Calculate Grid Width
+                    int slots = SlotsPerRow.Value;
+                    // Grid Width = (Cell + Spacing) * Slots - Spacing + PadL + PadR
+                    // Note: Unity Grid adds padding to the total width
+                    float gridContentWidth = (slotSize + spacing) * slots - spacing; 
+                    float gridTotalWidth = gridContentWidth + padL + padR;
+
+                    // 4. Calculate Visual Offset
+                    // We want Center of "Content" (Slots) at Screen Center.
+                    // Content Center relative to Left Edge = PadL + GridContentWidth / 2.
+                    // Right Edge relative to Left Edge = GridTotalWidth.
+                    // Distance from Right Edge to Content Center:
+                    // Dist = GridTotalWidth - (PadL + GridContentWidth / 2)
+                    //      = (GridContent + PadL + PadR) - PadL - GridContent/2
+                    //      = GridContent/2 + PadR.
+                    
+                    // We want: ScreenCenter = ContainerRight - Dist.
+                    // ContainerRight = ScreenCenter + Dist.
+                    
+                    float scale = Scale.Value / 100f;
+                    float scaledDist = (gridContentWidth / 2f + padR) * scale;
+                    
+                    // Pivot is Right (1). 
+                    // Pos = -ScreenCenter + scaledDist.
+                    
+                    center = -(pWidth / 2f) + scaledDist;
+                    
+                    if (foundGrid)
+                        debugInfo = $"[P:{padL:F0}/{padR:F0}]";
+                    else
+                        debugInfo = "[Def]";
+                }
             }
-            DrawHotbarSetting(entry, "Center", center);
+            catch (System.Exception ex)
+            {
+                debugInfo = "[Err]";
+                UnityEngine.Debug.LogException(ex);
+            }
+
+            DrawHotbarSetting(entry, "Center " + debugInfo, center);
         }
 
         private static void DrawHotbarY(ConfigEntryBase entry)
