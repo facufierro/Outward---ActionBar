@@ -3,7 +3,9 @@ using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using ModifAmorphic.Outward.Unity.ActionMenus;
 using ModifAmorphic.Outward.Unity.ActionUI;
 using System.IO;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 using ModifAmorphic.Outward.ActionUI.Services;
 
 namespace ModifAmorphic.Outward.ActionUI.Settings
@@ -184,10 +186,13 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
             if (container != null)
             {
                 var rect = container.GetComponent<RectTransform>();
-                var parent = rect.parent as RectTransform;
-                float pWidth = parent ? parent.rect.width : Screen.width;
                 
-                // Calculate Effective Hotbar Width (Total - Nav)
+                // Use Canvas Width instead of immediate parent
+                var canvas = container.GetComponentInParent<Canvas>();
+                var canvasRect = canvas ? canvas.GetComponent<RectTransform>() : (rect.parent as RectTransform);
+                
+                float pWidth = canvasRect ? canvasRect.rect.width : Screen.width;
+                
                 float totalWidth = rect.rect.width * container.transform.localScale.x;
                 float navWidth = 0f;
                 
@@ -200,19 +205,7 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                 float hotbarWidth = totalWidth - navWidth;
 
                 // Pivot is Right (1). 
-                // The Hotbar part ends at Pivot (0 offset from right) and starts at -hotbarWidth.
-                // Center of hotbar is at -hotbarWidth/2.
-                // We want that point to be at -pWidth/2.
-                // So Pivot Position = -pWidth/2 + hotbarWidth/2.
-                
                 center = -(pWidth / 2f) + (hotbarWidth / 2f);
-                
-                if (GUILayout.Button("Log X Debug", GUILayout.ExpandWidth(false)))
-                {
-                    UnityEngine.Debug.Log($"[ActionUI Debug] Screen: {Screen.width}, ParentW: {pWidth}");
-                    UnityEngine.Debug.Log($"[ActionUI Debug] TotalW: {totalWidth}, NavW: {navWidth}, HotbarW: {hotbarWidth}");
-                    UnityEngine.Debug.Log($"[ActionUI Debug] Calculated Center X: {center}");
-                }
             }
             DrawHotbarSetting(entry, "Center", center);
         }
@@ -220,25 +213,55 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
         private static void DrawHotbarY(ConfigEntryBase entry)
         {
             float center = -Screen.height / 2f;
-            var container = Object.FindObjectOfType<HotbarsContainer>();
-            if (container != null)
+            string debugInfo = "";
+            
+            try 
             {
-                var rect = container.GetComponent<RectTransform>();
-                var parent = rect.parent as RectTransform;
-                float pHeight = parent ? parent.rect.height : Screen.height;
-                // Pivot is Bottom (0). Pos = pHeight/2 - halfHeight
-                // Inverted Slider: Value = -Pos
-                float barHeight = rect.rect.height * container.transform.localScale.y;
-                center = -(pHeight / 2f) + (barHeight / 2f);
-                
-                if (GUILayout.Button("Log Y Debug", GUILayout.ExpandWidth(false)))
+                var container = Object.FindObjectOfType<HotbarsContainer>();
+                if (container != null)
                 {
-                    UnityEngine.Debug.Log($"[ActionUI Debug] Screen: {Screen.height}, ParentH: {pHeight}");
-                    UnityEngine.Debug.Log($"[ActionUI Debug] BarH: {barHeight}, ScaleY: {container.transform.localScale.y}");
-                    UnityEngine.Debug.Log($"[ActionUI Debug] Calculated Center Y: {center}");
+                    var rect = container.GetComponent<RectTransform>();
+                    
+                    // Safe Rebuild just in case
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+
+                    // FIX: Use Root Canvas Height, not immediate parent (which is 210px HUD panel)
+                    var canvas = container.GetComponentInParent<Canvas>();
+                    // Valid check: root canvas might be null if detached, but unlikely in game
+                    RectTransform canvasRect = null;
+                    if (canvas != null && canvas.rootCanvas != null)
+                         canvasRect = canvas.rootCanvas.GetComponent<RectTransform>();
+                    else if (canvas != null)
+                         canvasRect = canvas.GetComponent<RectTransform>();
+                    else
+                         canvasRect = rect.parent as RectTransform;
+
+                    float pHeight = canvasRect ? canvasRect.rect.height : Screen.height;
+                    
+                    // Use actual Rect height (scaled)
+                    float barHeight = rect.rect.height * container.transform.localScale.y;
+
+                    // Pivot is Bottom (0). Value = -Pos
+                    center = -(pHeight / 2f) + (barHeight / 2f);
+                    
+                    debugInfo = $"[H:{barHeight:F0} / C:{pHeight:F0}]";
+                }
+                else
+                {
+                     // Fallback
+                     float pHeight = Screen.height;
+                     float estHeight = 60f * Rows.Value * (Scale.Value / 100f);
+                     center = -(pHeight / 2f) + (estHeight / 2f);
+                     debugInfo = $"[Est:{estHeight:F0}]";
                 }
             }
-            DrawHotbarSetting(entry, "Center", center);
+            catch (System.Exception ex)
+            {
+                debugInfo = "[Err]";
+                UnityEngine.Debug.LogException(ex);
+            }
+
+            DrawHotbarSetting(entry, "Center " + debugInfo, center);
         }
 
         private static void DrawHotbarSetting(ConfigEntryBase entry, string centerLabel, float centerValue)
@@ -250,25 +273,19 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
             
             GUILayout.BeginHorizontal();
             
-            // Slider
-            // We use a fixed width for the slider to leave room for other elements, or expand
             float newValue = GUILayout.HorizontalSlider(value, min, max, GUILayout.ExpandWidth(true));
             
-            // Number Box
             string text = GUILayout.TextField(newValue.ToString("F1"), GUILayout.Width(50));
             if (float.TryParse(text, out float parsed))
             {
-                // Clamp to range just in case
                 newValue = Mathf.Clamp(parsed, min, max);
             }
 
-            // Center Button
             if (GUILayout.Button(centerLabel, GUILayout.ExpandWidth(false)))
             {
                 newValue = centerValue;
             }
 
-            // Reset Button
             if (GUILayout.Button("Reset", GUILayout.ExpandWidth(false)))
             {
                 newValue = (float)entry.DefaultValue;

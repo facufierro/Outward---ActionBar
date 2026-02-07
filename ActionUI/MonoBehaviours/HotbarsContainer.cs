@@ -41,6 +41,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         private Canvas _baseHotbarCanvas;
         internal Canvas BaseHotbarCanvas => _baseHotbarCanvas;
 
+        [SerializeField]
         private GridLayoutGroup _baseGrid;
         internal GridLayoutGroup BaseGrid => _baseGrid;
 
