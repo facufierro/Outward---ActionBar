@@ -206,6 +206,13 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                 // So Pivot Position = -pWidth/2 + hotbarWidth/2.
                 
                 center = -(pWidth / 2f) + (hotbarWidth / 2f);
+                
+                if (GUILayout.Button("Log X Debug", GUILayout.ExpandWidth(false)))
+                {
+                    UnityEngine.Debug.Log($"[ActionUI Debug] Screen: {Screen.width}, ParentW: {pWidth}");
+                    UnityEngine.Debug.Log($"[ActionUI Debug] TotalW: {totalWidth}, NavW: {navWidth}, HotbarW: {hotbarWidth}");
+                    UnityEngine.Debug.Log($"[ActionUI Debug] Calculated Center X: {center}");
+                }
             }
             DrawHotbarSetting(entry, "Center", center);
         }
@@ -221,7 +228,15 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                 float pHeight = parent ? parent.rect.height : Screen.height;
                 // Pivot is Bottom (0). Pos = pHeight/2 - halfHeight
                 // Inverted Slider: Value = -Pos
-                center = -(pHeight / 2f) + (rect.rect.height * container.transform.localScale.y / 2f);
+                float barHeight = rect.rect.height * container.transform.localScale.y;
+                center = -(pHeight / 2f) + (barHeight / 2f);
+                
+                if (GUILayout.Button("Log Y Debug", GUILayout.ExpandWidth(false)))
+                {
+                    UnityEngine.Debug.Log($"[ActionUI Debug] Screen: {Screen.height}, ParentH: {pHeight}");
+                    UnityEngine.Debug.Log($"[ActionUI Debug] BarH: {barHeight}, ScaleY: {container.transform.localScale.y}");
+                    UnityEngine.Debug.Log($"[ActionUI Debug] Calculated Center Y: {center}");
+                }
             }
             DrawHotbarSetting(entry, "Center", center);
         }
