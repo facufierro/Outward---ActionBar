@@ -70,14 +70,14 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
         }
         private void EnableUIPositioning()
         {
-            var uis = MainSettingsMenu.PlayerMenu.GetPositionableUIs();
+            var uis = Object.FindObjectsOfType<PositionableUI>();
 
             foreach (var ui in uis)
                 ui.EnableMovement();
         }
         private void DisableAndSavePositions()
         {
-            var uis = MainSettingsMenu.PlayerMenu.GetPositionableUIs();
+            var uis = Object.FindObjectsOfType<PositionableUI>();
             var positonService = MainSettingsMenu.PlayerMenu.ServicesProvider.GetService<IPositionsProfileService>();
             var positions = positonService.GetProfile();
             bool saveNeeded = false;

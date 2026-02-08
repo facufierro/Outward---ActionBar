@@ -64,7 +64,7 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
         public static void Init(ConfigFile config)
         {
             // General
-            EquipmentSetsEnabled = config.Bind("General", "Enable Equipment Sets", true,
+            EquipmentSetsEnabled = config.Bind("General", "Enable Equipment Sets", false,
                 new ConfigDescription("Enable the Equipment Sets tab in the action viewer.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
 
             // Hotbar
@@ -114,14 +114,7 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                  new ConfigDescription("JSON serialized hotbar configuration.", null, new ConfigurationManagerAttributes { Browsable = false, IsAdvanced = true }));
 
             // Events
-            Rows.SettingChanged += (s, e) => ApplyHotbarSettings();
-            SlotsPerRow.SettingChanged += (s, e) => ApplyHotbarSettings();
-            Scale.SettingChanged += (s, e) => ApplyHotbarSettings();
-            HideLeftNav.SettingChanged += (s, e) => ApplyHotbarSettings();
-            CombatMode.SettingChanged += (s, e) => ApplyHotbarSettings();
-            ShowCooldownTimer.SettingChanged += (s, e) => ApplyHotbarSettings();
-            PreciseCooldownTime.SettingChanged += (s, e) => ApplyHotbarSettings();
-            EmptySlotOption.SettingChanged += (s, e) => ApplyHotbarSettings();
+            // Handled by GlobalHotbarService to prevent race conditions
         }
 
         private static void CloseConfigWindow()
@@ -168,13 +161,10 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                 GlobalConfigService.Instance.SavePositions();
                 
                 // Force update UI
-                // We might need to implement an event or manual refresh here if the old system relied on OnProfileChanged
-                var menus = Object.FindObjectsOfType<PlayerActionMenus>();
-                foreach (var menu in menus)
+                var positionables = Object.FindObjectsOfType<PositionableUI>();
+                foreach (var pos in positionables)
                 {
-                     // Previously: menu.ProfileManager.PositionsProfileService.Save();
-                     // Now we need to trigger the update manually or through an event
-                     // Check if we need to call something on the menu to reset
+                    pos.ResetToOrigin();
                 }
             }
         }
@@ -344,27 +334,5 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
             }
         }
 
-
-
-        private static void ApplyHotbarSettings()
-        {
-            // Logic updated to use Config entries directly where possible, or refactor consumers
-            // For now, consumers (like HotbarsStartup or the hotbar UI) should read from these static ConfigEntries directly.
-            // This method might be redundant if we update the consumers to subscribe to config changes or check in Update()
-            
-            // However, to maintain some compatibility during refactor:
-            var menus = Object.FindObjectsOfType<PlayerActionMenus>();
-            foreach (var menu in menus)
-            {
-                 // We need to find the Hotbar script and update it.
-                 // Previously: if (menu.ProfileManager.HotbarProfileService is ... jsonService)
-                 
-                 // If the Hotbar UI listens to these events or we can access it directly, fine.
-                 // Ideally, the Hotbar UI components should reference ActionUISettings.Rows.Value, etc.
-                 
-                 // Let's assume for now we need to trigger a refresh on the hotbar.
-                 // We will need to locate the hotbar component.
-            }
-        }
     }
 }

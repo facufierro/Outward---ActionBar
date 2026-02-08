@@ -129,6 +129,17 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                  {
                      hotbarService.OnProfileChanged += OnProfileChanged;
                  }
+                 
+                 // Also initialize PositionableUI service since PlayerActionMenus might miss us if hierarchy is weird
+                 var positionable = GetComponent<PositionableUI>();
+                 if (positionable != null)
+                 {
+                     var posService = menus.ServicesProvider.GetService<IPositionsProfileService>();
+                     if (posService != null)
+                     {
+                         positionable.SetPositionsService(posService);
+                     }
+                 }
              }
         }
 

@@ -183,7 +183,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             {
                 DebugLogger.Log($"[Debug  :ActionMenus] PositionableUI{{{name}}}: Setting position of PositionableUI {name} to modified position of ({position.ModifiedPosition.AnchoredPosition.X}, {position.ModifiedPosition.AnchoredPosition.Y}).");
                 SetPosition(position.ModifiedPosition);
-                _originPosition = position.OriginPosition;
+                // _originPosition = position.OriginPosition; // Do not overwrite origin from profile, trust local startup origin
             }
         }
 
