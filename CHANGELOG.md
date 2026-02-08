@@ -2,13 +2,13 @@
 
 ## 1.1.0
 - **Added**: Precise UI Positioning:
-    - X/Y Sliders (-1000 to 1000) in Config Manager.
+    - X/Y Sliders in Config Manager.
     - Two-way binding between Config Manager and Visual Drag Editor.
     - "Center X" and "Center Y" buttons to alignment.
 - **Fixed**: UI Dragging no longer snaps the bar back to incorrect positions.
 - **Fixed**: "Reset Positions" button now correctly resets both UI and configuration values.
 - **Fixed**: Configuration changes (Rows, Slots) apply immediately and reliably.
-- **Removed**: "Equipment Sets" feature to streamline the mod and prevent conflicts.
+- **Removed**: "Equipment Sets" completely removed this time.
 
 ## 1.0.2
 - **Documentation**: Fixed README formatting and deduplication.
