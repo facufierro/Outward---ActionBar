@@ -21,8 +21,7 @@ namespace ModifAmorphic.Outward.ActionUI.Models
             this.skill = skill;
 
             this.Cooldown = new ItemCooldownTracker(skill);
-            this.equipmentSetSkill = skill as EquipmentSetSkill;
-            this.isEquipmentSetSkill = equipmentSetSkill != null;
+            // EquipmentSets removed
             this.Stack = skill.RequiredItems != null && skill.RequiredItems.Length > 0 ? new StackTracker(this, character.Inventory) : null;
         }
 
@@ -68,10 +67,7 @@ namespace ModifAmorphic.Outward.ActionUI.Models
         protected override void AssignRefItemDisplay(ActionSlot assignedSlot)
         {
             base.AssignRefItemDisplay(assignedSlot);
-            if (isEquipmentSetSkill && refItemDisplay != null)
-            {
-                EquipSetPrefabService.Instance.AddEquipmentSetIcon(refItemDisplay, equipmentSetSkill);
-            }
+            // if (isEquipmentSetSkill && refItemDisplay != null) ... Removed
         }
     }
 }

@@ -57,9 +57,9 @@ namespace ModifAmorphic.Outward.ActionUI
             _harmony.PatchAll(typeof(MenuPanelPatches));
             _harmony.PatchAll(typeof(ItemDisplayOptionPanelPatches));
 
-            _services
-                     .AddSingleton(new InventoryServicesInjector(_services, _playerMenuService, _modifGoService, _coroutines, _loggerFactory))
-                     .AddSingleton(new EquipSetPrefabService(_services.GetService<InventoryServicesInjector>(), _coroutines, _loggerFactory));
+                _services
+                      .AddSingleton(new InventoryServicesInjector(_services, _playerMenuService, _modifGoService, _coroutines, _loggerFactory));
+            // Removed EquipSetPrefabService
         }
     }
 }

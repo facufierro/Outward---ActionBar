@@ -48,8 +48,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             
             public bool EquipmentSetsEnabled 
             { 
-                get => ActionUISettings.EquipmentSetsEnabled.Value; 
-                set => ActionUISettings.EquipmentSetsEnabled.Value = value; 
+                get => false; 
+                set { } 
             }
             
 

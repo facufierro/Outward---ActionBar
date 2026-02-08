@@ -61,15 +61,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 GetSlotActionsQuery = () => GetDeployables()
             });
 
-            if (ActionUISettings.EquipmentSetsEnabled.Value)
-            {
-                displays.Add(new ActionsDisplayTab()
-                {
-                    DisplayName = ActionUISettings.ActionViewer.EquipmentSetsTab,
-                    TabOrder = tabOrder++,
-                    GetSlotActionsQuery = () => GetEquipmentSets()
-                });
-            }
+            // Equipment Sets feature removed
 
             //displays.Add(new ActionsDisplayTab()
             //{
@@ -138,10 +130,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                                                         .Cast<Skill>()
                                                         .Where(s => s.IsQuickSlotable && s.IsCosmetic && !(s is EquipmentSetSkill))
                                                         .Select(s => _slotData.GetSlotAction(s));
-        public IEnumerable<ISlotAction> GetEquipmentSets() => _inventory.SkillKnowledge.GetLearnedItems()
-                                                        .Where(s => s is EquipmentSetSkill)
-                                                        .Cast<EquipmentSetSkill>()
-                                                        .Select(s => _slotData.GetSlotAction(s));
+        // public IEnumerable<ISlotAction> GetEquipmentSets() ... Removed
 
         public IEnumerable<ISlotAction> GetConsumables() => _inventory.GetOwnedItems(TagSourceManager.Consumable)
                                                       .GroupBy(i => i.ItemID)

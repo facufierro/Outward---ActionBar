@@ -22,7 +22,7 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
             public const string SkillsTab = "Skills";
             public const string ConsumablesTab = "Consumables";
             public const string DeployablesTab = "Deployables";
-            public const string EquipmentSetsTab = "Equipment Sets";
+            // public const string EquipmentSetsTab = "Equipment Sets"; // Feature Removed
             public const string WeaponsTab = "Weapons";
             public const string ArmorTab = "Armor";
             public const string CosmeticsTab = "Cosmetics";
@@ -55,17 +55,14 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
 
         // Input
         public static ConfigEntry<bool> SetHotkeyMode;
-        public static ConfigEntry<bool> EquipmentSetsEnabled;
-        
-        // Serialized Data (Hidden)
         public static ConfigEntry<string> SerializedPositions;
         public static ConfigEntry<string> SerializedHotbars;
 
         public static void Init(ConfigFile config)
         {
             // General
-            EquipmentSetsEnabled = config.Bind("General", "Enable Equipment Sets", false,
-                new ConfigDescription("Enable the Equipment Sets tab in the action viewer.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
+            // Equipment Sets feature removed
+
 
             // Hotbar
             Rows = config.Bind("Hotbar", "Rows", 1, new ConfigDescription("Number of action bar rows.", new AcceptableValueRange<int>(1, 4), new ConfigurationManagerAttributes { IsAdvanced = false }));

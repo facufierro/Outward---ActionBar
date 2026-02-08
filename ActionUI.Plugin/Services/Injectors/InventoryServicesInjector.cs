@@ -3,7 +3,7 @@ using ModifAmorphic.Outward.GameObjectResources;
 using ModifAmorphic.Outward.Logging;
 using ModifAmorphic.Outward.Unity.ActionMenus;
 using ModifAmorphic.Outward.Unity.ActionUI.Data;
-using ModifAmorphic.Outward.Unity.ActionUI.EquipmentSets;
+// using ModifAmorphic.Outward.Unity.ActionUI.EquipmentSets; // Removed
 using System;
 
 namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
@@ -104,7 +104,6 @@ namespace ModifAmorphic.Outward.ActionUI.Services.Injectors
                 //                                    profileManager,
                 //                                    actionMenus.EquipmentSetMenus,
                 //                                    usp.GetService<InventoryService>(),
-                //                                    _services.GetService<EquipSetPrefabService>(),
                 //                                    _coroutines,
                 //                                    _getLogger))
                 //.AddSingleton(new SkillChainsService(
