@@ -160,6 +160,10 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
                 GlobalConfigService.Instance.PositionsProfile.Positions.Clear();
                 GlobalConfigService.Instance.SavePositions();
                 
+                // Reset Hotbar Config Values
+                HotbarPositionX.Value = (float)HotbarPositionX.DefaultValue;
+                HotbarPositionY.Value = (float)HotbarPositionY.DefaultValue;
+
                 // Force update UI
                 var positionables = Object.FindObjectsOfType<PositionableUI>();
                 foreach (var pos in positionables)

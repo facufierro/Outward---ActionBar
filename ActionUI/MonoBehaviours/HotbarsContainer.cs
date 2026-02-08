@@ -131,6 +131,8 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                  }
                  
                  // Also initialize PositionableUI service since PlayerActionMenus might miss us if hierarchy is weird
+                 /* 
+                  * Managed by HotbarService/ActionUISettings directly to support reset Logic and prevent conflicts.
                  var positionable = GetComponent<PositionableUI>();
                  if (positionable != null)
                  {
@@ -140,6 +142,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                          positionable.SetPositionsService(posService);
                      }
                  }
+                 */
              }
         }
 

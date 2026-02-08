@@ -530,11 +530,16 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private void OnHotbarUIMoved(PositionableUI p)
         {
-             if (Math.Abs(ActionUISettings.HotbarPositionX.Value - p.RectTransform.anchoredPosition.x) > 0.1f)
-                ActionUISettings.HotbarPositionX.Value = p.RectTransform.anchoredPosition.x;
+             // We must subtract DynamicOffset because SetPosition/Config expects the "Logical" position (without offset),
+             // but anchoredPosition includes the offset. Update() adds the offset back.
+             float logicalX = p.RectTransform.anchoredPosition.x - p.DynamicOffset.x;
+             float logicalY = p.RectTransform.anchoredPosition.y - p.DynamicOffset.y;
+
+             if (Math.Abs(ActionUISettings.HotbarPositionX.Value - logicalX) > 0.1f)
+                ActionUISettings.HotbarPositionX.Value = logicalX;
                 
-             if (Math.Abs(ActionUISettings.HotbarPositionY.Value - (-p.RectTransform.anchoredPosition.y)) > 0.1f)
-                ActionUISettings.HotbarPositionY.Value = -p.RectTransform.anchoredPosition.y;
+             if (Math.Abs(ActionUISettings.HotbarPositionY.Value - (-logicalY)) > 0.1f)
+                ActionUISettings.HotbarPositionY.Value = -logicalY;
         }
 
         public void Dispose()
