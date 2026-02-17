@@ -24,7 +24,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private static readonly HashSet<string> _positionBlocklist = new HashSet<string>()
         {
-            "CorruptionSmog", "PanicOverlay", "TargetingFlare", "CharacterBars", "LowHealth", "LowStamina", "Chat - Panel", "Durability"
+            "CorruptionSmog", "PanicOverlay", "TargetingFlare", "CharacterBars", "LowHealth", "LowStamina", "Chat - Panel", "Durability",
+            "ConfirmDeployListener", "InteractionDisplay", "InteractionSpot"
         };
 
         public PositionsService(
@@ -51,6 +52,14 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
                     if (uiRect.name == "QuickSlot")
                         uiRect = uiRect.Find("Keyboard") as RectTransform;
+
+                    if (uiRect.rect.width < 10 || uiRect.rect.height < 10)
+                    {
+                         // Keep generic size fix for other potential invisible elements, 
+                         // but interaction prompts are now blocklisted so they won't reach here anyway.
+                        uiRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, Mathf.Max(uiRect.rect.width, 300));
+                        uiRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(uiRect.rect.height, 100));
+                    }
 
                     if (!_positionBlocklist.Contains(uiRect.name))
                         AddPositionableUI(uiRect, positionablePrefab);

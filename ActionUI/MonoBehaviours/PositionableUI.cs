@@ -132,7 +132,7 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                 _canvasAdded = true;
             }
             var raycaster = GetComponent<GraphicRaycaster>();
-            if (canvas == null)
+            if (raycaster == null)
             {
                 gameObject.AddComponent<GraphicRaycaster>();
                 _raycasterAdded = true;

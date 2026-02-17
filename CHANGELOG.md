@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.1
+- **Fixed**: Bug where the interaction tooltip was on the top.
+
 ## 1.1.0
 - **Added**: Precise UI Positioning:
     - X/Y Sliders in Config Manager.
