@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+- **Added**: Per-slot empty style cycling in slot configuration mode (`Hidden → Image → Transparent`).
+- **Added**: Dynamic slots with weapon-based presets:
+    - Toggle dynamic state with middle-click in slot configuration mode.
+    - Equipping weapons applies saved dynamic slot presets when available.
+    - Drag/drop updates the active weapon preset for dynamic slots.
+    - Clearing a dynamic slot removes that slot from the active weapon preset.
+
 ## 1.1.2
 - **Fixed**: Interaction tooltip appearing at the top of the screen. Implemented auto-detection to identify the container holding the interaction prompt and exclude it from positioning, ensuring it remains in its correct place.
 
