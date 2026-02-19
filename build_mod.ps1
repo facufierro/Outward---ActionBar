@@ -177,6 +177,17 @@ function Invoke-PackageBuild($manifest, [string]$channel) {
         Write-Warning "ActionSlotHiddenImage.png not found at root or WikiReadmeAssets"
     }
 
+    $dynamicSlotImageSource = "$solutionDir\ActionSlotDynamicImage.png"
+    if (-not (Test-Path $dynamicSlotImageSource)) {
+        $dynamicSlotImageSource = "$solutionDir\WikiReadmeAssets\ActionSlotDynamicImage.png"
+    }
+    if (Test-Path $dynamicSlotImageSource) {
+        Copy-Item $dynamicSlotImageSource -Destination "$publishDir\ActionSlotDynamicImage.png" -Force
+        Write-Host "Copied dynamic slot image: ActionSlotDynamicImage.png"
+    } else {
+        Write-Warning "ActionSlotDynamicImage.png not found at root or WikiReadmeAssets"
+    }
+
     $assetBundleSource = "$solutionDir\Assets\asset-bundles\action-ui"
     if (Test-Path $assetBundleSource) {
         Copy-Item $assetBundleSource -Destination $publishDir -Force

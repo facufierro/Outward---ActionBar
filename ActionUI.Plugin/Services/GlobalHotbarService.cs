@@ -19,6 +19,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         public event Action<IHotbarProfile, HotbarProfileChangeTypes> OnProfileChanged;
 
         private IModifLogger Logger = LoggerFactory.GetLogger(ModInfo.ModId);
+        private CharacterSlotData _activeCharacterSlotData;
+        private string _activeCharacterUID;
 
         public GlobalHotbarService()
         {
@@ -310,6 +312,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                         if (uiSlot.Config != null)
                         {
                             profileSlot.Config.IsDisabled = uiSlot.Config.IsDisabled;
+                            profileSlot.Config.IsDynamic = uiSlot.Config.IsDynamic;
                         }
                     }
                 }
@@ -432,6 +435,10 @@ namespace ModifAmorphic.Outward.ActionUI.Services
              {
                  EmptySlotOption = source.Config.EmptySlotOption,
                  ShowCooldownTime = source.Config.ShowCooldownTime,
+                 PreciseCooldownTime = source.Config.PreciseCooldownTime,
+                 ShowZeroStackAmount = source.Config.ShowZeroStackAmount,
+                 IsDisabled = source.Config.IsDisabled,
+                 IsDynamic = source.Config.IsDynamic,
                  // ... other props
              };
               return new SlotData()
@@ -462,6 +469,15 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 return;
             }
 
+            _activeCharacterUID = characterUID;
+            _activeCharacterSlotData = new CharacterSlotData
+            {
+                CharacterUID = characterUID,
+                Slots = new Dictionary<string, SlotDataEntry>(),
+                DisabledSlots = new HashSet<string>(),
+                DynamicPresets = new Dictionary<string, Dictionary<string, SlotDataEntry>>()
+            };
+
             var filePath = GetCharacterSlotFilePath(characterUID);
             if (!System.IO.File.Exists(filePath))
             {
@@ -484,9 +500,18 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             {
                 var json = System.IO.File.ReadAllText(filePath);
                 var charData = JsonConvert.DeserializeObject<CharacterSlotData>(json);
-                
-                if (charData == null || charData.Slots == null)
+
+                if (charData == null)
                     return;
+
+                if (charData.Slots == null)
+                    charData.Slots = new Dictionary<string, SlotDataEntry>();
+                if (charData.DisabledSlots == null)
+                    charData.DisabledSlots = new HashSet<string>();
+                if (charData.DynamicPresets == null)
+                    charData.DynamicPresets = new Dictionary<string, Dictionary<string, SlotDataEntry>>();
+
+                _activeCharacterSlotData = charData;
                 
                 // Apply slot assignments to current profile
                 foreach (var bar in _cachedProfile.Hotbars)
@@ -541,12 +566,24 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                     System.IO.Directory.CreateDirectory(dirPath);
                 }
                 
-                var charData = new CharacterSlotData
+                var charData = _activeCharacterSlotData;
+                if (charData == null || !string.Equals(_activeCharacterUID, characterUID, StringComparison.Ordinal))
                 {
-                    CharacterUID = characterUID,
-                    Slots = new System.Collections.Generic.Dictionary<string, SlotDataEntry>(),
-                    DisabledSlots = new System.Collections.Generic.HashSet<string>()
-                };
+                    charData = new CharacterSlotData
+                    {
+                        CharacterUID = characterUID,
+                        Slots = new Dictionary<string, SlotDataEntry>(),
+                        DisabledSlots = new HashSet<string>(),
+                        DynamicPresets = new Dictionary<string, Dictionary<string, SlotDataEntry>>()
+                    };
+                }
+
+                charData.CharacterUID = characterUID;
+                charData.Slots = new Dictionary<string, SlotDataEntry>();
+                if (charData.DisabledSlots == null)
+                    charData.DisabledSlots = new HashSet<string>();
+                if (charData.DynamicPresets == null)
+                    charData.DynamicPresets = new Dictionary<string, Dictionary<string, SlotDataEntry>>();
                 
                 // Extract slot assignments from current profile
                 foreach (var bar in _cachedProfile.Hotbars)
@@ -574,6 +611,9 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 var filePath = GetCharacterSlotFilePath(characterUID);
                 var json = JsonConvert.SerializeObject(charData, Formatting.Indented);
                 System.IO.File.WriteAllText(filePath, json);
+
+                _activeCharacterUID = characterUID;
+                _activeCharacterSlotData = charData;
                 
                 Logger.LogDebug($"Saved character slots for {characterUID} to {filePath}.");
             }
@@ -582,6 +622,69 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 Logger.LogException($"Failed to save character slots for {characterUID}", ex);
             }
         }
+
+        public bool TryGetDynamicPresetSlot(int weaponType, int hotbarIndex, int slotIndex, out SlotDataEntry slotEntry)
+        {
+            slotEntry = null;
+            if (_activeCharacterSlotData?.DynamicPresets == null)
+                return false;
+
+            var weaponKey = GetWeaponTypeKey(weaponType);
+            var slotKey = GetSlotKey(hotbarIndex, slotIndex);
+
+            if (!_activeCharacterSlotData.DynamicPresets.TryGetValue(weaponKey, out var weaponSlots) || weaponSlots == null)
+                return false;
+
+            return weaponSlots.TryGetValue(slotKey, out slotEntry) && slotEntry != null;
+        }
+
+        public void SetDynamicPresetSlot(int weaponType, int hotbarIndex, int slotIndex, int itemId, string itemUid)
+        {
+            if (_activeCharacterSlotData == null)
+            {
+                _activeCharacterSlotData = new CharacterSlotData
+                {
+                    CharacterUID = _activeCharacterUID,
+                    Slots = new Dictionary<string, SlotDataEntry>(),
+                    DisabledSlots = new HashSet<string>(),
+                    DynamicPresets = new Dictionary<string, Dictionary<string, SlotDataEntry>>()
+                };
+            }
+
+            if (_activeCharacterSlotData.DynamicPresets == null)
+                _activeCharacterSlotData.DynamicPresets = new Dictionary<string, Dictionary<string, SlotDataEntry>>();
+
+            var weaponKey = GetWeaponTypeKey(weaponType);
+            var slotKey = GetSlotKey(hotbarIndex, slotIndex);
+
+            if (!_activeCharacterSlotData.DynamicPresets.TryGetValue(weaponKey, out var weaponSlots) || weaponSlots == null)
+            {
+                weaponSlots = new Dictionary<string, SlotDataEntry>();
+                _activeCharacterSlotData.DynamicPresets[weaponKey] = weaponSlots;
+            }
+
+            weaponSlots[slotKey] = new SlotDataEntry
+            {
+                ItemID = itemId,
+                ItemUID = itemUid
+            };
+        }
+
+        public void RemoveDynamicPresetSlot(int weaponType, int hotbarIndex, int slotIndex)
+        {
+            if (_activeCharacterSlotData?.DynamicPresets == null)
+                return;
+
+            var weaponKey = GetWeaponTypeKey(weaponType);
+            var slotKey = GetSlotKey(hotbarIndex, slotIndex);
+
+            if (!_activeCharacterSlotData.DynamicPresets.TryGetValue(weaponKey, out var weaponSlots) || weaponSlots == null)
+                return;
+
+            weaponSlots.Remove(slotKey);
+            if (weaponSlots.Count == 0)
+                _activeCharacterSlotData.DynamicPresets.Remove(weaponKey);
+        }
         
         private string GetCharacterSlotFilePath(string characterUID)
         {
@@ -589,6 +692,9 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             var sanitized = characterUID.Replace("\\", "_").Replace("/", "_").Replace(":", "_");
             return System.IO.Path.Combine(ActionUISettings.CharacterHotbarsPath, $"{sanitized}.json");
         }
+
+        private static string GetSlotKey(int hotbarIndex, int slotIndex) => $"{hotbarIndex}_{slotIndex}";
+        private static string GetWeaponTypeKey(int weaponType) => weaponType.ToString();
         
         #endregion
     }

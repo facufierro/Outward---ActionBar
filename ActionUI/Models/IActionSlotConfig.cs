@@ -8,6 +8,7 @@
         bool ShowZeroStackAmount { get; set; }
         EmptySlotOptions EmptySlotOption { get; set; }
         bool IsDisabled { get; set; }
+        bool IsDynamic { get; set; }
     }
     public enum EmptySlotOptions
     {

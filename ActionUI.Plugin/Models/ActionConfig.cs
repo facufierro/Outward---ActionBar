@@ -12,5 +12,6 @@ namespace ModifAmorphic.Outward.ActionUI.Models
         public string RewiredActionName { get; set; }
         public int RewiredActionId { get; set; }
         public bool IsDisabled { get; set; }
+        public bool IsDynamic { get; set; }
     }
 }

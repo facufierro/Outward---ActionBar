@@ -10,7 +10,9 @@ using ModifAmorphic.Outward.Unity.ActionMenus;
 using ModifAmorphic.Outward.Unity.ActionUI.Data;
 using Rewired;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace ModifAmorphic.Outward.ActionUI.Services
@@ -33,6 +35,9 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         private bool _saveDisabled;
         private bool _isProfileInit;
         private bool _isStarted = false;
+        private int _activeWeaponType = NoWeaponType;
+
+        private const int NoWeaponType = -1;
 
         private bool disposedValue;
 
@@ -63,6 +68,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             QuickSlotPanelPatches.StartInitAfter += DisableKeyboardQuickslots;
             SkillMenuPatches.AfterOnSectionSelected += SetSkillsMovable;
             ItemDisplayDropGroundPatches.TryGetIsDropValids.Add(_player.id, TryGetIsDropValid);
+            EquipmentPatches.AfterOnEquip += OnEquipmentChanged;
+            EquipmentPatches.AfterOnUnequip += OnEquipmentChanged;
             _hotbars.OnAwake += StartNextFrame;
             if (_hotbars.IsAwake)
                 StartNextFrame();
@@ -105,6 +112,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
                 AssignSlotActions();
                 AssignSlotActions();
+                EnsureNoWeaponDynamicPresetsInitialized();
+                ApplyDynamicPresetsForCurrentWeapon(force: true);
                 ShowHideHotbars(_characterUI);
                 
                 // Initialize Position Coupling
@@ -224,6 +233,9 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 {
                     var profile = GetOrCreateActiveProfile();
                     Logger.LogDebug($"{nameof(HotbarService)}_{InstanceID}: Hotbar changes detected. Saving.");
+
+                    SyncDynamicPresetsForCurrentWeapon();
+
                     _hotbarProfileService.Update(_hotbars);
                     
                     // Save character-specific slot assignments
@@ -401,6 +413,200 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 _isConfiguring = false;
             }
         }
+
+        private void OnEquipmentChanged(Character character, Equipment equipment)
+        {
+            try
+            {
+                if (!_isStarted || character == null || _character == null || character.UID != _character.UID)
+                    return;
+
+                if (equipment != null && !(equipment is Weapon))
+                    return;
+
+                _levelCoroutines.DoNextFrame(() => ApplyDynamicPresetsForCurrentWeapon());
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException("Failed applying dynamic presets after equipment change.", ex);
+            }
+        }
+
+        private void ApplyDynamicPresetsForCurrentWeapon(bool force = false)
+        {
+            if (!(_hotbarProfileService is GlobalHotbarService globalService))
+                return;
+
+            var currentWeaponType = TryGetCurrentWeaponType();
+            if (!force && currentWeaponType == _activeWeaponType)
+                return;
+
+            _activeWeaponType = currentWeaponType;
+
+            var profile = GetOrCreateActiveProfile();
+            var anyChanged = false;
+
+            var actionSlots = _hotbars.Controller.GetActionSlots();
+            for (int hotbarIndex = 0; hotbarIndex < actionSlots.Length; hotbarIndex++)
+            {
+                var barSlots = actionSlots[hotbarIndex];
+                for (int slotIndex = 0; slotIndex < barSlots.Length; slotIndex++)
+                {
+                    var actionSlot = barSlots[slotIndex];
+                    if (actionSlot?.Config == null || !actionSlot.Config.IsDynamic)
+                        continue;
+
+                    if (!globalService.TryGetDynamicPresetSlot(currentWeaponType, hotbarIndex, slotIndex, out var slotEntry))
+                        continue;
+
+                    if (slotEntry == null)
+                        continue;
+
+                    if (slotEntry.ItemID <= 0 && string.IsNullOrWhiteSpace(slotEntry.ItemUID))
+                    {
+                        if (actionSlot.SlotAction != null)
+                        {
+                            actionSlot.Controller.AssignEmptyAction();
+                            anyChanged = true;
+                        }
+                        continue;
+                    }
+
+                    var hasSameAssignment = actionSlot.SlotAction != null
+                        && actionSlot.SlotAction.ActionId == slotEntry.ItemID
+                        && string.Equals(actionSlot.SlotAction.ActionUid ?? string.Empty, slotEntry.ItemUID ?? string.Empty, StringComparison.Ordinal);
+                    if (hasSameAssignment)
+                        continue;
+
+                    if (_slotData.TryGetItemSlotAction(slotEntry.ItemID, slotEntry.ItemUID, profile.CombatMode, out var slotAction))
+                    {
+                        actionSlot.Controller.AssignSlotAction(slotAction, true);
+                        anyChanged = true;
+                    }
+                }
+            }
+
+            if (!anyChanged)
+                return;
+
+            _hotbarProfileService.Update(_hotbars);
+            globalService.SaveCharacterSlots(_character.UID);
+            _hotbars.ClearChanges();
+        }
+
+        private void SyncDynamicPresetsForCurrentWeapon()
+        {
+            if (!(_hotbarProfileService is GlobalHotbarService globalService))
+                return;
+
+            var currentWeaponType = TryGetCurrentWeaponType();
+
+            var actionSlots = _hotbars.Controller.GetActionSlots();
+            for (int hotbarIndex = 0; hotbarIndex < actionSlots.Length; hotbarIndex++)
+            {
+                var barSlots = actionSlots[hotbarIndex];
+                for (int slotIndex = 0; slotIndex < barSlots.Length; slotIndex++)
+                {
+                    var actionSlot = barSlots[slotIndex];
+                    if (actionSlot?.Config == null || !actionSlot.Config.IsDynamic)
+                        continue;
+
+                    if (actionSlot.SlotAction == null)
+                    {
+                        if (currentWeaponType == NoWeaponType)
+                        {
+                            globalService.SetDynamicPresetSlot(currentWeaponType, hotbarIndex, slotIndex, -1, null);
+                        }
+                        else
+                        {
+                            globalService.RemoveDynamicPresetSlot(currentWeaponType, hotbarIndex, slotIndex);
+                        }
+                    }
+                    else
+                    {
+                        globalService.SetDynamicPresetSlot(
+                            currentWeaponType,
+                            hotbarIndex,
+                            slotIndex,
+                            actionSlot.SlotAction.ActionId,
+                            actionSlot.SlotAction.ActionUid);
+                    }
+                }
+            }
+        }
+
+        private void EnsureNoWeaponDynamicPresetsInitialized()
+        {
+            if (!(_hotbarProfileService is GlobalHotbarService globalService))
+                return;
+
+            var actionSlots = _hotbars.Controller.GetActionSlots();
+            for (int hotbarIndex = 0; hotbarIndex < actionSlots.Length; hotbarIndex++)
+            {
+                var barSlots = actionSlots[hotbarIndex];
+                for (int slotIndex = 0; slotIndex < barSlots.Length; slotIndex++)
+                {
+                    var actionSlot = barSlots[slotIndex];
+                    if (actionSlot?.Config == null || !actionSlot.Config.IsDynamic)
+                        continue;
+
+                    if (globalService.TryGetDynamicPresetSlot(NoWeaponType, hotbarIndex, slotIndex, out _))
+                        continue;
+
+                    if (actionSlot.SlotAction == null)
+                    {
+                        globalService.SetDynamicPresetSlot(NoWeaponType, hotbarIndex, slotIndex, -1, null);
+                    }
+                    else
+                    {
+                        globalService.SetDynamicPresetSlot(
+                            NoWeaponType,
+                            hotbarIndex,
+                            slotIndex,
+                            actionSlot.SlotAction.ActionId,
+                            actionSlot.SlotAction.ActionUid);
+                    }
+                }
+            }
+
+            if (_hotbarProfileService is GlobalHotbarService global && _character != null)
+                global.SaveCharacterSlots(_character.UID);
+        }
+
+        private int TryGetCurrentWeaponType()
+        {
+            try
+            {
+                var currentWeapon = ReadCurrentWeapon(_character);
+                if (currentWeapon == null)
+                    return NoWeaponType;
+
+                return (int)currentWeapon.Type;
+            }
+            catch
+            {
+                return NoWeaponType;
+            }
+        }
+
+        private static Weapon ReadCurrentWeapon(Character character)
+        {
+            if (character == null)
+                return null;
+
+            var characterType = character.GetType();
+            var prop = characterType.GetProperty("CurrentWeapon", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (prop?.GetValue(character, null) is Weapon weapon)
+                return weapon;
+
+            var inventory = character.Inventory;
+            var equipment = inventory?.Equipment;
+            if (equipment == null)
+                return null;
+
+            var equipmentProp = equipment.GetType().GetProperty("CurrentWeapon", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            return equipmentProp?.GetValue(equipment, null) as Weapon;
+        }
         private void SetProfileHotkeys(IHotbarProfile profile)
         {
             var keyMap = _player.controllers.maps.GetMap<KeyboardMap>(0, RewiredConstants.ActionSlots.CategoryMapId, 0);
@@ -468,6 +674,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
                     QuickSlotPanelPatches.StartInitAfter -= DisableKeyboardQuickslots;
                     SkillMenuPatches.AfterOnSectionSelected -= SetSkillsMovable;
+                    EquipmentPatches.AfterOnEquip -= OnEquipmentChanged;
+                    EquipmentPatches.AfterOnUnequip -= OnEquipmentChanged;
 
                     if (ItemDisplayDropGroundPatches.TryGetIsDropValids.ContainsKey(_player.id))
                         ItemDisplayDropGroundPatches.TryGetIsDropValids.Remove(_player.id);

@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
 {
@@ -18,9 +19,13 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
         private StackService _stackService;
         private EnableToggleService _toggleService;
         private Coroutine _iconCoroutine;
+        private MouseClickListener _keyButtonMouseClickListener;
+        private Image _dynamicOverlayImage;
         private readonly Sprite _defaultEmptySprite;
         private static Sprite _hiddenEmptySprite;
         private static bool _hiddenEmptySpriteLoadAttempted;
+        private static Sprite _dynamicOverlaySprite;
+        private static bool _dynamicOverlaySpriteLoadAttempted;
 
         public bool IsUpdateEnabled => ActionSlot.SlotAction?.TargetAction != null && ActionSlot.SlotAction.CheckOnUpdate;
         public bool IsActionNeeded =>
@@ -34,7 +39,15 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             _defaultEmptySprite = actionSlot.EmptyImage?.sprite;
 
             actionSlot.MouseClickListener.OnRightClick.AddListener(OnRemoveRequested);
+            actionSlot.MouseClickListener.OnMiddleClick.AddListener(OnMiddleClickRequested);
             actionSlot.ActionButton.onClick.AddListener(OnActionButtonClicked);
+
+            _keyButtonMouseClickListener = actionSlot.KeyButton.gameObject.GetComponent<MouseClickListener>();
+            if (_keyButtonMouseClickListener == null)
+                _keyButtonMouseClickListener = actionSlot.KeyButton.gameObject.AddComponent<MouseClickListener>();
+
+            _keyButtonMouseClickListener.OnRightClick.AddListener(OnRemoveRequested);
+            _keyButtonMouseClickListener.OnMiddleClick.AddListener(OnMiddleClickRequested);
 
             actionSlot.KeyButton.onClick.AddListener(OnHotkeyEditRequested);
         }
@@ -84,6 +97,8 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
                     ActionSlot.CanvasGroup.alpha = 1;
             }
 
+            ApplyDynamicOverlay();
+
         }
 
         public void AssignSlotAction(ISlotAction slotAction, bool surpressChangeFlag = false)
@@ -127,6 +142,7 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             }
 
             StartEnableToggleService(slotAction.GetEnabled);
+            ApplyDynamicOverlay();
 
             try
             {
@@ -335,8 +351,21 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             if (ActionSlot.ParentCanvas != null && ActionSlot.ParentCanvas.enabled && ActionSlot.ActionButton.interactable)
             {
                 AssignEmptyAction();
-                // ActionSlot.HotbarsContainer.HasChanges = true; // PREVENT PREMATURE SAVE which wipes profile!
+                ActionSlot.HotbarsContainer.HasChanges = true;
             }
+        }
+
+        private void OnMiddleClickRequested()
+        {
+            if (!ActionSlot.HotbarsContainer.IsInHotkeyEditMode && !ActionSlot.HotbarsContainer.IsInActionSlotEditMode)
+                return;
+
+            ActionSlot.Config.IsDynamic = !ActionSlot.Config.IsDynamic;
+            ActionSlot.HotbarsContainer.HasChanges = true;
+
+            Refresh();
+            if (ActionSlot.CanvasGroup.alpha == 0f)
+                ActionSlot.CanvasGroup.alpha = 1f;
         }
 
         private void OnHotkeyEditRequested()
@@ -394,6 +423,78 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             }
 
             return _hiddenEmptySprite;
+        }
+
+        private Sprite GetDynamicOverlaySprite()
+        {
+            if (_dynamicOverlaySpriteLoadAttempted)
+                return _dynamicOverlaySprite;
+
+            _dynamicOverlaySpriteLoadAttempted = true;
+
+            try
+            {
+                var assemblyPath = typeof(ActionSlotController).Assembly.Location;
+                if (string.IsNullOrWhiteSpace(assemblyPath))
+                    return null;
+
+                var pluginDirectory = Path.GetDirectoryName(assemblyPath);
+                if (string.IsNullOrWhiteSpace(pluginDirectory))
+                    return null;
+
+                var dynamicImagePath = Path.Combine(pluginDirectory, "ActionSlotDynamicImage.png");
+                if (!File.Exists(dynamicImagePath))
+                    return null;
+
+                var imageBytes = File.ReadAllBytes(dynamicImagePath);
+                var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (!ImageConversion.LoadImage(texture, imageBytes))
+                    return null;
+
+                _dynamicOverlaySprite = Sprite.Create(
+                    texture,
+                    new Rect(0, 0, texture.width, texture.height),
+                    new Vector2(0.5f, 0.5f),
+                    100f);
+            }
+            catch
+            {
+                _dynamicOverlaySprite = null;
+            }
+
+            return _dynamicOverlaySprite;
+        }
+
+        private void ApplyDynamicOverlay()
+        {
+            if (_dynamicOverlayImage == null)
+            {
+                var overlayGo = new GameObject("DynamicOverlayImage");
+                overlayGo.transform.SetParent(ActionSlot.ActionButton.transform, false);
+                var overlayRect = overlayGo.AddComponent<RectTransform>();
+                overlayRect.anchorMin = Vector2.zero;
+                overlayRect.anchorMax = Vector2.one;
+                overlayRect.offsetMin = Vector2.zero;
+                overlayRect.offsetMax = Vector2.zero;
+                overlayRect.localScale = Vector3.one;
+
+                _dynamicOverlayImage = overlayGo.AddComponent<Image>();
+                _dynamicOverlayImage.raycastTarget = false;
+                _dynamicOverlayImage.preserveAspect = false;
+                _dynamicOverlayImage.enabled = false;
+            }
+
+            _dynamicOverlayImage.transform.SetAsLastSibling();
+            if (ActionSlot.Config?.IsDynamic ?? false)
+            {
+                _dynamicOverlayImage.sprite = GetDynamicOverlaySprite();
+                _dynamicOverlayImage.color = Color.white;
+                _dynamicOverlayImage.enabled = _dynamicOverlayImage.sprite != null;
+            }
+            else
+            {
+                _dynamicOverlayImage.enabled = false;
+            }
         }
 
         private EmptySlotOptions GetNextEmptySlotOption(EmptySlotOptions currentOption)
@@ -465,6 +566,8 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
                         logMsg = $"AssignSlotIcon: ActionSlot.ActionImages == null == {ActionSlot.ActionImages == null}.  spriteIcon[{i}] == null == {spriteIcons[i] == null}";
                         ActionSlot.ActionImages.AddOrUpdateImage(spriteIcons[i]);
                     }
+
+                    ApplyDynamicOverlay();
                 }
             }
             catch (Exception ex)
@@ -607,6 +710,11 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             {
                 if (disposing)
                 {
+                    ActionSlot.MouseClickListener?.OnRightClick.RemoveListener(OnRemoveRequested);
+                    ActionSlot.MouseClickListener?.OnMiddleClick.RemoveListener(OnMiddleClickRequested);
+                    _keyButtonMouseClickListener?.OnRightClick.RemoveListener(OnRemoveRequested);
+                    _keyButtonMouseClickListener?.OnMiddleClick.RemoveListener(OnMiddleClickRequested);
+
                     _cooldownService?.Dispose();
                     _stackService?.Dispose();
                     _toggleService?.Dispose();

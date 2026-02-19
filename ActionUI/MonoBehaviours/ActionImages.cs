@@ -53,6 +53,23 @@ public class ActionImages : MonoBehaviour
         }
     }
 
+    public void RemoveImage(string imageName)
+    {
+        if (_bottomImages.TryGetValue(imageName, out var bottomImage))
+        {
+            if (bottomImage?.gameObject != null)
+                bottomImage.gameObject.Destroy();
+            _bottomImages.Remove(imageName);
+        }
+
+        if (_topImages.TryGetValue(imageName, out var topImage))
+        {
+            if (topImage?.gameObject != null)
+                topImage.gameObject.Destroy();
+            _topImages.Remove(imageName);
+        }
+    }
+
     public void ClearImages()
     {
         foreach (var image in _bottomImages.Values)
