@@ -773,7 +773,10 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
                 var isOffSlot = slotType.IndexOf("Left", StringComparison.OrdinalIgnoreCase) >= 0
                     || slotType.IndexOf("Off", StringComparison.OrdinalIgnoreCase) >= 0
-                    || slotType.IndexOf("Secondary", StringComparison.OrdinalIgnoreCase) >= 0;
+                    || slotType.IndexOf("Secondary", StringComparison.OrdinalIgnoreCase) >= 0
+                    || slotType.IndexOf("Lantern", StringComparison.OrdinalIgnoreCase) >= 0
+                    || slotType.IndexOf("Lexicon", StringComparison.OrdinalIgnoreCase) >= 0
+                    || slotType.IndexOf("Tome", StringComparison.OrdinalIgnoreCase) >= 0;
 
                 if ((isMainHand && !isMainSlot) || (!isMainHand && !isOffSlot))
                     continue;
