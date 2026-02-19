@@ -35,9 +35,10 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         private bool _saveDisabled;
         private bool _isProfileInit;
         private bool _isStarted = false;
-        private int _activeWeaponType = NoWeaponType;
+        private string _activeContextSignature = string.Empty;
 
         private const int NoWeaponType = -1;
+        private const int OffhandNonWeaponContextOffset = 1000000;
 
         private bool disposedValue;
 
@@ -421,9 +422,6 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 if (!_isStarted || character == null || _character == null || character.UID != _character.UID)
                     return;
 
-                if (equipment != null && !(equipment is Weapon))
-                    return;
-
                 _levelCoroutines.DoNextFrame(() => ApplyDynamicPresetsForCurrentWeapon());
             }
             catch (Exception ex)
@@ -437,11 +435,11 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             if (!(_hotbarProfileService is GlobalHotbarService globalService))
                 return;
 
-            var currentWeaponType = TryGetCurrentWeaponType();
-            if (!force && currentWeaponType == _activeWeaponType)
+            var context = GetCurrentWeaponContext();
+            if (!force && string.Equals(context.Signature, _activeContextSignature, StringComparison.Ordinal))
                 return;
 
-            _activeWeaponType = currentWeaponType;
+            _activeContextSignature = context.Signature;
 
             var profile = GetOrCreateActiveProfile();
             var anyChanged = false;
@@ -456,10 +454,18 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                     if (actionSlot?.Config == null || !actionSlot.Config.IsDynamic)
                         continue;
 
-                    if (!globalService.TryGetDynamicPresetSlot(currentWeaponType, hotbarIndex, slotIndex, out var slotEntry))
-                        continue;
+                    SlotDataEntry slotEntry = null;
+                    var hasPreset = false;
+                    for (int k = 0; k < context.ResolveKeys.Length; k++)
+                    {
+                        if (globalService.TryGetDynamicPresetSlot(context.ResolveKeys[k], hotbarIndex, slotIndex, out slotEntry))
+                        {
+                            hasPreset = true;
+                            break;
+                        }
+                    }
 
-                    if (slotEntry == null)
+                    if (!hasPreset || slotEntry == null)
                         continue;
 
                     if (slotEntry.ItemID <= 0 && string.IsNullOrWhiteSpace(slotEntry.ItemUID))
@@ -499,7 +505,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             if (!(_hotbarProfileService is GlobalHotbarService globalService))
                 return;
 
-            var currentWeaponType = TryGetCurrentWeaponType();
+            var context = GetCurrentWeaponContext();
+            var activeEditKey = context.EditKey;
 
             var actionSlots = _hotbars.Controller.GetActionSlots();
             for (int hotbarIndex = 0; hotbarIndex < actionSlots.Length; hotbarIndex++)
@@ -513,19 +520,19 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
                     if (actionSlot.SlotAction == null)
                     {
-                        if (currentWeaponType == NoWeaponType)
+                        if (string.Equals(activeEditKey, GlobalHotbarService.GetBaselineContextKey(), StringComparison.Ordinal))
                         {
-                            globalService.SetDynamicPresetSlot(currentWeaponType, hotbarIndex, slotIndex, -1, null);
+                            globalService.SetDynamicPresetSlot(activeEditKey, hotbarIndex, slotIndex, -1, null);
                         }
                         else
                         {
-                            globalService.RemoveDynamicPresetSlot(currentWeaponType, hotbarIndex, slotIndex);
+                            globalService.RemoveDynamicPresetSlot(activeEditKey, hotbarIndex, slotIndex);
                         }
                     }
                     else
                     {
                         globalService.SetDynamicPresetSlot(
-                            currentWeaponType,
+                            activeEditKey,
                             hotbarIndex,
                             slotIndex,
                             actionSlot.SlotAction.ActionId,
@@ -550,17 +557,18 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                     if (actionSlot?.Config == null || !actionSlot.Config.IsDynamic)
                         continue;
 
-                    if (globalService.TryGetDynamicPresetSlot(NoWeaponType, hotbarIndex, slotIndex, out _))
+                    var baselineKey = GlobalHotbarService.GetBaselineContextKey();
+                    if (globalService.TryGetDynamicPresetSlot(baselineKey, hotbarIndex, slotIndex, out _))
                         continue;
 
                     if (actionSlot.SlotAction == null)
                     {
-                        globalService.SetDynamicPresetSlot(NoWeaponType, hotbarIndex, slotIndex, -1, null);
+                        globalService.SetDynamicPresetSlot(baselineKey, hotbarIndex, slotIndex, -1, null);
                     }
                     else
                     {
                         globalService.SetDynamicPresetSlot(
-                            NoWeaponType,
+                            baselineKey,
                             hotbarIndex,
                             slotIndex,
                             actionSlot.SlotAction.ActionId,
@@ -573,20 +581,41 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 global.SaveCharacterSlots(_character.UID);
         }
 
-        private int TryGetCurrentWeaponType()
+        private WeaponContextSnapshot GetCurrentWeaponContext()
         {
+            var mainWeaponType = NoWeaponType;
+            var offContextType = NoWeaponType;
+
             try
             {
-                var currentWeapon = ReadCurrentWeapon(_character);
-                if (currentWeapon == null)
-                    return NoWeaponType;
+                var mainHandEquipment = ReadMainHandEquipment(_character);
+                var offHandEquipment = ReadOffhandEquipment(_character);
 
-                return (int)currentWeapon.Type;
+                if (mainHandEquipment == null)
+                {
+                    var currentWeapon = ReadCurrentWeapon(_character);
+                    if (currentWeapon != null)
+                    {
+                        if (offHandEquipment == null || !ReferenceEquals(currentWeapon, offHandEquipment))
+                            mainHandEquipment = currentWeapon;
+                    }
+                }
+
+                if (mainHandEquipment != null)
+                    mainWeaponType = GetMainContextType(mainHandEquipment);
+
+                if (offHandEquipment != null && !ReferenceEquals(offHandEquipment, mainHandEquipment))
+                    offContextType = GetOffhandContextType(offHandEquipment);
             }
             catch
             {
-                return NoWeaponType;
+                mainWeaponType = NoWeaponType;
+                offContextType = NoWeaponType;
             }
+
+            var resolveKeys = BuildResolveKeys(mainWeaponType, offContextType);
+            var editKey = BuildEditKey(mainWeaponType, offContextType);
+            return new WeaponContextSnapshot(mainWeaponType, offContextType, resolveKeys, editKey);
         }
 
         private static Weapon ReadCurrentWeapon(Character character)
@@ -606,6 +635,154 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
             var equipmentProp = equipment.GetType().GetProperty("CurrentWeapon", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             return equipmentProp?.GetValue(equipment, null) as Weapon;
+        }
+
+        private static Equipment ReadMainHandEquipment(Character character)
+        {
+            if (character == null)
+                return null;
+
+            var fromCharacter = ReadEquipmentFromPropertyNames(character,
+                "RightHandWeapon",
+                "RightHandEquipment",
+                "MainHandWeapon",
+                "MainHandEquipment");
+            if (fromCharacter != null)
+                return fromCharacter;
+
+            var inventory = character.Inventory;
+            var equipment = inventory?.Equipment;
+            if (equipment == null)
+                return null;
+
+            return ReadEquipmentFromPropertyNames(equipment,
+                "RightHandWeapon",
+                "RightHandEquipment",
+                "MainHandWeapon",
+                "MainHandEquipment");
+        }
+
+        private static Equipment ReadOffhandEquipment(Character character)
+        {
+            if (character == null)
+                return null;
+
+            var fromCharacter = ReadEquipmentFromPropertyNames(character,
+                "LeftHandWeapon",
+                "LeftHandEquipment",
+                "OffHandWeapon",
+                "OffHandEquipment");
+            if (fromCharacter != null)
+                return fromCharacter;
+
+            var inventory = character.Inventory;
+            var equipment = inventory?.Equipment;
+            if (equipment == null)
+                return null;
+
+            return ReadEquipmentFromPropertyNames(equipment,
+                "LeftHandWeapon",
+                "LeftHandEquipment",
+                "OffHandWeapon",
+                "OffHandEquipment");
+        }
+
+        private static Equipment ReadEquipmentFromPropertyNames(object source, params string[] propertyNames)
+        {
+            if (source == null || propertyNames == null || propertyNames.Length == 0)
+                return null;
+
+            var sourceType = source.GetType();
+            for (int i = 0; i < propertyNames.Length; i++)
+            {
+                var prop = sourceType.GetProperty(propertyNames[i], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (prop == null)
+                    continue;
+
+                if (prop.GetValue(source, null) is Equipment equipment)
+                    return equipment;
+            }
+
+            return null;
+        }
+
+        private static int GetMainContextType(Equipment mainEquipment)
+        {
+            if (mainEquipment == null)
+                return NoWeaponType;
+
+            if (mainEquipment is Weapon mainWeapon)
+                return (int)mainWeapon.Type;
+
+            var itemIdProp = mainEquipment.GetType().GetProperty("ItemID", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (itemIdProp?.GetValue(mainEquipment, null) is int itemId && itemId > 0)
+                return itemId;
+
+            return NoWeaponType;
+        }
+
+        private static int GetOffhandContextType(Equipment offhandEquipment)
+        {
+            if (offhandEquipment == null)
+                return NoWeaponType;
+
+            if (offhandEquipment is Weapon offhandWeapon)
+                return (int)offhandWeapon.Type;
+
+            var itemIdProp = offhandEquipment.GetType().GetProperty("ItemID", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (itemIdProp?.GetValue(offhandEquipment, null) is int itemId && itemId > 0)
+                return OffhandNonWeaponContextOffset + itemId;
+
+            return NoWeaponType;
+        }
+
+        private static string[] BuildResolveKeys(int mainWeaponType, int offWeaponType)
+        {
+            var keys = new List<string>(4);
+
+            if (mainWeaponType != NoWeaponType && offWeaponType != NoWeaponType)
+                keys.Add(GlobalHotbarService.GetComboContextKey(mainWeaponType, offWeaponType));
+
+            if (mainWeaponType != NoWeaponType)
+                keys.Add(GlobalHotbarService.GetMainContextKey(mainWeaponType));
+
+            if (offWeaponType != NoWeaponType)
+                keys.Add(GlobalHotbarService.GetOffContextKey(offWeaponType));
+
+            keys.Add(GlobalHotbarService.GetBaselineContextKey());
+            return keys.Distinct().ToArray();
+        }
+
+        private static string BuildEditKey(int mainWeaponType, int offWeaponType)
+        {
+            if (mainWeaponType != NoWeaponType && offWeaponType != NoWeaponType)
+                return GlobalHotbarService.GetComboContextKey(mainWeaponType, offWeaponType);
+
+            if (mainWeaponType != NoWeaponType)
+                return GlobalHotbarService.GetMainContextKey(mainWeaponType);
+
+            if (offWeaponType != NoWeaponType)
+                return GlobalHotbarService.GetOffContextKey(offWeaponType);
+
+            return GlobalHotbarService.GetBaselineContextKey();
+        }
+
+        private sealed class WeaponContextSnapshot
+        {
+            public WeaponContextSnapshot(int mainWeaponType, int offWeaponType, string[] resolveKeys, string editKey)
+            {
+                MainWeaponType = mainWeaponType;
+                OffWeaponType = offWeaponType;
+                ResolveKeys = resolveKeys ?? Array.Empty<string>();
+                EditKey = editKey ?? GlobalHotbarService.GetBaselineContextKey();
+                Signature = $"{MainWeaponType}|{OffWeaponType}";
+            }
+
+            public int MainWeaponType { get; }
+            public int OffWeaponType { get; }
+            public string[] ResolveKeys { get; }
+            public string EditKey { get; }
+            public string Signature { get; }
         }
         private void SetProfileHotkeys(IHotbarProfile profile)
         {

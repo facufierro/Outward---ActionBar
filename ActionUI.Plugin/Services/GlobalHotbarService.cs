@@ -21,6 +21,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         private IModifLogger Logger = LoggerFactory.GetLogger(ModInfo.ModId);
         private CharacterSlotData _activeCharacterSlotData;
         private string _activeCharacterUID;
+        private const int LegacyNoWeaponType = -1;
 
         public GlobalHotbarService()
         {
@@ -511,6 +512,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 if (charData.DynamicPresets == null)
                     charData.DynamicPresets = new Dictionary<string, Dictionary<string, SlotDataEntry>>();
 
+                MigrateLegacyDynamicPresetKeys(charData);
+
                 _activeCharacterSlotData = charData;
                 
                 // Apply slot assignments to current profile
@@ -623,23 +626,25 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             }
         }
 
-        public bool TryGetDynamicPresetSlot(int weaponType, int hotbarIndex, int slotIndex, out SlotDataEntry slotEntry)
+        public bool TryGetDynamicPresetSlot(string contextKey, int hotbarIndex, int slotIndex, out SlotDataEntry slotEntry)
         {
             slotEntry = null;
-            if (_activeCharacterSlotData?.DynamicPresets == null)
+            if (string.IsNullOrWhiteSpace(contextKey) || _activeCharacterSlotData?.DynamicPresets == null)
                 return false;
 
-            var weaponKey = GetWeaponTypeKey(weaponType);
             var slotKey = GetSlotKey(hotbarIndex, slotIndex);
 
-            if (!_activeCharacterSlotData.DynamicPresets.TryGetValue(weaponKey, out var weaponSlots) || weaponSlots == null)
+            if (!_activeCharacterSlotData.DynamicPresets.TryGetValue(contextKey, out var weaponSlots) || weaponSlots == null)
                 return false;
 
             return weaponSlots.TryGetValue(slotKey, out slotEntry) && slotEntry != null;
         }
 
-        public void SetDynamicPresetSlot(int weaponType, int hotbarIndex, int slotIndex, int itemId, string itemUid)
+        public void SetDynamicPresetSlot(string contextKey, int hotbarIndex, int slotIndex, int itemId, string itemUid)
         {
+            if (string.IsNullOrWhiteSpace(contextKey))
+                return;
+
             if (_activeCharacterSlotData == null)
             {
                 _activeCharacterSlotData = new CharacterSlotData
@@ -654,13 +659,12 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             if (_activeCharacterSlotData.DynamicPresets == null)
                 _activeCharacterSlotData.DynamicPresets = new Dictionary<string, Dictionary<string, SlotDataEntry>>();
 
-            var weaponKey = GetWeaponTypeKey(weaponType);
             var slotKey = GetSlotKey(hotbarIndex, slotIndex);
 
-            if (!_activeCharacterSlotData.DynamicPresets.TryGetValue(weaponKey, out var weaponSlots) || weaponSlots == null)
+            if (!_activeCharacterSlotData.DynamicPresets.TryGetValue(contextKey, out var weaponSlots) || weaponSlots == null)
             {
                 weaponSlots = new Dictionary<string, SlotDataEntry>();
-                _activeCharacterSlotData.DynamicPresets[weaponKey] = weaponSlots;
+                _activeCharacterSlotData.DynamicPresets[contextKey] = weaponSlots;
             }
 
             weaponSlots[slotKey] = new SlotDataEntry
@@ -670,20 +674,19 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             };
         }
 
-        public void RemoveDynamicPresetSlot(int weaponType, int hotbarIndex, int slotIndex)
+        public void RemoveDynamicPresetSlot(string contextKey, int hotbarIndex, int slotIndex)
         {
-            if (_activeCharacterSlotData?.DynamicPresets == null)
+            if (string.IsNullOrWhiteSpace(contextKey) || _activeCharacterSlotData?.DynamicPresets == null)
                 return;
 
-            var weaponKey = GetWeaponTypeKey(weaponType);
             var slotKey = GetSlotKey(hotbarIndex, slotIndex);
 
-            if (!_activeCharacterSlotData.DynamicPresets.TryGetValue(weaponKey, out var weaponSlots) || weaponSlots == null)
+            if (!_activeCharacterSlotData.DynamicPresets.TryGetValue(contextKey, out var weaponSlots) || weaponSlots == null)
                 return;
 
             weaponSlots.Remove(slotKey);
             if (weaponSlots.Count == 0)
-                _activeCharacterSlotData.DynamicPresets.Remove(weaponKey);
+                _activeCharacterSlotData.DynamicPresets.Remove(contextKey);
         }
         
         private string GetCharacterSlotFilePath(string characterUID)
@@ -694,7 +697,67 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         }
 
         private static string GetSlotKey(int hotbarIndex, int slotIndex) => $"{hotbarIndex}_{slotIndex}";
-        private static string GetWeaponTypeKey(int weaponType) => weaponType.ToString();
+
+        public static string GetBaselineContextKey() => "baseline";
+        public static string GetMainContextKey(int mainType) => $"main:{mainType}";
+        public static string GetOffContextKey(int offType) => $"off:{offType}";
+        public static string GetComboContextKey(int mainType, int offType) => $"combo:{mainType}:{offType}";
+
+        private static void MigrateLegacyDynamicPresetKeys(CharacterSlotData charData)
+        {
+            if (charData?.DynamicPresets == null || charData.DynamicPresets.Count == 0)
+                return;
+
+            var migrated = new Dictionary<string, Dictionary<string, SlotDataEntry>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var kvp in charData.DynamicPresets)
+            {
+                var targetKey = NormalizeDynamicContextKey(kvp.Key);
+                if (string.IsNullOrWhiteSpace(targetKey))
+                    continue;
+
+                if (!migrated.TryGetValue(targetKey, out var slotMap) || slotMap == null)
+                {
+                    slotMap = new Dictionary<string, SlotDataEntry>();
+                    migrated[targetKey] = slotMap;
+                }
+
+                if (kvp.Value == null)
+                    continue;
+
+                foreach (var slot in kvp.Value)
+                {
+                    slotMap[slot.Key] = slot.Value;
+                }
+            }
+
+            charData.DynamicPresets = migrated;
+        }
+
+        private static string NormalizeDynamicContextKey(string rawKey)
+        {
+            if (string.IsNullOrWhiteSpace(rawKey))
+                return null;
+
+            var key = rawKey.Trim();
+            if (key.StartsWith("combo:", StringComparison.OrdinalIgnoreCase)
+                || key.StartsWith("main:", StringComparison.OrdinalIgnoreCase)
+                || key.StartsWith("off:", StringComparison.OrdinalIgnoreCase)
+                || key.Equals("baseline", StringComparison.OrdinalIgnoreCase))
+            {
+                return key.ToLowerInvariant();
+            }
+
+            if (int.TryParse(key, out var legacyType))
+            {
+                if (legacyType == LegacyNoWeaponType)
+                    return GetBaselineContextKey();
+
+                return GetMainContextKey(legacyType);
+            }
+
+            return key.ToLowerInvariant();
+        }
         
         #endregion
     }

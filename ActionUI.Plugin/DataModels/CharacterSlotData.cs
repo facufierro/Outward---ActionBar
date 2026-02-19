@@ -21,7 +21,7 @@ namespace ModifAmorphic.Outward.ActionUI.DataModels
         public HashSet<string> DisabledSlots { get; set; } = new HashSet<string>();
 
         /// <summary>
-        /// Dynamic slot presets. First key is weapon type, second key is slot key "barIndex_slotIndex".
+        /// Dynamic slot presets. First key is context key (baseline/main/off/combo), second key is slot key "barIndex_slotIndex".
         /// </summary>
         public Dictionary<string, Dictionary<string, SlotDataEntry>> DynamicPresets { get; set; } = new Dictionary<string, Dictionary<string, SlotDataEntry>>();
     }
