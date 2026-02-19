@@ -36,6 +36,11 @@
 	  <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
     <Reference Include="UnityEngine.InputModule">
       <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.InputModule.dll</HintPath>
 	  <Private>false</Private>

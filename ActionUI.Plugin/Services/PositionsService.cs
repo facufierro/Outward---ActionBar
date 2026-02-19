@@ -41,6 +41,28 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         public void InjectPositionableUIs(CharacterUI characterUI)
         {
             var hud = characterUI.transform.Find("Canvas/GameplayPanels/HUD");
+
+            // Auto-detect interaction container logic
+            string interactionContainerName = null;
+            var interactionTransform = hud.GetComponentsInChildren<RectTransform>(true)
+                                          .FirstOrDefault(r => r.name == "InteractionDisplay" || r.name == "InteractionSpot");
+
+            if (interactionTransform != null)
+            {
+                // Trace up to find the direct child of HUD
+                var current = interactionTransform;
+                while (current.parent != null && current.parent != hud)
+                {
+                    current = current.parent as RectTransform;
+                }
+
+                if (current.parent == hud)
+                {
+                    interactionContainerName = current.name;
+                    //Logger.LogDebug($"Auto-detected interaction container to blacklist: {interactionContainerName}");
+                }
+            }
+
             //hud.GetOrAddComponent<GraphicRaycaster>();
             var positionablePrefab = _modInactivableGo.transform.Find("Prefabs/PositionableBg").gameObject;
             for (int i = 0; i < hud.childCount; i++)
@@ -61,7 +83,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                         uiRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(uiRect.rect.height, 100));
                     }
 
-                    if (!_positionBlocklist.Contains(uiRect.name))
+                    if (!_positionBlocklist.Contains(uiRect.name) && uiRect.name != interactionContainerName)
                         AddPositionableUI(uiRect, positionablePrefab);
                 }
             }

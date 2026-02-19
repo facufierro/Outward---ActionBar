@@ -40,7 +40,6 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
         public static ConfigEntry<bool> CombatMode;
         public static ConfigEntry<bool> ShowCooldownTimer;
         public static ConfigEntry<bool> PreciseCooldownTime;
-        public static ConfigEntry<string> EmptySlotOption;
         public static ConfigEntry<string> DisabledSlots;
 
         // UI Positioning
@@ -73,10 +72,6 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
             CombatMode = config.Bind("Hotbar", "CombatMode", true, new ConfigDescription("Automatically show action bars when entering combat.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
             ShowCooldownTimer = config.Bind("Hotbar", "ShowCooldownTimer", true, new ConfigDescription("Show numeric cooldown timer on slots.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
             PreciseCooldownTime = config.Bind("Hotbar", "PreciseCooldownTime", false, new ConfigDescription("Show decimal precision for cooldowns.", null, new ConfigurationManagerAttributes { IsAdvanced = false }));
-            
-            EmptySlotOption = config.Bind("Hotbar", "EmptySlotDisplay", "Transparent", 
-                new ConfigDescription("How empty slots should look.", 
-                new AcceptableValueList<string>("Transparent", "Image", "Hidden"), new ConfigurationManagerAttributes { IsAdvanced = false }));
 
             DisabledSlots = config.Bind("Hotbar", "DisabledSlots", "",
                 new ConfigDescription("Internal list of disabled slot indices.", null, new ConfigurationManagerAttributes { Browsable = false, IsAdvanced = true }));

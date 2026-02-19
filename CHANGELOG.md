@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.2
+- **Fixed**: Interaction tooltip appearing at the top of the screen. Implemented auto-detection to identify the container holding the interaction prompt and exclude it from positioning, ensuring it remains in its correct place.
+
 ## 1.1.1
 - **Fixed**: Bug where the interaction tooltip was on the top.
 

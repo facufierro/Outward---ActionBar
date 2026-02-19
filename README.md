@@ -5,9 +5,9 @@ A complete overhaul of the Outward Action Bar functionality, focused on stabilit
 ## Features
 
 ### Added
-- **Hide/Disable Slots**: Right-click in Hotkey Mode to toggle slot visibility.
+- **Per-Slot Empty Style**: Right-click in Hotkey Mode to cycle slot style (Hidden → Image → Transparent).
 - **Per-Character Skill Saving**: Each character saves their own skill/item assignments.
-- **Global Layout Config**: Rows, slots, scale, disabled slots shared across all characters.
+- **Global Layout Config**: Rows, slots, and scale shared across all characters.
 - **UI Positioning**: Position Hotbars with X/Y sliders or Drag & Drop.
 - **Config Manager Integration**: Uses Mefino's Config Manager instead of custom menu.
 
@@ -37,6 +37,6 @@ Access the configuration menu via **Config Manager** (F5 by default) in-game.
 - **Layout**: Configure rows and slots per row.
 - **Hotkeys**: Set up your custom keybindings.
 
-To disable/hide specific slots:
+To set specific empty slot styles:
 1. Enter **Hotkey Mode** (default binding in controls).
-2. **Right-click** on any slot to toggle it disabled/hidden.
+2. **Right-click** on any slot to cycle `Hidden → Image → Transparent`.

@@ -3,6 +3,7 @@ using ModifAmorphic.Outward.Unity.ActionUI.Services;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
@@ -17,6 +18,9 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
         private StackService _stackService;
         private EnableToggleService _toggleService;
         private Coroutine _iconCoroutine;
+        private readonly Sprite _defaultEmptySprite;
+        private static Sprite _hiddenEmptySprite;
+        private static bool _hiddenEmptySpriteLoadAttempted;
 
         public bool IsUpdateEnabled => ActionSlot.SlotAction?.TargetAction != null && ActionSlot.SlotAction.CheckOnUpdate;
         public bool IsActionNeeded =>
@@ -27,6 +31,7 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
         public ActionSlotController(ActionSlot actionSlot)
         {
             ActionSlot = actionSlot ?? throw new ArgumentNullException(nameof(actionSlot));
+            _defaultEmptySprite = actionSlot.EmptyImage?.sprite;
 
             actionSlot.MouseClickListener.OnRightClick.AddListener(OnRemoveRequested);
             actionSlot.ActionButton.onClick.AddListener(OnActionButtonClicked);
@@ -52,9 +57,10 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             foreach (var bar in ActionSlot.ProgressBars.Values)
                 bar.gameObject.SetActive(false);
 
-            if (ActionSlot.Config.IsDisabled || ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden)
+            if (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden)
             {
                 ActionSlot.EmptyImage.gameObject.SetActive(true);
+                ActionSlot.EmptyImage.sprite = GetHiddenEmptySprite() ?? _defaultEmptySprite;
                 ActionSlot.EmptyImage.color = Color.white; // Reset color
                 if (ActionSlot.CanvasGroup.alpha != 0)
                     ActionSlot.CanvasGroup.alpha = 0;
@@ -72,6 +78,7 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             else if (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Image)
             {
                 ActionSlot.EmptyImage.gameObject.SetActive(true);
+                ActionSlot.EmptyImage.sprite = _defaultEmptySprite;
                 ActionSlot.EmptyImage.color = Color.white; // Reset color
                 if (ActionSlot.CanvasGroup.alpha != 1)
                     ActionSlot.CanvasGroup.alpha = 1;
@@ -160,17 +167,6 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
 
         public void ActionSlotUpdate()
         {
-            // CRITICAL: Enforce disabled slot visibility every frame
-            // This overrides any code path that might incorrectly set alpha = 1
-            if (ActionSlot.Config != null && ActionSlot.Config.IsDisabled && !ActionSlot.HotbarsContainer.IsInHotkeyEditMode)
-            {
-                if (ActionSlot.CanvasGroup.alpha != 0f)
-                {
-                    ActionSlot.CanvasGroup.alpha = 0f;
-                }
-                return; // Skip other update logic for disabled slots
-            }
-
             if (!IsUpdateEnabled)
                 return;
 
@@ -269,12 +265,7 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             ActionSlot.KeyButton.gameObject.SetActive(toggle);
             if (toggle)
             {
-               // Show all slots, but disabled ones should be faded
-               if (ActionSlot.Config.IsDisabled)
-               {
-                   ActionSlot.CanvasGroup.alpha = 0.5f; // Faded to indicate disabled
-               }
-               else if (ActionSlot.CanvasGroup.alpha == 0f)
+               if (ActionSlot.CanvasGroup.alpha == 0f)
                {
                    ActionSlot.CanvasGroup.alpha = 1f;
                }
@@ -289,7 +280,7 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
                 ActionSlot.CanvasGroup.interactable = true;
                 ActionSlot.CanvasGroup.blocksRaycasts = true;
                 
-                if ((ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden && ActionSlot.SlotAction == null) || ActionSlot.Config.IsDisabled)
+                if (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden && ActionSlot.SlotAction == null)
                 {
                     ActionSlot.CanvasGroup.alpha = 0;
                 }
@@ -300,10 +291,10 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
 
         public void ToggleEditMode(bool toggle, bool showHidden = false)
         {
-            bool isHiddenSlot = (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden && ActionSlot.SlotAction == null) || ActionSlot.Config.IsDisabled;
+            bool isHiddenSlot = ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden && ActionSlot.SlotAction == null;
             bool overrideHidden = showHidden || (
-                              (ActionSlot.Config.EmptySlotOption != EmptySlotOptions.Hidden && ActionSlot.SlotAction != null && !ActionSlot.Config.IsDisabled) ||
-                              (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden && !string.IsNullOrWhiteSpace(ActionSlot.KeyText.text) && !ActionSlot.Config.IsDisabled));
+                              (ActionSlot.Config.EmptySlotOption != EmptySlotOptions.Hidden && ActionSlot.SlotAction != null) ||
+                              (ActionSlot.Config.EmptySlotOption == EmptySlotOptions.Hidden && !string.IsNullOrWhiteSpace(ActionSlot.KeyText.text)));
             //DebugLogger.Log($"{ActionSlot.name} ToggleEditMode({toggle}, {showHidden}), overrideHidden=={overrideHidden}.");
             if (toggle && ActionSlot.CanvasGroup.alpha == 0f && (ActionSlot.Config.EmptySlotOption != EmptySlotOptions.Hidden || overrideHidden))
                 ActionSlot.CanvasGroup.alpha = 1;
@@ -331,27 +322,14 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
 
             if (ActionSlot.HotbarsContainer.IsInHotkeyEditMode)
             {
-                ActionSlot.Config.IsDisabled = !ActionSlot.Config.IsDisabled;
+                ActionSlot.Config.EmptySlotOption = GetNextEmptySlotOption(ActionSlot.Config.EmptySlotOption);
                 ActionSlot.HotbarsContainer.HasChanges = true;
-                
-                // Visual feedback: toggle transparency immediately if in edit mode
-                 if (ActionSlot.Config.IsDisabled)
-                 {
-                     ActionSlot.CanvasGroup.alpha = 0.5f;
-                     // Ensure EmptyImage is OFF if we have an action, so we see the action partially faded
-                     if (ActionSlot.SlotAction != null)
-                        ActionSlot.EmptyImage.gameObject.SetActive(false);
-                     else
-                        ActionSlot.EmptyImage.gameObject.SetActive(true); // Show empty image if no action
-                 }
-                 else
-                 {
-                     Refresh();
-                     // In Hotkey Edit Mode, we want to see the slot even if it is normally hidden/transparent
-                     if (ActionSlot.CanvasGroup.alpha == 0f)
-                         ActionSlot.CanvasGroup.alpha = 1f;
-                 }
-                 return;
+
+                Refresh();
+                if (ActionSlot.CanvasGroup.alpha == 0f)
+                    ActionSlot.CanvasGroup.alpha = 1f;
+
+                return;
             }
 
             if (ActionSlot.ParentCanvas != null && ActionSlot.ParentCanvas.enabled && ActionSlot.ActionButton.interactable)
@@ -375,8 +353,60 @@ namespace ModifAmorphic.Outward.Unity.ActionUI.Controllers
             ActionSlot.CooldownText.text = String.Empty;
             ActionSlot.StackText.text = String.Empty;
 
-            bool isHidden = ActionSlot.Config.IsDisabled && !ActionSlot.HotbarsContainer.IsInHotkeyEditMode;
-            ActionSlot.CanvasGroup.alpha = isHidden ? 0 : 1;
+            ActionSlot.CanvasGroup.alpha = 1;
+        }
+
+        private Sprite GetHiddenEmptySprite()
+        {
+            if (_hiddenEmptySpriteLoadAttempted)
+                return _hiddenEmptySprite;
+
+            _hiddenEmptySpriteLoadAttempted = true;
+
+            try
+            {
+                var assemblyPath = typeof(ActionSlotController).Assembly.Location;
+                if (string.IsNullOrWhiteSpace(assemblyPath))
+                    return null;
+
+                var pluginDirectory = Path.GetDirectoryName(assemblyPath);
+                if (string.IsNullOrWhiteSpace(pluginDirectory))
+                    return null;
+
+                var hiddenImagePath = Path.Combine(pluginDirectory, "ActionSlotHiddenImage.png");
+                if (!File.Exists(hiddenImagePath))
+                    return null;
+
+                var imageBytes = File.ReadAllBytes(hiddenImagePath);
+                var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (!ImageConversion.LoadImage(texture, imageBytes))
+                    return null;
+
+                _hiddenEmptySprite = Sprite.Create(
+                    texture,
+                    new Rect(0, 0, texture.width, texture.height),
+                    new Vector2(0.5f, 0.5f),
+                    100f);
+            }
+            catch
+            {
+                _hiddenEmptySprite = null;
+            }
+
+            return _hiddenEmptySprite;
+        }
+
+        private EmptySlotOptions GetNextEmptySlotOption(EmptySlotOptions currentOption)
+        {
+            switch (currentOption)
+            {
+                case EmptySlotOptions.Hidden:
+                    return EmptySlotOptions.Image;
+                case EmptySlotOptions.Image:
+                    return EmptySlotOptions.Transparent;
+                default:
+                    return EmptySlotOptions.Hidden;
+            }
         }
 
 

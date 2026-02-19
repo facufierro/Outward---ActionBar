@@ -31,7 +31,6 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             ActionUISettings.CombatMode.SettingChanged += (s, e) => UpdateFromSettings(HotbarProfileChangeTypes.CombatMode);
             ActionUISettings.ShowCooldownTimer.SettingChanged += (s, e) => UpdateFromSettings(HotbarProfileChangeTypes.CooldownTimer);
             ActionUISettings.PreciseCooldownTime.SettingChanged += (s, e) => UpdateFromSettings(HotbarProfileChangeTypes.CooldownTimer);
-            ActionUISettings.EmptySlotOption.SettingChanged += (s, e) => UpdateFromSettings(HotbarProfileChangeTypes.EmptySlotView);
         }
 
         private void LoadProfile()
@@ -70,15 +69,10 @@ namespace ModifAmorphic.Outward.ActionUI.Services
              profile.CombatMode = ActionUISettings.CombatMode.Value;
              
              // Sync per-slot settings from Config to all slot configs
-             var emptySlotOption = Enum.TryParse<EmptySlotOptions>(ActionUISettings.EmptySlotOption.Value, out var parsedOption) 
-                 ? parsedOption 
-                 : EmptySlotOptions.Transparent;
-             
              foreach (var bar in profile.Hotbars)
              {
                  foreach (var slot in bar.Slots)
                  {
-                     slot.Config.EmptySlotOption = emptySlotOption;
                      slot.Config.ShowCooldownTime = ActionUISettings.ShowCooldownTimer.Value;
                      slot.Config.PreciseCooldownTime = ActionUISettings.PreciseCooldownTime.Value;
                  }
@@ -160,7 +154,6 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                     var config = hotbarProfile.Hotbars[0].Slots[0].Config;
                     if (ActionUISettings.ShowCooldownTimer.Value != config.ShowCooldownTime) ActionUISettings.ShowCooldownTimer.Value = config.ShowCooldownTime;
                     if (ActionUISettings.PreciseCooldownTime.Value != config.PreciseCooldownTime) ActionUISettings.PreciseCooldownTime.Value = config.PreciseCooldownTime;
-                    if (ActionUISettings.EmptySlotOption.Value != config.EmptySlotOption.ToString()) ActionUISettings.EmptySlotOption.Value = config.EmptySlotOption.ToString();
                 }
 
                 var json = JsonConvert.SerializeObject(hotbarProfile, Formatting.None);

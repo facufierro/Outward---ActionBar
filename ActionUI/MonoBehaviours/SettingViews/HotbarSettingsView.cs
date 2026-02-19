@@ -1,6 +1,5 @@
 using ModifAmorphic.Outward.Unity.ActionUI;
 using ModifAmorphic.Outward.Unity.ActionUI.Data;
-using System;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
@@ -121,11 +120,8 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
             HideLeftNav.isOn = _hotbarProfile?.HideLeftNav ?? false;
             CombatMode.isOn = _hotbarProfile.CombatMode;
 
-            EmptySlotDropdown.ClearOptions();
-            var imageOptions = Enum.GetNames(typeof(EmptySlotOptions)).Select(name => new Dropdown.OptionData(name)).ToList();
-            EmptySlotDropdown.AddOptions(imageOptions);
-            var selectedName = Enum.GetName(typeof(EmptySlotOptions), config?.EmptySlotOption ?? EmptySlotOptions.Image);
-            EmptySlotDropdown.value = imageOptions.FindIndex(o => o.text.Equals(selectedName, StringComparison.InvariantCultureIgnoreCase));
+            if (EmptySlotDropdown != null)
+                EmptySlotDropdown.gameObject.SetActive(false);
 
         }
         private void HookControls()
@@ -169,9 +165,6 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                 _hotbarService.SetCombatMode(CombatMode.isOn)
             );
 
-            EmptySlotDropdown.onValueChanged.AddListener(value =>
-                _hotbarService.SetEmptySlotView((EmptySlotOptions)value)
-            );
         }
         private void EnableHotkeyEdits()
         {
