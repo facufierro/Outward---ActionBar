@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+- **Fixed**: Dynamic slot context now resolves both main-hand and off-hand equipment correctly (including non-weapon off-hand items like torches).
+- **Fixed**: Combo context fallback behavior now restores expected slot assignments when the off-hand item is unequipped.
+- **Fixed**: Slot edits made while both hands are equipped now save to the combo preset context instead of incorrectly saving only to the main-hand context.
+
 ## 1.2.0
 - **Added**: Per-slot empty style cycling in slot configuration mode (`Hidden → Image → Transparent`).
 - **Added**: Dynamic slots with weapon-based presets:
