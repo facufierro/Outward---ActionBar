@@ -39,6 +39,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private const int NoWeaponType = -1;
         private const int OffhandNonWeaponContextOffset = 1000000;
+        private const int MainNonWeaponContextOffset = 2000000;
 
         private bool disposedValue;
 
@@ -655,11 +656,15 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             if (equipment == null)
                 return null;
 
-            return ReadEquipmentFromPropertyNames(equipment,
+            var fromEquipment = ReadEquipmentFromPropertyNames(equipment,
                 "RightHandWeapon",
                 "RightHandEquipment",
                 "MainHandWeapon",
                 "MainHandEquipment");
+            if (fromEquipment != null)
+                return fromEquipment;
+
+            return ReadEquipmentFromSlots(character, isMainHand: true);
         }
 
         private static Equipment ReadOffhandEquipment(Character character)
@@ -680,11 +685,15 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             if (equipment == null)
                 return null;
 
-            return ReadEquipmentFromPropertyNames(equipment,
+            var fromEquipment = ReadEquipmentFromPropertyNames(equipment,
                 "LeftHandWeapon",
                 "LeftHandEquipment",
                 "OffHandWeapon",
                 "OffHandEquipment");
+            if (fromEquipment != null)
+                return fromEquipment;
+
+            return ReadEquipmentFromSlots(character, isMainHand: false);
         }
 
         private static Equipment ReadEquipmentFromPropertyNames(object source, params string[] propertyNames)
@@ -714,9 +723,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             if (mainEquipment is Weapon mainWeapon)
                 return (int)mainWeapon.Type;
 
-            var itemIdProp = mainEquipment.GetType().GetProperty("ItemID", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            if (itemIdProp?.GetValue(mainEquipment, null) is int itemId && itemId > 0)
-                return itemId;
+            if (TryGetStableEquipmentContextId(mainEquipment, out var itemId))
+                return MainNonWeaponContextOffset + itemId;
 
             return NoWeaponType;
         }
@@ -729,11 +737,235 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             if (offhandEquipment is Weapon offhandWeapon)
                 return (int)offhandWeapon.Type;
 
-            var itemIdProp = offhandEquipment.GetType().GetProperty("ItemID", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            if (itemIdProp?.GetValue(offhandEquipment, null) is int itemId && itemId > 0)
+            if (TryGetStableEquipmentContextId(offhandEquipment, out var itemId))
                 return OffhandNonWeaponContextOffset + itemId;
 
             return NoWeaponType;
+        }
+
+        private static Equipment ReadEquipmentFromSlots(Character character, bool isMainHand)
+        {
+            var inventory = character?.Inventory;
+            var equipmentRoot = inventory?.Equipment;
+            if (equipmentRoot == null)
+                return null;
+
+            var slots = ReadObjectEnumerable(equipmentRoot,
+                "EquipmentSlots",
+                "m_equipmentSlots",
+                "Slots",
+                "m_slots");
+            if (slots == null)
+                return null;
+
+            foreach (var slot in slots)
+            {
+                if (slot == null)
+                    continue;
+
+                var slotType = ReadSlotTypeName(slot);
+                if (string.IsNullOrWhiteSpace(slotType))
+                    continue;
+
+                var isMainSlot = slotType.IndexOf("Right", StringComparison.OrdinalIgnoreCase) >= 0
+                    || slotType.IndexOf("Main", StringComparison.OrdinalIgnoreCase) >= 0
+                    || slotType.IndexOf("Primary", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                var isOffSlot = slotType.IndexOf("Left", StringComparison.OrdinalIgnoreCase) >= 0
+                    || slotType.IndexOf("Off", StringComparison.OrdinalIgnoreCase) >= 0
+                    || slotType.IndexOf("Secondary", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                if ((isMainHand && !isMainSlot) || (!isMainHand && !isOffSlot))
+                    continue;
+
+                var equipped = ReadEquipmentFromPropertyNames(slot,
+                    "EquippedItem",
+                    "m_equippedItem",
+                    "Item");
+                if (equipped != null)
+                    return equipped;
+            }
+
+            return null;
+        }
+
+        private static IEnumerable<object> ReadObjectEnumerable(object source, params string[] memberNames)
+        {
+            if (source == null || memberNames == null || memberNames.Length == 0)
+                return null;
+
+            var type = source.GetType();
+            for (int i = 0; i < memberNames.Length; i++)
+            {
+                var prop = type.GetProperty(memberNames[i], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (prop?.GetValue(source, null) is System.Collections.IEnumerable propEnumerable)
+                {
+                    var values = new List<object>();
+                    foreach (var item in propEnumerable)
+                        values.Add(item);
+                    return values;
+                }
+
+                var field = type.GetField(memberNames[i], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (field?.GetValue(source) is System.Collections.IEnumerable fieldEnumerable)
+                {
+                    var values = new List<object>();
+                    foreach (var item in fieldEnumerable)
+                        values.Add(item);
+                    return values;
+                }
+            }
+
+            return null;
+        }
+
+        private static string ReadSlotTypeName(object slot)
+        {
+            if (slot == null)
+                return null;
+
+            var type = slot.GetType();
+            var slotTypeProp = type.GetProperty("SlotType", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var slotTypeValue = slotTypeProp?.GetValue(slot, null);
+            if (slotTypeValue != null)
+                return slotTypeValue.ToString();
+
+            var slotTypeField = type.GetField("m_slotType", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var fieldValue = slotTypeField?.GetValue(slot);
+            return fieldValue?.ToString();
+        }
+
+        private static bool TryGetStableEquipmentContextId(Equipment equipment, out int itemId)
+        {
+            itemId = 0;
+            if (equipment == null)
+                return false;
+
+            if (TryReadIntMember(equipment, out itemId,
+                "ItemID",
+                "ItemId",
+                "ID",
+                "m_itemID",
+                "m_itemId",
+                "_itemID",
+                "_itemId"))
+            {
+                return itemId > 0;
+            }
+
+            var uid = ReadStringMember(equipment,
+                "UID",
+                "ItemUID",
+                "ItemUid",
+                "m_uid",
+                "m_UID",
+                "_uid");
+            if (!string.IsNullOrWhiteSpace(uid))
+            {
+                itemId = StablePositiveHash(uid);
+                return itemId > 0;
+            }
+
+            var name = equipment.name;
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                itemId = StablePositiveHash($"name:{name}");
+                return itemId > 0;
+            }
+
+            return false;
+        }
+
+        private static bool TryReadIntMember(object source, out int value, params string[] memberNames)
+        {
+            value = 0;
+            if (source == null || memberNames == null || memberNames.Length == 0)
+                return false;
+
+            var type = source.GetType();
+            for (int i = 0; i < memberNames.Length; i++)
+            {
+                var prop = type.GetProperty(memberNames[i], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (prop != null && TryConvertToInt(prop.GetValue(source, null), out value))
+                    return true;
+
+                var field = type.GetField(memberNames[i], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (field != null && TryConvertToInt(field.GetValue(source), out value))
+                    return true;
+
+                var method = type.GetMethod(memberNames[i], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
+                if (method != null && TryConvertToInt(method.Invoke(source, null), out value))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static string ReadStringMember(object source, params string[] memberNames)
+        {
+            if (source == null || memberNames == null || memberNames.Length == 0)
+                return null;
+
+            var type = source.GetType();
+            for (int i = 0; i < memberNames.Length; i++)
+            {
+                var prop = type.GetProperty(memberNames[i], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (prop?.GetValue(source, null) is string propValue && !string.IsNullOrWhiteSpace(propValue))
+                    return propValue;
+
+                var field = type.GetField(memberNames[i], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (field?.GetValue(source) is string fieldValue && !string.IsNullOrWhiteSpace(fieldValue))
+                    return fieldValue;
+            }
+
+            return null;
+        }
+
+        private static bool TryConvertToInt(object value, out int result)
+        {
+            result = 0;
+            if (value == null)
+                return false;
+
+            switch (value)
+            {
+                case int intValue:
+                    result = intValue;
+                    return true;
+                case long longValue when longValue <= int.MaxValue && longValue >= int.MinValue:
+                    result = (int)longValue;
+                    return true;
+                case short shortValue:
+                    result = shortValue;
+                    return true;
+                case uint uintValue when uintValue <= int.MaxValue:
+                    result = (int)uintValue;
+                    return true;
+                case byte byteValue:
+                    result = byteValue;
+                    return true;
+                case string stringValue when int.TryParse(stringValue, out var parsed):
+                    result = parsed;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static int StablePositiveHash(string text)
+        {
+            unchecked
+            {
+                var hash = 2166136261;
+                for (int i = 0; i < text.Length; i++)
+                {
+                    hash ^= text[i];
+                    hash *= 16777619;
+                }
+
+                var positive = (int)(hash & 0x7FFFFFFF);
+                return positive == 0 ? 1 : positive;
+            }
         }
 
         private static string[] BuildResolveKeys(int mainWeaponType, int offWeaponType)
