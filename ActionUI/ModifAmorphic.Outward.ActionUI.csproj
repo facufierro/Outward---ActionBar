@@ -20,49 +20,54 @@
     <DefineConstants>$(DefineConstants)TRACE;UNITY_5_5_OR_NEWER;UNITY_2018_3_OR_NEWER</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <BepInExCorePath Condition="'$(BepInExCorePath)' == ''">c:\Users\fierr\AppData\Roaming\r2modmanPlus-local\OutwardDe\profiles\Classfixes\BepInEx\core</BepInExCorePath>
+    <OutwardManagedPath Condition="'$(OutwardManagedPath)' == ''">D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed</OutwardManagedPath>
+  </PropertyGroup>
+
   <ItemGroup>
     <Reference Include="UnityEngine">
-      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>$(OutwardManagedPath)\UnityEngine.dll</HintPath>
       <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(OutwardManagedPath)\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
-	  <Private>false</Private>
+      <HintPath>$(OutwardManagedPath)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+      <HintPath>$(OutwardManagedPath)\UnityEngine.ImageConversionModule.dll</HintPath>
       <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>
     <Reference Include="UnityEngine.InputModule">
-      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.InputModule.dll</HintPath>
-	  <Private>false</Private>
+      <HintPath>$(OutwardManagedPath)\UnityEngine.InputModule.dll</HintPath>
+      <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <HintPath>$(OutwardManagedPath)\UnityEngine.UI.dll</HintPath>
       <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>
     <Reference Include="UnityEngine.UIModule">
-      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <HintPath>$(OutwardManagedPath)\UnityEngine.UIModule.dll</HintPath>
       <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>
      <Reference Include="Assembly-CSharp">
-      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(OutwardManagedPath)\Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      <HintPath>$(OutwardManagedPath)\Assembly-CSharp-firstpass.dll</HintPath>
       <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>

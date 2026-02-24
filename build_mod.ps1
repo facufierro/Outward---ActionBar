@@ -10,7 +10,11 @@ param(
 
     [string]$Version,
 
-    [switch]$BuildAfterChange
+    [switch]$BuildAfterChange,
+
+    [string]$BepInExCorePath,
+
+    [string]$OutwardManagedPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,6 +26,71 @@ $binDir = "$solutionDir\bin"
 $publishDir = "$solutionDir\bin\Debug\publish"
 $manifestPath = "$projectDir\manifest.json"
 $devStatePath = "$solutionDir\.dev-version.json"
+
+function Resolve-BepInExCorePath([string]$value) {
+    if (-not [string]::IsNullOrWhiteSpace($value) -and (Test-Path (Join-Path $value "BepInEx.dll")) -and (Test-Path (Join-Path $value "0Harmony.dll"))) {
+        return $value
+    }
+
+    $envPath = $env:R2MODMAN_BEPINEX_CORE
+    if (-not [string]::IsNullOrWhiteSpace($envPath) -and (Test-Path (Join-Path $envPath "BepInEx.dll")) -and (Test-Path (Join-Path $envPath "0Harmony.dll"))) {
+        return $envPath
+    }
+
+    $profilesRoot = Join-Path $env:APPDATA "r2modmanPlus-local\OutwardDe\profiles"
+    if (Test-Path $profilesRoot) {
+        $candidates = Get-ChildItem -Path $profilesRoot -Directory -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                $corePath = Join-Path $_.FullName "BepInEx\core"
+                if ((Test-Path (Join-Path $corePath "BepInEx.dll")) -and (Test-Path (Join-Path $corePath "0Harmony.dll"))) {
+                    [PSCustomObject]@{
+                        Path = $corePath
+                        LastWriteTime = $_.LastWriteTime
+                    }
+                }
+            } |
+            Where-Object { $_ -ne $null } |
+            Sort-Object LastWriteTime -Descending
+
+        if ($candidates -and $candidates.Count -gt 0) {
+            return $candidates[0].Path
+        }
+    }
+
+    Write-Error "Could not resolve BepInEx core path. Pass -BepInExCorePath or set R2MODMAN_BEPINEX_CORE."
+}
+
+function Resolve-OutwardManagedPath([string]$value) {
+    if (-not [string]::IsNullOrWhiteSpace($value) -and (Test-Path (Join-Path $value "Assembly-CSharp.dll"))) {
+        return $value
+    }
+
+    $envPath = $env:OUTWARD_MANAGED_PATH
+    if (-not [string]::IsNullOrWhiteSpace($envPath) -and (Test-Path (Join-Path $envPath "Assembly-CSharp.dll"))) {
+        return $envPath
+    }
+
+    $candidateRoots = @(
+        "D:\Games\Steam\steamapps\common\Outward",
+        "C:\Program Files (x86)\Steam\steamapps\common\Outward",
+        "C:\Program Files\Steam\steamapps\common\Outward"
+    )
+
+    foreach ($root in $candidateRoots) {
+        $managedCandidates = @(
+            (Join-Path $root "Outward_Defed\Outward Definitive Edition_Data\Managed"),
+            (Join-Path $root "Outward_Data\Managed")
+        )
+
+        foreach ($candidate in $managedCandidates) {
+            if (Test-Path (Join-Path $candidate "Assembly-CSharp.dll")) {
+                return $candidate
+            }
+        }
+    }
+
+    Write-Error "Could not resolve Outward managed path. Pass -OutwardManagedPath or set OUTWARD_MANAGED_PATH."
+}
 
 function Get-Manifest {
     if (-not (Test-Path $manifestPath)) {
@@ -107,6 +176,9 @@ function Get-Author($manifest) {
 }
 
 function Invoke-PackageBuild($manifest, [string]$channel) {
+    $resolvedBepInExCorePath = Resolve-BepInExCorePath -value $BepInExCorePath
+    $resolvedOutwardManagedPath = Resolve-OutwardManagedPath -value $OutwardManagedPath
+
     $releaseVersion = $manifest.version_number
     [void](Get-SemVerParts -value $releaseVersion)
 
@@ -124,6 +196,8 @@ function Invoke-PackageBuild($manifest, [string]$channel) {
     Write-Host "Build channel: $channel"
     Write-Host "Release version: $releaseVersion"
     Write-Host "Package version: $packageVersion"
+    Write-Host "BepInEx core: $resolvedBepInExCorePath"
+    Write-Host "Outward managed: $resolvedOutwardManagedPath"
 
     Write-Host "Cleaning bin and obj folders..."
     foreach ($cleanDir in @("$solutionDir\ActionUI\bin", "$solutionDir\ActionUI\obj", "$projectDir\bin", "$projectDir\obj")) {
@@ -136,7 +210,7 @@ function Invoke-PackageBuild($manifest, [string]$channel) {
     }
 
     Write-Host "Building and publishing project..."
-    dotnet publish $projectFile -c Debug -o "$publishDir"
+    dotnet publish $projectFile -c Debug -o "$publishDir" -p:BepInExCorePath="$resolvedBepInExCorePath" -p:OutwardManagedPath="$resolvedOutwardManagedPath"
     if ($LASTEXITCODE -ne 0) {
         Write-Error "dotnet publish failed for ActionUI.Plugin"
     }
