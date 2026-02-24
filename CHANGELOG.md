@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2
+- **Fixed**: Dynamic slots now work correctly with modded equipment that adds non-standard hand slots (e.g. Classfixes).
+- **Fixed**: Main-hand non-weapon equipment (shields, off-hand items held in the main hand) no longer shares context IDs with offhand equipment, preventing preset mixups.
+- **Fixed**: Equipment context resolution now falls back to slot-based slot scanning when standard property names are unavailable, improving compatibility with mods that expose equipment differently.
+- **Fixed**: Non-weapon equipment context IDs are now derived from a stable UID or name hash, preventing context collisions across sessions.
+
 ## 1.2.1
 - **Fixed**: Dynamic slot context now resolves both main-hand and off-hand equipment correctly (including non-weapon off-hand items like torches).
 - **Fixed**: Combo context fallback behavior now restores expected slot assignments when the off-hand item is unequipped.
