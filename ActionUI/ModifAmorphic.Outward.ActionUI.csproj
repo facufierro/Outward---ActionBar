@@ -21,8 +21,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <BepInExCorePath Condition="'$(BepInExCorePath)' == ''">c:\Users\fierr\AppData\Roaming\r2modmanPlus-local\OutwardDe\profiles\Classfixes\BepInEx\core</BepInExCorePath>
-    <OutwardManagedPath Condition="'$(OutwardManagedPath)' == ''">D:\Games\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed</OutwardManagedPath>
+    <BepInExCorePath Condition="'$(BepInExCorePath)' == '' and '$(R2MODMAN_BEPINEX_CORE)' != ''">$(R2MODMAN_BEPINEX_CORE)</BepInExCorePath>
+    <OutwardManagedPath Condition="'$(OutwardManagedPath)' == '' and '$(OUTWARD_MANAGED_PATH)' != ''">$(OUTWARD_MANAGED_PATH)</OutwardManagedPath>
   </PropertyGroup>
 
   <ItemGroup>
