@@ -36,6 +36,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         private bool _isProfileInit;
         private bool _isStarted = false;
         private string _activeContextSignature = string.Empty;
+        private bool _pendingHotbarConfigRefresh;
 
         private const int NoWeaponType = -1;
         private const int OffhandNonWeaponContextOffset = 1000000;
@@ -129,6 +130,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 ActionUISettings.CombatMode.SettingChanged += OnHotbarConfigChanged;
                 ActionUISettings.ShowCooldownTimer.SettingChanged += OnHotbarConfigChanged;
                 ActionUISettings.PreciseCooldownTime.SettingChanged += OnHotbarConfigChanged;
+
             }
             catch (Exception ex)
             {
@@ -216,6 +218,12 @@ namespace ModifAmorphic.Outward.ActionUI.Services
             {
                 _isConfiguring = false;
                 _saveDisabled = false;
+
+                if (_pendingHotbarConfigRefresh)
+                {
+                    _pendingHotbarConfigRefresh = false;
+                    OnHotbarConfigChanged(this, EventArgs.Empty);
+                }
             }
         }
         private void TryConfigureHotbars(IHotbarProfile profile, HotbarProfileChangeTypes changeType)
@@ -1166,8 +1174,14 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private void OnHotbarConfigChanged(object sender, EventArgs e)
         {
-            if (!_isStarted || _isConfiguring || _hotbars == null)
+            if (!_isStarted || _hotbars == null)
                 return;
+
+            if (_isConfiguring)
+            {
+                _pendingHotbarConfigRefresh = true;
+                return;
+            }
 
             try
             {
@@ -1205,7 +1219,6 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 }
 
                 TryConfigureHotbars(profile, HotbarProfileChangeTypes.ProfileRefreshed);
-                OnHotbarPositionConfigChanged(sender, e);
                 _hotbars.ClearChanges();
             }
             catch (Exception ex)

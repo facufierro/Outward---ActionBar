@@ -49,6 +49,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                  try
                 {
                     _cachedProfile = JsonConvert.DeserializeObject<HotbarProfileData>(json);
+                    if (_cachedProfile == null)
+                        _cachedProfile = CreateDefaultProfile();
                     
                     // Validate/Fix profile if needed (e.g. if settings changed while game was closed? Unlikely with BepInEx)
                     // But we should sync the simple config values to the profile or vice versa.
@@ -87,11 +89,48 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private void EnsureDimensions(HotbarProfileData profile, int rows, int slotsPerRow)
         {
-             // This is a simplified resize logic, might need full implementation from old service if we want to support it cleanly
-             // For now, let's trust the UpdateFromSettings or Add/Remove logic.
-             // But if we just loaded, we might need to conform the list.
-             
-             // Implementation similar to UpdateDimensions but operating on provided profile
+            if (profile == null)
+                return;
+
+            profile.Rows = Math.Max(1, rows);
+            profile.SlotsPerRow = Math.Max(1, slotsPerRow);
+
+            if (profile.Hotbars == null || profile.Hotbars.Count == 0)
+                profile.Hotbars = DeepCloneHotbars(HotbarSettings.DefaulHotbarProfile.Hotbars);
+
+            int required = profile.Rows * profile.SlotsPerRow;
+
+            for (int barIndex = 0; barIndex < profile.Hotbars.Count; barIndex++)
+            {
+                var bar = profile.Hotbars[barIndex] as HotbarData;
+                if (bar == null)
+                {
+                    bar = new HotbarData()
+                    {
+                        HotbarIndex = barIndex,
+                        RewiredActionId = RewiredConstants.ActionSlots.HotbarNavActions[Math.Min(barIndex, RewiredConstants.ActionSlots.HotbarNavActions.Count - 1)].id,
+                        RewiredActionName = RewiredConstants.ActionSlots.HotbarNavActions[Math.Min(barIndex, RewiredConstants.ActionSlots.HotbarNavActions.Count - 1)].name,
+                        Slots = new List<ISlotData>()
+                    };
+                    profile.Hotbars[barIndex] = bar;
+                }
+
+                if (bar.Slots == null)
+                    bar.Slots = new List<ISlotData>();
+
+                if (bar.Slots.Count == 0)
+                    bar.Slots.Add(CreateDefaultSlotData(0));
+
+                while (bar.Slots.Count < required)
+                {
+                    bar.Slots.Add(CreateSlotDataFrom(bar.Slots[0], bar.Slots.Count));
+                }
+
+                if (bar.Slots.Count > required)
+                    bar.Slots.RemoveRange(required, bar.Slots.Count - required);
+
+                ReindexSlots(bar.Slots);
+            }
         }
 
         private HotbarProfileData CreateDefaultProfile()
@@ -116,11 +155,9 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 PrevRewiredAxisActionName = RewiredConstants.ActionSlots.PreviousHotbarAxisAction.name,
                 PrevRewiredAxisActionId = RewiredConstants.ActionSlots.PreviousHotbarAxisAction.id,
             };
-            
-            // Initial resize
-            // We need logic to add/remove rows to match Rows value
-            // For now assuming DefaultHotbarProfile has 1 row, 11 slots (or whatever default is)
-            
+
+            EnsureDimensions(profile, profile.Rows, profile.SlotsPerRow);
+
             return profile;
         }
 
@@ -268,6 +305,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                     }
                 }
 
+                bool skipItemAssignmentSync = false;
                 if (allUiSlotsEmpty)
                 {
                     bool profileHasItems = false;
@@ -282,8 +320,8 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                     
                     if (profileHasItems)
                     {
-                        Logger.LogWarning("GlobalHotbarService: Detected attempt to update from EMPTY UI while profile has items. Aborting Update to prevent data loss.");
-                        return;
+                        Logger.LogWarning("GlobalHotbarService: Detected update from EMPTY UI while profile has items. Preserving item assignments and syncing slot config only.");
+                        skipItemAssignmentSync = true;
                     }
                 }
 
@@ -298,20 +336,21 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                         var profileSlot = profileBar.Slots[slotIndex];
                         
                         // Only update if we have a valid reference or if we are confident it's an intentional empty
-                        if (uiSlot.SlotAction != null)
+                        if (!skipItemAssignmentSync && uiSlot.SlotAction != null)
                         {
                             profileSlot.ItemID = uiSlot.SlotAction.ActionId;
                             profileSlot.ItemUID = uiSlot.SlotAction.ActionUid;
                         }
-                        else
+                        else if (!skipItemAssignmentSync)
                         {
                             profileSlot.ItemID = -1;
                             profileSlot.ItemUID = null;
                         }
                         
-                        // Sync disabled state from UI config
+                        // Sync slot config state from UI config
                         if (uiSlot.Config != null)
                         {
+                            profileSlot.Config.EmptySlotOption = uiSlot.Config.EmptySlotOption;
                             profileSlot.Config.IsDisabled = uiSlot.Config.IsDisabled;
                             profileSlot.Config.IsDynamic = uiSlot.Config.IsDynamic;
                         }
@@ -379,24 +418,7 @@ namespace ModifAmorphic.Outward.ActionUI.Services
 
         private void SyncStructure()
         {
-             // Ensure slots exist for Rows * SlotsPerRow
-             // Simplified version for brevity, should use robust logic from old service
-             // Iterate hotbars
-             foreach(var bar in _cachedProfile.Hotbars)
-             {
-                 // Add/Remove slots logic...
-                 int required = _cachedProfile.Rows * _cachedProfile.SlotsPerRow;
-                 while(bar.Slots.Count < required)
-                 {
-                     // Add slot
-                      bar.Slots.Add(CreateSlotDataFrom(bar.Slots.First(), bar.Slots.Count));
-                 }
-                 if(bar.Slots.Count > required)
-                 {
-                     bar.Slots.RemoveRange(required, bar.Slots.Count - required);
-                 }
-                 ReindexSlots(bar.Slots);
-             }
+            EnsureDimensions(_cachedProfile, _cachedProfile.Rows, _cachedProfile.SlotsPerRow);
         }
 
         private bool _isSaving = false;
@@ -453,8 +475,77 @@ namespace ModifAmorphic.Outward.ActionUI.Services
         
          private List<IHotbarSlotData> DeepCloneHotbars(List<IHotbarSlotData> original)
         {
-             // implementation
-             return new List<IHotbarSlotData>(original); // Placeholder, needs deep clone
+            var result = new List<IHotbarSlotData>();
+            if (original == null)
+                return result;
+
+            for (int barIndex = 0; barIndex < original.Count; barIndex++)
+            {
+                var sourceBar = original[barIndex];
+                var sourceHotbarData = sourceBar as HotbarData;
+                var clonedBar = new HotbarData()
+                {
+                    HotbarIndex = sourceBar.HotbarIndex,
+                    RewiredActionId = sourceHotbarData?.RewiredActionId
+                        ?? RewiredConstants.ActionSlots.HotbarNavActions[Math.Min(barIndex, RewiredConstants.ActionSlots.HotbarNavActions.Count - 1)].id,
+                    RewiredActionName = sourceHotbarData?.RewiredActionName
+                        ?? RewiredConstants.ActionSlots.HotbarNavActions[Math.Min(barIndex, RewiredConstants.ActionSlots.HotbarNavActions.Count - 1)].name,
+                    HotbarHotkey = sourceBar.HotbarHotkey,
+                    Slots = new List<ISlotData>()
+                };
+
+                if (sourceBar.Slots != null)
+                {
+                    for (int slotIndex = 0; slotIndex < sourceBar.Slots.Count; slotIndex++)
+                    {
+                        var sourceSlot = sourceBar.Slots[slotIndex];
+                        clonedBar.Slots.Add(new SlotData()
+                        {
+                            SlotIndex = sourceSlot.SlotIndex,
+                            ItemID = sourceSlot.ItemID,
+                            ItemUID = sourceSlot.ItemUID,
+                            Config = new ActionConfig()
+                            {
+                                HotkeyText = sourceSlot.Config?.HotkeyText,
+                                ShowCooldownTime = sourceSlot.Config?.ShowCooldownTime ?? false,
+                                PreciseCooldownTime = sourceSlot.Config?.PreciseCooldownTime ?? false,
+                                ShowZeroStackAmount = sourceSlot.Config?.ShowZeroStackAmount ?? false,
+                                EmptySlotOption = sourceSlot.Config?.EmptySlotOption ?? EmptySlotOptions.Transparent,
+                                RewiredActionName = (sourceSlot.Config as ActionConfig)?.RewiredActionName,
+                                RewiredActionId = (sourceSlot.Config as ActionConfig)?.RewiredActionId ?? 0,
+                                IsDisabled = sourceSlot.Config?.IsDisabled ?? false,
+                                IsDynamic = sourceSlot.Config?.IsDynamic ?? false,
+                            }
+                        });
+                    }
+                }
+
+                result.Add(clonedBar);
+            }
+
+            return result;
+        }
+
+        private SlotData CreateDefaultSlotData(int slotIndex)
+        {
+            var safeActionIndex = Math.Min(slotIndex, RewiredConstants.ActionSlots.Actions.Count - 1);
+            return new SlotData()
+            {
+                SlotIndex = slotIndex,
+                ItemID = -1,
+                ItemUID = null,
+                Config = new ActionConfig()
+                {
+                    RewiredActionId = RewiredConstants.ActionSlots.Actions[safeActionIndex].id,
+                    RewiredActionName = RewiredConstants.ActionSlots.Actions[safeActionIndex].name,
+                    EmptySlotOption = EmptySlotOptions.Transparent,
+                    ShowCooldownTime = ActionUISettings.ShowCooldownTimer.Value,
+                    PreciseCooldownTime = ActionUISettings.PreciseCooldownTime.Value,
+                    ShowZeroStackAmount = false,
+                    IsDisabled = false,
+                    IsDynamic = false,
+                }
+            };
         }
         
         #region Per-Character Slot Data

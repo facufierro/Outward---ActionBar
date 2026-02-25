@@ -31,7 +31,7 @@ namespace ModifAmorphic.Outward.ActionUI.Monobehaviours
         public void SetLogger(Func<IModifLogger> getLogger) => _getLogger = getLogger;
         public void OnDrop(PointerEventData eventData)
         {
-            //_actionSlot.Controller.AssignSlotAction()
+            _draggedItemDisplay = GetDraggedElement(eventData);
             Logger.LogDebug($"{nameof(ActionSlotDropper)}:{nameof(OnDrop)}: ActionItemView {_actionSlot.name}, ItemDisplay: {_draggedItemDisplay?.name}, RefItem: {_draggedItemDisplay?.RefItem?.name}");
             if (_draggedItemDisplay?.RefItem != null && _draggedItemDisplay.RefItem.IsQuickSlotable)
             {
