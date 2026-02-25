@@ -1,4 +1,7 @@
 # Changelog
+## 1.2.3
+- **Fixed**: Configs not refreshing when changed
+- **Fixed**: Some UI elements reseting on reload
 
 ## 1.2.2
 - **Fixed**: Dynamic slots now work correctly with modded equipment that adds non-standard hand slots (e.g. Classfixes).

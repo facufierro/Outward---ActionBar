@@ -174,8 +174,11 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
 
         public void SetPosition(UIPosition position) => SetPosition(position.AnchoredPosition.X, position.AnchoredPosition.Y);
 
-        public void SetPositionFromProfile(PositionsProfile profile)
+        public bool SetPositionFromProfile(PositionsProfile profile)
         {
+            if (profile == null)
+                return false;
+
             // Use normalized path for matching so positions work across different characters
             var normalizedPath = NormalizedTransformPath;
             var position = profile.Positions?.FirstOrDefault(p => TransformExtensions.NormalizePath(p.TransformPath) == normalizedPath);
@@ -184,13 +187,15 @@ namespace ModifAmorphic.Outward.Unity.ActionMenus
                 DebugLogger.Log($"[Debug  :ActionMenus] PositionableUI{{{name}}}: Setting position of PositionableUI {name} to modified position of ({position.ModifiedPosition.AnchoredPosition.X}, {position.ModifiedPosition.AnchoredPosition.Y}).");
                 SetPosition(position.ModifiedPosition);
                 // _originPosition = position.OriginPosition; // Do not overwrite origin from profile, trust local startup origin
+                return true;
             }
+
+            return false;
         }
 
         private void OnProfileChanged(PositionsProfile profile)
         {
             DebugLogger.Log($"[Debug  :ActionMenus] PositionableUI{{{name}}}: OnProfileChanged for PositionableUI {name}.");
-            ResetToOrigin();
             SetPositionFromProfile(profile);
         }
 
