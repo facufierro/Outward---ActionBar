@@ -120,6 +120,15 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 
                 // Initialize Position Coupling
                 InitializePositionConfig();
+
+                // Live config refresh from Config Manager
+                ActionUISettings.Rows.SettingChanged += OnHotbarConfigChanged;
+                ActionUISettings.SlotsPerRow.SettingChanged += OnHotbarConfigChanged;
+                ActionUISettings.Scale.SettingChanged += OnHotbarConfigChanged;
+                ActionUISettings.HideLeftNav.SettingChanged += OnHotbarConfigChanged;
+                ActionUISettings.CombatMode.SettingChanged += OnHotbarConfigChanged;
+                ActionUISettings.ShowCooldownTimer.SettingChanged += OnHotbarConfigChanged;
+                ActionUISettings.PreciseCooldownTime.SettingChanged += OnHotbarConfigChanged;
             }
             catch (Exception ex)
             {
@@ -1103,6 +1112,13 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                     // Unsubscribe from Position events
                     ActionUISettings.HotbarPositionX.SettingChanged -= OnHotbarPositionConfigChanged;
                     ActionUISettings.HotbarPositionY.SettingChanged -= OnHotbarPositionConfigChanged;
+                    ActionUISettings.Rows.SettingChanged -= OnHotbarConfigChanged;
+                    ActionUISettings.SlotsPerRow.SettingChanged -= OnHotbarConfigChanged;
+                    ActionUISettings.Scale.SettingChanged -= OnHotbarConfigChanged;
+                    ActionUISettings.HideLeftNav.SettingChanged -= OnHotbarConfigChanged;
+                    ActionUISettings.CombatMode.SettingChanged -= OnHotbarConfigChanged;
+                    ActionUISettings.ShowCooldownTimer.SettingChanged -= OnHotbarConfigChanged;
+                    ActionUISettings.PreciseCooldownTime.SettingChanged -= OnHotbarConfigChanged;
                     
                     if (_hotbars != null)
                     {
@@ -1145,6 +1161,56 @@ namespace ModifAmorphic.Outward.ActionUI.Services
                 {
                     posUI.SetPosition(ActionUISettings.HotbarPositionX.Value, -ActionUISettings.HotbarPositionY.Value);
                 }
+            }
+        }
+
+        private void OnHotbarConfigChanged(object sender, EventArgs e)
+        {
+            if (!_isStarted || _isConfiguring || _hotbars == null)
+                return;
+
+            try
+            {
+                var profile = _hotbarProfileService.GetProfile();
+                if (profile == null)
+                    return;
+
+                while (profile.Rows < ActionUISettings.Rows.Value)
+                    profile = _hotbarProfileService.AddRow();
+                while (profile.Rows > ActionUISettings.Rows.Value)
+                    profile = _hotbarProfileService.RemoveRow();
+
+                while (profile.SlotsPerRow < ActionUISettings.SlotsPerRow.Value)
+                    profile = _hotbarProfileService.AddSlot();
+                while (profile.SlotsPerRow > ActionUISettings.SlotsPerRow.Value)
+                    profile = _hotbarProfileService.RemoveSlot();
+
+                if (profile.Scale != ActionUISettings.Scale.Value)
+                    profile = _hotbarProfileService.SetScale(ActionUISettings.Scale.Value);
+
+                if (profile.HideLeftNav != ActionUISettings.HideLeftNav.Value)
+                    profile = _hotbarProfileService.SetHideLeftNav(ActionUISettings.HideLeftNav.Value);
+
+                if (profile.CombatMode != ActionUISettings.CombatMode.Value)
+                    profile = _hotbarProfileService.SetCombatMode(ActionUISettings.CombatMode.Value);
+
+                if (profile.Hotbars.Count > 0 && profile.Hotbars[0].Slots.Count > 0)
+                {
+                    var firstSlotConfig = profile.Hotbars[0].Slots[0].Config;
+                    if (firstSlotConfig.ShowCooldownTime != ActionUISettings.ShowCooldownTimer.Value
+                        || firstSlotConfig.PreciseCooldownTime != ActionUISettings.PreciseCooldownTime.Value)
+                    {
+                        profile = _hotbarProfileService.SetCooldownTimer(ActionUISettings.ShowCooldownTimer.Value, ActionUISettings.PreciseCooldownTime.Value);
+                    }
+                }
+
+                TryConfigureHotbars(profile, HotbarProfileChangeTypes.ProfileRefreshed);
+                OnHotbarPositionConfigChanged(sender, e);
+                _hotbars.ClearChanges();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException($"Failed applying hotbar settings from config.", ex);
             }
         }
 

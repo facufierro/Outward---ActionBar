@@ -311,6 +311,20 @@ namespace ModifAmorphic.Outward.ActionUI.Settings
             if (Mathf.Abs(newValue - value) > 0.001f)
             {
                 entry.BoxedValue = newValue;
+                RefreshHotbarPositionFromConfig();
+            }
+        }
+
+        private static void RefreshHotbarPositionFromConfig()
+        {
+            var hotbarContainers = Object.FindObjectsOfType<HotbarsContainer>();
+            foreach (var container in hotbarContainers)
+            {
+                var positionableUI = container.GetComponent<PositionableUI>();
+                if (positionableUI != null)
+                {
+                    positionableUI.SetPosition(HotbarPositionX.Value, -HotbarPositionY.Value);
+                }
             }
         }
 
