@@ -55,47 +55,53 @@ namespace fierrof.ActionBar
             for (int b = 0; b < MAX_BARS; b++)
             {
                 string section = $"Bar {b + 1} Settings";
-                bool isEnabled = b == 0; // Bar 1 enabled by default
-
-                // Collect attributes for all entries in this bar so we can toggle Browsable
-                var barAttrs = new System.Collections.Generic.List<ConfigurationManagerAttributes>();
+                bool isEnabled = b == 0;
+                int barIdx = b; // capture for closures
 
                 Enabled[b] = Config.Bind(section, "Enabled", isEnabled,
                     new ConfigDescription($"Enable Action Bar {b + 1}", null,
                     new ConfigurationManagerAttributes { HideDefaultButton = true }));
 
-                var slotsAttr = new ConfigurationManagerAttributes();
-                barAttrs.Add(slotsAttr);
                 SlotCount[b] = Config.Bind(section, "Slots", 8,
                     new ConfigDescription($"Number of quickslot buttons displayed for Bar {b + 1}",
-                        new AcceptableValueRange<int>(1, MAX_SLOTS), slotsAttr));
+                        new AcceptableValueRange<int>(1, MAX_SLOTS),
+                    new ConfigurationManagerAttributes {
+                        CustomDrawer = (ConfigEntryBase e) => DrawBarIntEntry(e, barIdx),
+                        HideDefaultButton = true
+                    }));
 
-                var posXAttr = new ConfigurationManagerAttributes {
-                    CustomDrawer = DrawIntSlider, HideDefaultButton = true };
-                barAttrs.Add(posXAttr);
                 PositionX[b] = Config.Bind(section, "Position X", 85,
                     new ConfigDescription($"Horizontal position (0 = left, 100 = right)",
-                        new AcceptableValueRange<int>(0, 100), posXAttr));
+                        new AcceptableValueRange<int>(0, 100),
+                    new ConfigurationManagerAttributes {
+                        CustomDrawer = (ConfigEntryBase e) => DrawBarSlider(e, barIdx),
+                        HideDefaultButton = true
+                    }));
 
                 int defaultY = 5 + (b * 10);
-                var posYAttr = new ConfigurationManagerAttributes {
-                    CustomDrawer = DrawIntSlider, HideDefaultButton = true };
-                barAttrs.Add(posYAttr);
                 PositionY[b] = Config.Bind(section, "Position Y", defaultY,
                     new ConfigDescription($"Vertical position (0 = bottom, 100 = top)",
-                        new AcceptableValueRange<int>(0, 100), posYAttr));
+                        new AcceptableValueRange<int>(0, 100),
+                    new ConfigurationManagerAttributes {
+                        CustomDrawer = (ConfigEntryBase e) => DrawBarSlider(e, barIdx),
+                        HideDefaultButton = true
+                    }));
 
-                var scaleAttr = new ConfigurationManagerAttributes();
-                barAttrs.Add(scaleAttr);
                 Scale[b] = Config.Bind(section, "Scale", 100,
                     new ConfigDescription($"Size of the action bar in percent",
-                        new AcceptableValueRange<int>(1, 200), scaleAttr));
+                        new AcceptableValueRange<int>(1, 200),
+                    new ConfigurationManagerAttributes {
+                        CustomDrawer = (ConfigEntryBase e) => DrawBarIntEntry(e, barIdx),
+                        HideDefaultButton = true
+                    }));
 
-                var gapAttr = new ConfigurationManagerAttributes();
-                barAttrs.Add(gapAttr);
                 SlotGap[b] = Config.Bind(section, "Slot Gap", 8,
                     new ConfigDescription($"Space between slots in pixels",
-                        new AcceptableValueRange<int>(0, 20), gapAttr));
+                        new AcceptableValueRange<int>(0, 20),
+                    new ConfigurationManagerAttributes {
+                        CustomDrawer = (ConfigEntryBase e) => DrawBarIntEntry(e, barIdx),
+                        HideDefaultButton = true
+                    }));
 
                 SlotKeys[b] = new ConfigEntry<KeyCode>[MAX_SLOTS];
                 for (int s = 0; s < MAX_SLOTS; s++)
@@ -108,32 +114,25 @@ namespace fierrof.ActionBar
                 }
 
                 // Reset button
-                int barIdx = b;
-                var resetAttr = new ConfigurationManagerAttributes {
-                    CustomDrawer = (ConfigEntryBase _) => DrawResetBarButton(barIdx),
-                    HideDefaultButton = true,
-                    Order = -100
-                };
-                barAttrs.Add(resetAttr);
                 Config.Bind(section, "Reset Bar", false,
                     new ConfigDescription($"Reset all settings for Bar {b + 1} to defaults (except Enabled)", null,
-                    resetAttr));
-
-                // Set initial visibility and listen for changes
-                var capturedAttrs = barAttrs.ToArray();
-                SetBarConfigVisible(capturedAttrs, isEnabled);
-                Enabled[b].SettingChanged += (sender, args) => {
-                    bool nowEnabled = ((ConfigEntry<bool>)sender).Value;
-                    SetBarConfigVisible(capturedAttrs, nowEnabled);
-                };
+                    new ConfigurationManagerAttributes {
+                        CustomDrawer = (ConfigEntryBase _) => DrawResetBarButton(barIdx),
+                        HideDefaultButton = true,
+                        Order = -100
+                    }));
             }
 
             new Harmony(GUID).PatchAll();
             Log.LogMessage($"{NAME} v{VERSION} loaded.");
         }
 
-        private static void DrawIntSlider(ConfigEntryBase entry)
+        // ── Drawers that hide when bar is disabled ─────────
+
+        private static void DrawBarSlider(ConfigEntryBase entry, int barIndex)
         {
+            if (!Enabled[barIndex].Value) return; // hide when disabled
+
             int value = (int)entry.BoxedValue;
             var range = (AcceptableValueRange<int>)entry.Description.AcceptableValues;
 
@@ -155,32 +154,35 @@ namespace fierrof.ActionBar
                 entry.BoxedValue = newValue;
         }
 
-        private static void SetBarConfigVisible(ConfigurationManagerAttributes[] attrs, bool visible)
+        private static void DrawBarIntEntry(ConfigEntryBase entry, int barIndex)
         {
-            foreach (var attr in attrs)
-                attr.Browsable = visible;
+            if (!Enabled[barIndex].Value) return; // hide when disabled
 
-            // Force the Configuration Manager to rebuild its display
-            RefreshConfigManager();
-        }
+            int value = (int)entry.BoxedValue;
+            var range = (AcceptableValueRange<int>)entry.Description.AcceptableValues;
 
-        private static void RefreshConfigManager()
-        {
-            var configManagerType = System.Type.GetType(
-                "ConfigurationManager.ConfigurationManager, ConfigurationManager");
-            if (configManagerType == null) return;
+            GUILayout.BeginHorizontal();
 
-            var configManager = Object.FindObjectOfType(configManagerType);
-            if (configManager == null) return;
+            float newFloatValue = GUILayout.HorizontalSlider(value, range.MinValue, range.MaxValue, GUILayout.ExpandWidth(true));
+            int newValue = Mathf.RoundToInt(newFloatValue);
 
-            // Call BuildSettingList to force UI refresh
-            var method = configManagerType.GetMethod("BuildSettingList",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            method?.Invoke(configManager, null);
+            string text = GUILayout.TextField(newValue.ToString(), GUILayout.Width(50));
+            if (int.TryParse(text, out int parsed))
+                newValue = (int)Mathf.Clamp(parsed, range.MinValue, range.MaxValue);
+
+            if (GUILayout.Button("Reset", GUILayout.ExpandWidth(false)))
+                newValue = (int)entry.DefaultValue;
+
+            GUILayout.EndHorizontal();
+
+            if (newValue != value)
+                entry.BoxedValue = newValue;
         }
 
         private static void DrawResetBarButton(int barIndex)
         {
+            if (!Enabled[barIndex].Value) return; // hide when disabled
+
             if (GUILayout.Button($"Reset Bar {barIndex + 1} to Defaults", GUILayout.ExpandWidth(true)))
             {
                 SlotCount[barIndex].Value = (int)SlotCount[barIndex].DefaultValue;
