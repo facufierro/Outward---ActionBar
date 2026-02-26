@@ -16,14 +16,18 @@ namespace fierrof.ActionBar
 
         public static ManualLogSource Log;
 
-        public static ConfigEntry<int> SlotCount;
-        public static ConfigEntry<int> PositionX;
-        public static ConfigEntry<int> PositionY;
-        public static ConfigEntry<int> Scale;
+        public const int MAX_BARS = 4;
+        public const int MAX_SLOTS = 20;
+
+        public static ConfigEntry<bool>[] Enabled   = new ConfigEntry<bool>[MAX_BARS];
+        public static ConfigEntry<int>[]  SlotCount = new ConfigEntry<int>[MAX_BARS];
+        public static ConfigEntry<int>[]  PositionX = new ConfigEntry<int>[MAX_BARS];
+        public static ConfigEntry<int>[]  PositionY = new ConfigEntry<int>[MAX_BARS];
+        public static ConfigEntry<int>[]  Scale     = new ConfigEntry<int>[MAX_BARS];
+        
         public static ConfigEntry<bool> SetHotkeyMode;
 
-        public const int MAX_SLOTS = 20;
-        public static ConfigEntry<KeyCode>[] SlotKeys = new ConfigEntry<KeyCode>[MAX_SLOTS];
+        public static ConfigEntry<KeyCode>[][] SlotKeys = new ConfigEntry<KeyCode>[MAX_BARS][];
 
         private static readonly KeyCode[] DefaultKeys = {
             KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4,
@@ -37,31 +41,8 @@ namespace fierrof.ActionBar
         {
             Log = Logger;
 
-            SlotCount = Config.Bind("Settings", "Slots", 8,
-                new ConfigDescription("Number of quickslot buttons displayed",
-                    new AcceptableValueRange<int>(1, MAX_SLOTS)));
-
-            PositionX = Config.Bind("Settings", "Position X", 50,
-                new ConfigDescription("Horizontal position (0 = left, 100 = right)",
-                    new AcceptableValueRange<int>(0, 100),
-                new ConfigurationManagerAttributes {
-                    CustomDrawer = DrawIntSlider,
-                    HideDefaultButton = true
-                }));
-
-            PositionY = Config.Bind("Settings", "Position Y", 5,
-                new ConfigDescription("Vertical position (0 = bottom, 100 = top)",
-                    new AcceptableValueRange<int>(0, 100),
-                new ConfigurationManagerAttributes {
-                    CustomDrawer = DrawIntSlider,
-                    HideDefaultButton = true
-                }));
-
-            Scale = Config.Bind("Settings", "Scale", 100,
-                new ConfigDescription("Size of the action bar in percent",
-                    new AcceptableValueRange<int>(1, 200)));
-
-            SetHotkeyMode = Config.Bind("Settings", "Configure Hotkeys", false,
+            // Global Settings
+            SetHotkeyMode = Config.Bind("Global Settings", "Configure Hotkeys", false,
                 new ConfigDescription("Click to enter hotkey assignment mode.", null,
                 new ConfigurationManagerAttributes {
                     CustomDrawer = DrawHotkeyModeButton,
@@ -69,12 +50,49 @@ namespace fierrof.ActionBar
                     Order = -1
                 }));
 
-            for (int i = 0; i < MAX_SLOTS; i++)
+            // Bar Settings
+            for (int b = 0; b < MAX_BARS; b++)
             {
-                SlotKeys[i] = Config.Bind("Keybinds", $"Slot{i + 1}", DefaultKeys[i],
-                    new ConfigDescription($"Key for slot {i + 1}",
-                    null,
-                    new ConfigurationManagerAttributes { Browsable = false }));
+                string section = $"Bar {b + 1} Settings";
+                
+                Enabled[b] = Config.Bind(section, "Enabled", b == 0,
+                    new ConfigDescription($"Enable Action Bar {b + 1}"));
+
+                SlotCount[b] = Config.Bind(section, "Slots", 8,
+                    new ConfigDescription($"Number of quickslot buttons displayed for Bar {b + 1}",
+                        new AcceptableValueRange<int>(1, MAX_SLOTS)));
+
+                PositionX[b] = Config.Bind(section, "Position X", 85,
+                    new ConfigDescription($"Horizontal position (0 = left, 100 = right)",
+                        new AcceptableValueRange<int>(0, 100),
+                    new ConfigurationManagerAttributes {
+                        CustomDrawer = DrawIntSlider,
+                        HideDefaultButton = true
+                    }));
+
+                // Stack default Y positions slightly so they don't exactly overlap if all enabled
+                int defaultY = 5 + (b * 10);
+                PositionY[b] = Config.Bind(section, "Position Y", defaultY,
+                    new ConfigDescription($"Vertical position (0 = bottom, 100 = top)",
+                        new AcceptableValueRange<int>(0, 100),
+                    new ConfigurationManagerAttributes {
+                        CustomDrawer = DrawIntSlider,
+                        HideDefaultButton = true
+                    }));
+
+                Scale[b] = Config.Bind(section, "Scale", 100,
+                    new ConfigDescription($"Size of the action bar in percent",
+                        new AcceptableValueRange<int>(1, 200)));
+
+                SlotKeys[b] = new ConfigEntry<KeyCode>[MAX_SLOTS];
+                for (int s = 0; s < MAX_SLOTS; s++)
+                {
+                    KeyCode defaultKey = (b == 0) ? DefaultKeys[s] : KeyCode.None;
+                    SlotKeys[b][s] = Config.Bind($"Bar {b + 1} Keybinds", $"Slot{s + 1}", defaultKey,
+                        new ConfigDescription($"Key for slot {s + 1} on Bar {b + 1}",
+                        null,
+                        new ConfigurationManagerAttributes { Browsable = false }));
+                }
             }
 
             new Harmony(GUID).PatchAll();

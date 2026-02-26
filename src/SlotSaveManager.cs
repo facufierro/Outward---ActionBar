@@ -19,12 +19,21 @@ namespace fierrof.ActionBar
 
         public static void Save(string characterUID, SlotDropHandler[] slots)
         {
-            var lines = slots.Select(s =>
-                s.AssignedItem != null ? s.AssignedItem.ItemID.ToString() : "-1");
+            // Always save exactly 80 lines (4 bars * 20 slots max)
+            var lines = Enumerable.Repeat("-1", Plugin.MAX_BARS * Plugin.MAX_SLOTS).ToArray();
+
+            foreach (var slot in slots)
+            {
+                if (slot.AssignedItem != null)
+                {
+                    int lineIndex = slot.BarIndex * Plugin.MAX_SLOTS + slot.SlotIndex;
+                    lines[lineIndex] = slot.AssignedItem.ItemID.ToString();
+                }
+            }
 
             Directory.CreateDirectory(SaveDir);
-            File.WriteAllLines(GetPath(characterUID), lines.ToArray());
-            Plugin.Log.LogMessage($"Saved {slots.Length} slots for character {characterUID}.");
+            File.WriteAllLines(GetPath(characterUID), lines);
+            Plugin.Log.LogMessage($"Saved slots to {GetPath(characterUID)}.");
         }
 
         /// <summary>Returns true if all saved items were found (or no save exists).</summary>
@@ -36,18 +45,21 @@ namespace fierrof.ActionBar
             try
             {
                 var lines = File.ReadAllLines(path);
-                var inventory = character.Inventory;
                 bool allFound = true;
 
-                for (int i = 0; i < slots.Length && i < lines.Length; i++)
+                foreach (var slot in slots)
                 {
-                    if (slots[i].AssignedItem != null) continue; // already loaded
-                    if (!int.TryParse(lines[i].Trim(), out int itemID) || itemID < 0)
+                    if (slot.AssignedItem != null) continue; // already loaded
+                    
+                    int lineIndex = slot.BarIndex * Plugin.MAX_SLOTS + slot.SlotIndex;
+                    if (lineIndex >= lines.Length) continue;
+
+                    if (!int.TryParse(lines[lineIndex].Trim(), out int itemID) || itemID < 0)
                         continue;
 
                     var item = FindItem(character, itemID);
                     if (item != null)
-                        slots[i].AssignItem(item);
+                        slot.AssignItem(item);
                     else
                         allFound = false;
                 }

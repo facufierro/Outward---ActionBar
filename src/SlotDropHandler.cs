@@ -11,6 +11,7 @@ namespace fierrof.ActionBar
     /// </summary>
     public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
     {
+        public int BarIndex { get; set; }
         public int SlotIndex { get; set; }
 
         /// <summary>True when the pointer is over any action bar slot.</summary>
@@ -87,9 +88,9 @@ namespace fierrof.ActionBar
 
             // Gameplay: press bound key to activate item
             if (AssignedItem == null) return;
-            if (SlotIndex >= Plugin.MAX_SLOTS) return;
+            if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS) return;
 
-            var boundKey = Plugin.SlotKeys[SlotIndex].Value;
+            var boundKey = Plugin.SlotKeys[BarIndex][SlotIndex].Value;
             if (boundKey == KeyCode.None) return;
 
             if (Input.GetKeyDown(boundKey))
@@ -105,7 +106,7 @@ namespace fierrof.ActionBar
         {
             AssignedItem = item;
             UpdateIcon();
-            Plugin.Log.LogMessage($"Slot {SlotIndex}: assigned '{item.Name}'.");
+            Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: assigned '{item.Name}'.");
 
             var manager = GetComponentInParent<ActionBarManager>();
             if (manager != null) manager.SaveSlots();
@@ -124,22 +125,25 @@ namespace fierrof.ActionBar
 
         private void SetKeybind(KeyCode key)
         {
-            if (SlotIndex >= Plugin.MAX_SLOTS) return;
+            if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS) return;
 
             // Unbind this key from any other slots first
             if (key != KeyCode.None)
             {
-                for (int i = 0; i < Plugin.MAX_SLOTS; i++)
+                for (int b = 0; b < Plugin.MAX_BARS; b++)
                 {
-                    if (i != SlotIndex && Plugin.SlotKeys[i].Value == key)
+                    for (int s = 0; s < Plugin.MAX_SLOTS; s++)
                     {
-                        Plugin.SlotKeys[i].Value = KeyCode.None;
-                        Plugin.Log.LogMessage($"Slot {i}: unbound '{key}' because it was assigned to slot {SlotIndex}.");
+                        if ((b != BarIndex || s != SlotIndex) && Plugin.SlotKeys[b][s].Value == key)
+                        {
+                            Plugin.SlotKeys[b][s].Value = KeyCode.None;
+                            Plugin.Log.LogMessage($"Bar {b + 1} Slot {s + 1}: unbound '{key}' because it was assigned to Bar {BarIndex + 1} Slot {SlotIndex + 1}.");
+                        }
                     }
                 }
             }
 
-            Plugin.SlotKeys[SlotIndex].Value = key;
+            Plugin.SlotKeys[BarIndex][SlotIndex].Value = key;
             
             // Update labels for all active slots
             var allHandlers = FindObjectsOfType<SlotDropHandler>();
@@ -148,20 +152,20 @@ namespace fierrof.ActionBar
                 handler.UpdateKeyLabel();
             }
 
-            Plugin.Log.LogMessage($"Slot {SlotIndex}: bound to '{key}'.");
+            Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: bound to '{key}'.");
         }
 
         public void UpdateKeyLabel()
         {
             EnsureKeyLabel();
 
-            if (SlotIndex >= Plugin.MAX_SLOTS)
+            if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS)
             {
                 _keyLabel.text = "";
                 return;
             }
 
-            var key = Plugin.SlotKeys[SlotIndex].Value;
+            var key = Plugin.SlotKeys[BarIndex][SlotIndex].Value;
             _keyLabel.text = key == KeyCode.None ? "" : FormatKeyName(key);
         }
 

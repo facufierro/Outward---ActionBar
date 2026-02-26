@@ -19,12 +19,17 @@ namespace fierrof.ActionBar
         private const int   SLOT_GAP    = 4;
 
         private Transform        _vanillaBar;
-        private GameObject       _container;
-        private CanvasGroup      _canvasGroup;
-        private List<GameObject> _slots = new List<GameObject>();
+        
+        private GameObject[] _containers = new GameObject[Plugin.MAX_BARS];
+        private List<GameObject>[] _slots = new List<GameObject>[Plugin.MAX_BARS];
+        
+        private int[]   _lastSlotCount = new int[Plugin.MAX_BARS];
+        private float[] _lastPosX = new float[Plugin.MAX_BARS];
+        private float[] _lastPosY = new float[Plugin.MAX_BARS];
+        private float[] _lastScale = new float[Plugin.MAX_BARS];
+        private bool[]  _lastEnabled = new bool[Plugin.MAX_BARS];
 
-        private int   _lastSlotCount;
-        private float _lastPosX, _lastPosY, _lastScale;
+        private CanvasGroup      _canvasGroup;
         
         private GameObject _configOverlay;
         private bool _wasConfigMode;
@@ -35,8 +40,18 @@ namespace fierrof.ActionBar
         public void Setup(Transform vanillaBar)
         {
             _vanillaBar = vanillaBar;
+            
+            for (int i = 0; i < Plugin.MAX_BARS; i++)
+            {
+                _slots[i] = new List<GameObject>();
+            }
+
             BuildUI();
-            SyncSlots();
+            
+            for (int i = 0; i < Plugin.MAX_BARS; i++)
+            {
+                SyncSlots(i);
+            }
         }
 
         // ── UI Build ───────────────────────────────────────────
@@ -66,18 +81,21 @@ namespace fierrof.ActionBar
             _canvasGroup.alpha = 0f;
             _canvasGroup.blocksRaycasts = false;
 
-            _container = UIFactory.CreateUIObject("SlotContainer", gameObject);
+            for (int i = 0; i < Plugin.MAX_BARS; i++)
+            {
+                _containers[i] = UIFactory.CreateUIObject($"SlotContainer_Bar{i+1}", gameObject);
 
-            UIFactory.SetLayoutGroup<HorizontalLayoutGroup>(
-                _container,
-                forceWidth: false, forceHeight: false,
-                childControlWidth: false, childControlHeight: false,
-                spacing: SLOT_GAP
-            );
+                UIFactory.SetLayoutGroup<HorizontalLayoutGroup>(
+                    _containers[i],
+                    forceWidth: false, forceHeight: false,
+                    childControlWidth: false, childControlHeight: false,
+                    spacing: SLOT_GAP
+                );    
 
-            var fitter           = _container.AddComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-            fitter.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
+                var fitter           = _containers[i].AddComponent<ContentSizeFitter>();
+                fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                fitter.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
+            }
 
             BuildConfigOverlay();
         }
@@ -123,25 +141,25 @@ namespace fierrof.ActionBar
 
         // ── Slots ──────────────────────────────────────────────
 
-        private void SyncSlots()
+        private void SyncSlots(int barIndex)
         {
-            int target = Plugin.SlotCount.Value;
+            int target = Plugin.SlotCount[barIndex].Value;
 
-            while (_slots.Count < target)
-                _slots.Add(CreateSlot(_slots.Count));
+            while (_slots[barIndex].Count < target)
+                _slots[barIndex].Add(CreateSlot(barIndex, _slots[barIndex].Count));
 
-            while (_slots.Count > target)
+            while (_slots[barIndex].Count > target)
             {
-                Destroy(_slots[_slots.Count - 1]);
-                _slots.RemoveAt(_slots.Count - 1);
+                Destroy(_slots[barIndex][_slots[barIndex].Count - 1]);
+                _slots[barIndex].RemoveAt(_slots[barIndex].Count - 1);
             }
 
-            _lastSlotCount = target;
+            _lastSlotCount[barIndex] = target;
         }
 
-        private GameObject CreateSlot(int index)
+        private GameObject CreateSlot(int barIndex, int slotIndex)
         {
-            var slot = UIFactory.CreateUIObject($"Slot_{index}", _container,
+            var slot = UIFactory.CreateUIObject($"Slot_{barIndex}_{slotIndex}", _containers[barIndex],
                            new Vector2(SLOT_WIDTH, SLOT_HEIGHT));
 
             var bg   = slot.AddComponent<Image>();
@@ -156,7 +174,8 @@ namespace fierrof.ActionBar
                 preferredWidth: SLOT_WIDTH, preferredHeight: SLOT_HEIGHT);
 
             var dropHandler = slot.AddComponent<SlotDropHandler>();
-            dropHandler.SlotIndex = index;
+            dropHandler.BarIndex = barIndex;
+            dropHandler.SlotIndex = slotIndex;
 
             return slot;
         }
@@ -225,8 +244,8 @@ namespace fierrof.ActionBar
             if (_retryInterval < 0.5f) return;
             _retryInterval = 0f;
 
-            var handlers = GetSlotHandlers();
-            bool allFound = SlotSaveManager.Load(uid, handlers, character);
+            var allHandlers = GetAllSlotHandlers();
+            bool allFound = SlotSaveManager.Load(uid, allHandlers, character);
 
             if (allFound || _totalLoadTime > 10f)
             {
@@ -245,15 +264,19 @@ namespace fierrof.ActionBar
             var character = CharacterManager.Instance?.GetFirstLocalCharacter();
             if (character == null) return;
 
-            SlotSaveManager.Save(_loadedCharacterUID, GetSlotHandlers());
+            SlotSaveManager.Save(_loadedCharacterUID, GetAllSlotHandlers());
         }
 
-        public SlotDropHandler[] GetSlotHandlers()
+        public SlotDropHandler[] GetAllSlotHandlers()
         {
-            return _slots
-                .Select(s => s.GetComponent<SlotDropHandler>())
-                .Where(h => h != null)
-                .ToArray();
+            var allHandlers = new List<SlotDropHandler>();
+            for (int i = 0; i < Plugin.MAX_BARS; i++)
+            {
+                allHandlers.AddRange(_slots[i]
+                    .Select(s => s.GetComponent<SlotDropHandler>())
+                    .Where(h => h != null));
+            }
+            return allHandlers.ToArray();
         }
 
         private void HandleConfigModeState()
@@ -295,28 +318,40 @@ namespace fierrof.ActionBar
 
         private void ApplyConfig()
         {
-            if (_container == null) return;
+            for (int i = 0; i < Plugin.MAX_BARS; i++)
+            {
+                if (_containers[i] == null) continue;
 
-            if (Plugin.SlotCount.Value != _lastSlotCount)
-                SyncSlots();
+                bool enabled = Plugin.Enabled[i].Value;
+                if (enabled != _lastEnabled[i])
+                {
+                    _containers[i].SetActive(enabled);
+                    _lastEnabled[i] = enabled;
+                }
 
-            float x     = Plugin.PositionX.Value / 100f;
-            float y     = Plugin.PositionY.Value / 100f;
-            float scale = Plugin.Scale.Value / 100f;
+                if (!enabled) continue;
 
-            if (x == _lastPosX && y == _lastPosY && scale == _lastScale)
-                return;
+                if (Plugin.SlotCount[i].Value != _lastSlotCount[i])
+                    SyncSlots(i);
 
-            var rect              = _container.GetComponent<RectTransform>();
-            rect.anchorMin        = new Vector2(x, y);
-            rect.anchorMax        = new Vector2(x, y);
-            rect.pivot            = new Vector2(0.5f, 0f);
-            rect.anchoredPosition = Vector2.zero;
-            rect.localScale       = new Vector3(scale, scale, 1f);
+                float x     = Plugin.PositionX[i].Value / 100f;
+                float y     = Plugin.PositionY[i].Value / 100f;
+                float scale = Plugin.Scale[i].Value / 100f;
 
-            _lastPosX  = x;
-            _lastPosY  = y;
-            _lastScale = scale;
+                if (x == _lastPosX[i] && y == _lastPosY[i] && scale == _lastScale[i])
+                    continue;
+
+                var rect              = _containers[i].GetComponent<RectTransform>();
+                rect.anchorMin        = new Vector2(x, y);
+                rect.anchorMax        = new Vector2(x, y);
+                rect.pivot            = new Vector2(0.5f, 0f); // Default to center-bottom alignment to keep slots centered
+                rect.anchoredPosition = Vector2.zero;
+                rect.localScale       = new Vector3(scale, scale, 1f);
+
+                _lastPosX[i]  = x;
+                _lastPosY[i]  = y;
+                _lastScale[i] = scale;
+            }
         }
     }
 }
