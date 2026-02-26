@@ -240,14 +240,40 @@ namespace fierrof.ActionBar
 
         private static RectTransform FindContentChild(RectTransform parent)
         {
-            // Walk children recursively, return the first one with an Image component
+            RectTransform fallback = null;
+            return FindContentChildRecursive(parent, ref fallback) ?? fallback;
+        }
+
+        private static RectTransform FindContentChildRecursive(RectTransform parent, ref RectTransform fallback)
+        {
             for (int i = 0; i < parent.childCount; i++)
             {
                 var child = parent.GetChild(i).GetComponent<RectTransform>();
                 if (child == null || child.name == "HudMover_Handle") continue;
-                if (child.GetComponent<Image>() != null || child.GetComponent<RawImage>() != null)
-                    return child;
-                var deeper = FindContentChild(child);
+
+                var img = child.GetComponent<Image>();
+                var raw = child.GetComponent<RawImage>();
+
+                if (img != null || raw != null)
+                {
+                    // In Outward, the GameObject might just be called "Image", but the actual Sprite
+                    // usually has "Icon" or specific names like "tex_men_equipmentIconEmptyBag" in it.
+                    string spriteName = img != null && img.sprite != null ? img.sprite.name : "";
+                    string texName = raw != null && raw.texture != null ? raw.texture.name : "";
+
+                    string ident = child.name + spriteName + texName;
+
+                    if (ident.IndexOf("Icon", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        ident.IndexOf("EmptyBag", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        ident.IndexOf("Bandage", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        return child;
+                    }
+
+                    if (fallback == null) fallback = child;
+                }
+
+                var deeper = FindContentChildRecursive(child, ref fallback);
                 if (deeper != null) return deeper;
             }
             return null;
