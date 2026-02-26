@@ -12,7 +12,7 @@ namespace fierrof.ActionBar
     {
         public const string GUID    = "fierrof.actionbar";
         public const string NAME    = "ActionBar";
-        public const string VERSION = "2.0.21";
+        public const string VERSION = "2.0.87";
 
         public static ManualLogSource Log;
 
