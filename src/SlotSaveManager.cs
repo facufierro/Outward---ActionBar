@@ -27,37 +27,45 @@ namespace fierrof.ActionBar
             Plugin.Log.LogMessage($"Saved {slots.Length} slots for character {characterUID}.");
         }
 
-        public static void Load(string characterUID, SlotDropHandler[] slots, Character character)
+        /// <summary>Returns true if all saved items were found (or no save exists).</summary>
+        public static bool Load(string characterUID, SlotDropHandler[] slots, Character character)
         {
             var path = GetPath(characterUID);
-            if (!File.Exists(path)) return;
+            if (!File.Exists(path)) return true;
 
             try
             {
                 var lines = File.ReadAllLines(path);
                 var inventory = character.Inventory;
+                bool allFound = true;
 
                 for (int i = 0; i < slots.Length && i < lines.Length; i++)
                 {
+                    if (slots[i].AssignedItem != null) continue; // already loaded
                     if (!int.TryParse(lines[i].Trim(), out int itemID) || itemID < 0)
                         continue;
 
-                    var item = FindItem(inventory, itemID);
+                    var item = FindItem(character, itemID);
                     if (item != null)
                         slots[i].AssignItem(item);
+                    else
+                        allFound = false;
                 }
 
-                Plugin.Log.LogMessage($"Loaded slots for character {characterUID}.");
+                return allFound;
             }
             catch (Exception ex)
             {
                 Plugin.Log.LogWarning($"Failed to load slots: {ex.Message}");
+                return true; // don't retry on error
             }
         }
 
-        private static Item FindItem(CharacterInventory inventory, int itemID)
+        private static Item FindItem(Character character, int itemID)
         {
-            // Check learned skills first
+            var inventory = character.Inventory;
+
+            // Check learned skills
             if (inventory.SkillKnowledge != null)
             {
                 foreach (var item in inventory.SkillKnowledge.GetLearnedItems())
@@ -66,7 +74,7 @@ namespace fierrof.ActionBar
                 }
             }
 
-            // Then check pouch
+            // Check pouch
             if (inventory.Pouch != null)
             {
                 foreach (var item in inventory.Pouch.GetContainedItems())
@@ -75,7 +83,7 @@ namespace fierrof.ActionBar
                 }
             }
 
-            // Then check bag
+            // Check equipped bag contents
             if (inventory.EquippedBag != null)
             {
                 var bag = inventory.EquippedBag.Container;
@@ -85,6 +93,16 @@ namespace fierrof.ActionBar
                     {
                         if (item.ItemID == itemID) return item;
                     }
+                }
+            }
+
+            // Check equipped items (weapons, armor, lantern, etc.)
+            if (inventory.Equipment != null)
+            {
+                foreach (var slot in inventory.Equipment.EquipmentSlots)
+                {
+                    if (slot?.EquippedItem != null && slot.EquippedItem.ItemID == itemID)
+                        return slot.EquippedItem;
                 }
             }
 

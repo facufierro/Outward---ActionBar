@@ -196,17 +196,46 @@ namespace fierrof.ActionBar
 
         // ── Slot persistence ──────────────────────────────────
 
+        private float _totalLoadTime;
+        private float _retryInterval;
+        private bool  _slotsLoaded;
+
         private void TryLoadSlots()
         {
             var character = CharacterManager.Instance?.GetFirstLocalCharacter();
             if (character == null) return;
 
             string uid = character.UID;
-            if (uid == _loadedCharacterUID) return;
 
-            _loadedCharacterUID = uid;
+            // New character — reset load state
+            if (uid != _loadedCharacterUID)
+            {
+                _loadedCharacterUID = uid;
+                _slotsLoaded = false;
+                _totalLoadTime = 0f;
+                _retryInterval = 0f;
+            }
+
+            if (_slotsLoaded) return;
+
+            _totalLoadTime += Time.unscaledDeltaTime;
+            _retryInterval += Time.unscaledDeltaTime;
+
+            // Wait 0.5s between retries
+            if (_retryInterval < 0.5f) return;
+            _retryInterval = 0f;
+
             var handlers = GetSlotHandlers();
-            SlotSaveManager.Load(uid, handlers, character);
+            bool allFound = SlotSaveManager.Load(uid, handlers, character);
+
+            if (allFound || _totalLoadTime > 10f)
+            {
+                _slotsLoaded = true;
+                if (!allFound)
+                    Plugin.Log.LogWarning("Some slotted items could not be found in inventory.");
+                else
+                    Plugin.Log.LogMessage($"All slots loaded for {uid}.");
+            }
         }
 
         public void SaveSlots()
@@ -271,9 +300,9 @@ namespace fierrof.ActionBar
             if (Plugin.SlotCount.Value != _lastSlotCount)
                 SyncSlots();
 
-            float x     = Plugin.PositionX.Value;
-            float y     = Plugin.PositionY.Value;
-            float scale = Plugin.Scale.Value;
+            float x     = Plugin.PositionX.Value / 100f;
+            float y     = Plugin.PositionY.Value / 100f;
+            float scale = Plugin.Scale.Value / 100f;
 
             if (x == _lastPosX && y == _lastPosY && scale == _lastScale)
                 return;

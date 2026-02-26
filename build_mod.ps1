@@ -73,6 +73,7 @@ $zipPath = "$channelBinDir\$zipName"
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 
 Write-Host "Zipping package to $zipPath ..."
-Compress-Archive -Path "$publishDir\*" -DestinationPath $zipPath
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::CreateFromDirectory($publishDir, $zipPath)
 
 Write-Host "Build complete: $zipPath"

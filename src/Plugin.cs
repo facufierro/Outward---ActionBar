@@ -16,11 +16,11 @@ namespace fierrof.ActionBar
 
         public static ManualLogSource Log;
 
-        public static ConfigEntry<int>   SlotCount;
-        public static ConfigEntry<float> PositionX;
-        public static ConfigEntry<float> PositionY;
-        public static ConfigEntry<float> Scale;
-        public static ConfigEntry<bool>  SetHotkeyMode;
+        public static ConfigEntry<int> SlotCount;
+        public static ConfigEntry<int> PositionX;
+        public static ConfigEntry<int> PositionY;
+        public static ConfigEntry<int> Scale;
+        public static ConfigEntry<bool> SetHotkeyMode;
 
         public const int MAX_SLOTS = 20;
         public static ConfigEntry<KeyCode>[] SlotKeys = new ConfigEntry<KeyCode>[MAX_SLOTS];
@@ -37,23 +37,31 @@ namespace fierrof.ActionBar
         {
             Log = Logger;
 
-            SlotCount = Config.Bind("ActionBar", "SlotCount", 8,
+            SlotCount = Config.Bind("Settings", "Slots", 8,
                 new ConfigDescription("Number of quickslot buttons displayed",
                     new AcceptableValueRange<int>(1, MAX_SLOTS)));
 
-            PositionX = Config.Bind("ActionBar", "PositionX", 0.5f,
-                new ConfigDescription("Horizontal position (0 = left, 1 = right)",
-                    new AcceptableValueRange<float>(0f, 1f)));
+            PositionX = Config.Bind("Settings", "Position X", 50,
+                new ConfigDescription("Horizontal position (0 = left, 100 = right)",
+                    new AcceptableValueRange<int>(0, 100),
+                new ConfigurationManagerAttributes {
+                    CustomDrawer = DrawIntSlider,
+                    HideDefaultButton = true
+                }));
 
-            PositionY = Config.Bind("ActionBar", "PositionY", 0.05f,
-                new ConfigDescription("Vertical position (0 = bottom, 1 = top)",
-                    new AcceptableValueRange<float>(0f, 1f)));
+            PositionY = Config.Bind("Settings", "Position Y", 5,
+                new ConfigDescription("Vertical position (0 = bottom, 100 = top)",
+                    new AcceptableValueRange<int>(0, 100),
+                new ConfigurationManagerAttributes {
+                    CustomDrawer = DrawIntSlider,
+                    HideDefaultButton = true
+                }));
 
-            Scale = Config.Bind("ActionBar", "Scale", 1.0f,
-                new ConfigDescription("Size multiplier for the action bar",
-                    new AcceptableValueRange<float>(0.5f, 3f)));
+            Scale = Config.Bind("Settings", "Scale", 100,
+                new ConfigDescription("Size of the action bar in percent",
+                    new AcceptableValueRange<int>(1, 200)));
 
-            SetHotkeyMode = Config.Bind("ActionBar", "Configure Hotkeys", false,
+            SetHotkeyMode = Config.Bind("Settings", "Configure Hotkeys", false,
                 new ConfigDescription("Click to enter hotkey assignment mode.", null,
                 new ConfigurationManagerAttributes {
                     CustomDrawer = DrawHotkeyModeButton,
@@ -71,6 +79,29 @@ namespace fierrof.ActionBar
 
             new Harmony(GUID).PatchAll();
             Log.LogMessage($"{NAME} v{VERSION} loaded.");
+        }
+
+        private static void DrawIntSlider(ConfigEntryBase entry)
+        {
+            int value = (int)entry.BoxedValue;
+            var range = (AcceptableValueRange<int>)entry.Description.AcceptableValues;
+
+            GUILayout.BeginHorizontal();
+
+            float newFloatValue = GUILayout.HorizontalSlider(value, range.MinValue, range.MaxValue, GUILayout.ExpandWidth(true));
+            int newValue = Mathf.RoundToInt(newFloatValue);
+
+            string text = GUILayout.TextField(newValue.ToString(), GUILayout.Width(50));
+            if (int.TryParse(text, out int parsed))
+                newValue = (int)Mathf.Clamp(parsed, range.MinValue, range.MaxValue);
+
+            if (GUILayout.Button("Reset", GUILayout.ExpandWidth(false)))
+                newValue = (int)entry.DefaultValue;
+
+            GUILayout.EndHorizontal();
+
+            if (newValue != value)
+                entry.BoxedValue = newValue;
         }
 
         private static void DrawHotkeyModeButton(ConfigEntryBase entry)
