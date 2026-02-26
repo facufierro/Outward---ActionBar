@@ -1,0 +1,48 @@
+# Built applications and artifacts
+bin/
+obj/
+*.dll.config
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# IDE / Editor folders
+.idea/
+.vs/
+.vscode/
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# macOS
+.DS_Store
+
+# Windows image cache
+Thumbs.db
+ehthumbs.db
+
+# Unity / Game stuff (just in case)
+*.pidb
+*.boop
+*.unityproj
+*.temp
+*.log
+
+# Thunderstore packages (handled by bin/ ignores, but being explicit just in case)
+*.zip
