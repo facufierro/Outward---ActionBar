@@ -24,6 +24,9 @@ namespace fierrof.ActionBar
 
         private int   _lastSlotCount;
         private float _lastPosX, _lastPosY, _lastScale;
+        
+        private GameObject _configOverlay;
+        private bool _wasConfigMode;
 
         // ── Setup ──────────────────────────────────────────────
 
@@ -73,6 +76,47 @@ namespace fierrof.ActionBar
             var fitter           = _container.AddComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fitter.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
+
+            BuildConfigOverlay();
+        }
+
+        private void BuildConfigOverlay()
+        {
+            _configOverlay = new GameObject("ConfigOverlay");
+            _configOverlay.transform.SetParent(gameObject.transform, false);
+            _configOverlay.transform.SetAsFirstSibling(); // Behind the slots
+
+            var rt = _configOverlay.AddComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            var bg = _configOverlay.AddComponent<Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.7f); // Dark tint
+            bg.raycastTarget = true; // Block clicks to game world
+
+            var textGO = new GameObject("InstructionText");
+            textGO.transform.SetParent(_configOverlay.transform, false);
+
+            var textRt = textGO.AddComponent<RectTransform>();
+            textRt.anchorMin = new Vector2(0f, 0.8f);
+            textRt.anchorMax = new Vector2(1f, 1f);
+            textRt.offsetMin = Vector2.zero;
+            textRt.offsetMax = Vector2.zero;
+
+            var text = textGO.AddComponent<Text>();
+            text.font = Font.CreateDynamicFontFromOSFont("Arial", 36);
+            text.fontSize = 36;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.white;
+            text.text = "HOTKEY CONFIGURATION MODE\n<size=24>Hover a slot and press a key to bind. Press ESC to exit.</size>";
+
+            var outline = textGO.AddComponent<Outline>();
+            outline.effectColor = Color.black;
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            _configOverlay.SetActive(false);
         }
 
         // ── Slots ──────────────────────────────────────────────
@@ -141,8 +185,35 @@ namespace fierrof.ActionBar
                 _canvasGroup.blocksRaycasts = true;
             }
 
+            HandleConfigModeState();
+
             SuppressVanillaBar();
             ApplyConfig();
+        }
+
+        private void HandleConfigModeState()
+        {
+            if (SlotDropHandler.IsConfigMode && !_wasConfigMode)
+            {
+                _configOverlay.SetActive(true);
+                Time.timeScale = 0f; // Pause game
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                _wasConfigMode = true;
+            }
+            else if (!SlotDropHandler.IsConfigMode && _wasConfigMode)
+            {
+                _configOverlay.SetActive(false);
+                Time.timeScale = 1f; // Resume game
+                Cursor.lockState = CursorLockMode.Confined;
+                _wasConfigMode = false;
+            }
+
+            // Global ESC to exit config mode
+            if (SlotDropHandler.IsConfigMode && Input.GetKeyDown(KeyCode.Escape))
+            {
+                SlotDropHandler.IsConfigMode = false;
+            }
         }
 
         private void SuppressVanillaBar()

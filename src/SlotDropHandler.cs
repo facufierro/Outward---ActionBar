@@ -119,8 +119,29 @@ namespace fierrof.ActionBar
         private void SetKeybind(KeyCode key)
         {
             if (SlotIndex >= Plugin.MAX_SLOTS) return;
+
+            // Unbind this key from any other slots first
+            if (key != KeyCode.None)
+            {
+                for (int i = 0; i < Plugin.MAX_SLOTS; i++)
+                {
+                    if (i != SlotIndex && Plugin.SlotKeys[i].Value == key)
+                    {
+                        Plugin.SlotKeys[i].Value = KeyCode.None;
+                        Plugin.Log.LogMessage($"Slot {i}: unbound '{key}' because it was assigned to slot {SlotIndex}.");
+                    }
+                }
+            }
+
             Plugin.SlotKeys[SlotIndex].Value = key;
-            UpdateKeyLabel();
+            
+            // Update labels for all active slots
+            var allHandlers = FindObjectsOfType<SlotDropHandler>();
+            foreach (var handler in allHandlers)
+            {
+                handler.UpdateKeyLabel();
+            }
+
             Plugin.Log.LogMessage($"Slot {SlotIndex}: bound to '{key}'.");
         }
 
