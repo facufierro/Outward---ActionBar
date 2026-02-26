@@ -41,7 +41,7 @@ namespace fierrof.ActionBar
 
             var canvas          = gameObject.AddComponent<Canvas>();
             canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 50;
+            canvas.sortingOrder = -1; // Below game UI so dragged items render on top
 
             var scaler                 = gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -103,6 +103,9 @@ namespace fierrof.ActionBar
             UIFactory.SetLayoutElement(slot,
                 minWidth: SLOT_WIDTH,       minHeight: SLOT_HEIGHT,
                 preferredWidth: SLOT_WIDTH, preferredHeight: SLOT_HEIGHT);
+
+            var dropHandler = slot.AddComponent<SlotDropHandler>();
+            dropHandler.SlotIndex = index;
 
             return slot;
         }
