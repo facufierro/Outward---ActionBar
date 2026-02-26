@@ -11,6 +11,7 @@ namespace fierrof.ActionBar
     public class HudMover : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         public string ElementId;
+        public bool AnchorBottom; // For elements like tutorials where content is at the bottom
 
         private RectTransform _rect;
         private Vector2 _originalAnchoredPos;
@@ -78,12 +79,11 @@ namespace fierrof.ActionBar
             {
                 _addedCanvas = gameObject.GetComponent<Canvas>();
                 if (_addedCanvas == null)
-                {
                     _addedCanvas = gameObject.AddComponent<Canvas>();
-                    _addedCanvas.overrideSorting = true;
-                    _addedCanvas.sortingOrder = 100;
-                }
             }
+            // Always force high sort order so our handle is on top
+            _addedCanvas.overrideSorting = true;
+            _addedCanvas.sortingOrder = 100;
 
             if (_addedRaycaster == null)
             {
@@ -117,13 +117,27 @@ namespace fierrof.ActionBar
                 img.raycastTarget = true; // needed for drag events
 
                 var hRect = _handleObj.GetComponent<RectTransform>();
-                hRect.anchorMin = new Vector2(0.5f, 0.5f);
-                hRect.anchorMax = new Vector2(0.5f, 0.5f);
-                hRect.pivot = new Vector2(0.5f, 0.5f);
+
+                if (AnchorBottom)
+                {
+                    // Anchor handle at the bottom of the rect (for tutorials)
+                    hRect.anchorMin = new Vector2(0.5f, 0f);
+                    hRect.anchorMax = new Vector2(0.5f, 0f);
+                    hRect.pivot = new Vector2(0.5f, 0f);
+                }
+                else
+                {
+                    // Center on the element
+                    hRect.anchorMin = new Vector2(0.5f, 0.5f);
+                    hRect.anchorMax = new Vector2(0.5f, 0.5f);
+                    hRect.pivot = new Vector2(0.5f, 0.5f);
+                }
 
                 // Clamp to sensible size: min 40, max 150
-                float w = Mathf.Clamp(_rect.rect.width + 10f, 40f, 150f);
-                float h = Mathf.Clamp(_rect.rect.height + 10f, 40f, 150f);
+                float w = Mathf.Max(_rect.rect.width + 10f, 60f);
+                float h = Mathf.Max(_rect.rect.height + 10f, 60f);
+                w = Mathf.Min(w, 150f);
+                h = Mathf.Min(h, 150f);
                 hRect.sizeDelta = new Vector2(w, h);
                 hRect.anchoredPosition = Vector2.zero;
 

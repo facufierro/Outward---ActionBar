@@ -152,6 +152,11 @@ namespace fierrof.ActionBar
                 {
                     var mover = child.gameObject.AddComponent<HudMover>();
                     mover.ElementId = friendlyName;
+
+                    // Tutorial elements have icons at the bottom of tall rects
+                    if (name.StartsWith("Tutorialization"))
+                        mover.AnchorBottom = true;
+
                     _movers.Add(mover);
                     Plugin.Log.LogMessage($"  >>> Attached HudMover: '{friendlyName}' ({child.name})");
                     // Don't recurse into matched elements — we move the whole thing
