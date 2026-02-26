@@ -36,7 +36,6 @@ namespace fierrof.ActionBar
             { "QuiverDisplay",              "Arrows" },
             { "StatusEffect - Panel",       "Status Effects" },
             { "InteractionDisplay",         "Interact Tooltip" },
-            { "QuickSlot",                  "Quick Slots" },
             { "Compass",                    "Compass" },
             { "Needs - Panel",              "Needs" },
             { "TemperatureSensor",          "Temp Sensor" },
@@ -57,6 +56,7 @@ namespace fierrof.ActionBar
             "ActionBar_Root",
             "CharacterMainCharacterBars",
             "SlotContainer",
+            "QuickSlot",
         };
 
         void Awake()

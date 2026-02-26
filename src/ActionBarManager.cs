@@ -136,17 +136,24 @@ namespace fierrof.ActionBar
             textGO.transform.SetParent(_configOverlay.transform, false);
 
             var textRt = textGO.AddComponent<RectTransform>();
-            textRt.anchorMin = new Vector2(0f, 0.8f);
-            textRt.anchorMax = new Vector2(1f, 1f);
+            textRt.anchorMin = new Vector2(0.6f, 0.7f); // Top right quadrant
+            textRt.anchorMax = new Vector2(0.98f, 0.98f); // 2% padding from edge
             textRt.offsetMin = Vector2.zero;
             textRt.offsetMax = Vector2.zero;
 
             var text = textGO.AddComponent<Text>();
-            text.font = Font.CreateDynamicFontFromOSFont("Arial", 36);
-            text.fontSize = 36;
-            text.alignment = TextAnchor.MiddleCenter;
+            text.font = Font.CreateDynamicFontFromOSFont("Arial", 40);
+            text.fontSize = 40;
+            text.alignment = TextAnchor.UpperRight; // Align the actual text to the right
             text.color = Color.white;
-            text.text = "EDIT MODE\n<size=24>Hover a slot and press a key to bind it.\nDrag a bar to reposition it. Press ESC to exit.</size>";
+            text.text = "EDIT MODE\n" +
+                        "<size=26>\n" +
+                        "• Drag icons into slots to assign them\n" +
+                        "• Hover a slot & press a key to bind it\n" +
+                        "• Drag yellow handles to move elements\n" +
+                        "• Right-Click a slot to Hide/Disable it\n" +
+                        "• Open Config (F5) to add/resize bars\n\n" +
+                        "Press ESC to Exit</size>";
 
             var outline = textGO.AddComponent<Outline>();
             outline.effectColor = Color.black;
