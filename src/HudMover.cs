@@ -49,8 +49,7 @@ namespace fierrof.ActionBar
         {
             if (SlotDropHandler.IsEditMode)
             {
-                // Force this element visible so the game can't hide it mid-edit
-                if (!gameObject.activeSelf) gameObject.SetActive(true);
+                // Keep CanvasGroup alpha up (manager handles gameObject.SetActive)
                 if (_canvasGroup != null && _canvasGroup.alpha < 0.05f) _canvasGroup.alpha = 1f;
             }
         }

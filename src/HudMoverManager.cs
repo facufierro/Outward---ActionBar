@@ -25,10 +25,8 @@ namespace fierrof.ActionBar
         // Names taken directly from the CharacterUI hierarchy log
         private static readonly Dictionary<string, string> KnownElements = new Dictionary<string, string>
         {
-            // MainCharacterBars children (L4)
-            { "Health",                     "Health" },
-            { "Mana",                       "Mana" },
-            { "Stamina",                    "Stamina" },
+            // All bars as a group (L3)
+            { "MainCharacterBars",          "Health / Mana / Stamina" },
 
             // MainCharacterBars > Debug_CharacterNeedsBars children (L5)
             { "Temperature",                "Temperature" },
@@ -42,8 +40,6 @@ namespace fierrof.ActionBar
             { "Compass",                    "Compass" },
             { "Needs - Panel",              "Needs" },
             { "TemperatureSensor",          "Temp Sensor" },
-            { "Tutorialization_DropBag",    "Tutorial: Drop Bag" },
-            { "Tutorialization_UseBandage", "Tutorial: Use Bandage" },
         };
 
         // ── Names that should NEVER get a HudMover (root containers, our stuff) ──
@@ -82,6 +78,13 @@ namespace fierrof.ActionBar
             // Handle edit mode transitions
             if (SlotDropHandler.IsEditMode && !_wasEditMode)
             {
+                // Force all mover GameObjects active BEFORE enabling visuals
+                // (Update() won't run on inactive objects, so the manager must do this)
+                foreach (var m in _movers)
+                {
+                    if (m != null && !m.gameObject.activeSelf)
+                        m.gameObject.SetActive(true);
+                }
                 foreach (var m in _movers) m.EnableEditVisuals();
                 _wasEditMode = true;
             }
@@ -89,6 +92,17 @@ namespace fierrof.ActionBar
             {
                 foreach (var m in _movers) m.DisableEditVisuals();
                 _wasEditMode = false;
+            }
+
+            // While in edit mode, keep forcing visibility every frame
+            // in case the game hides elements mid-session
+            if (SlotDropHandler.IsEditMode)
+            {
+                foreach (var m in _movers)
+                {
+                    if (m != null && !m.gameObject.activeSelf)
+                        m.gameObject.SetActive(true);
+                }
             }
         }
 
