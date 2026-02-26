@@ -16,7 +16,6 @@ namespace fierrof.ActionBar
     {
         private const int   SLOT_WIDTH  = 54;
         private const int   SLOT_HEIGHT = 81; // 1.5× taller than wide
-        private const int   SLOT_GAP    = 4;
 
         private Transform        _vanillaBar;
         
@@ -27,6 +26,7 @@ namespace fierrof.ActionBar
         private float[] _lastPosX = new float[Plugin.MAX_BARS];
         private float[] _lastPosY = new float[Plugin.MAX_BARS];
         private float[] _lastScale = new float[Plugin.MAX_BARS];
+        private int[]   _lastGap = new int[Plugin.MAX_BARS];
         private bool[]  _lastEnabled = new bool[Plugin.MAX_BARS];
 
         private CanvasGroup      _canvasGroup;
@@ -89,7 +89,7 @@ namespace fierrof.ActionBar
                     _containers[i],
                     forceWidth: false, forceHeight: false,
                     childControlWidth: false, childControlHeight: false,
-                    spacing: SLOT_GAP
+                    spacing: Plugin.SlotGap[i].Value
                 );    
 
                 var fitter           = _containers[i].AddComponent<ContentSizeFitter>();
@@ -174,7 +174,7 @@ namespace fierrof.ActionBar
             bg.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
 
             var outline            = slot.AddComponent<Outline>();
-            outline.effectColor    = new Color(0.6f, 0.6f, 0.6f, 1f);
+            outline.effectColor    = Color.black;
             outline.effectDistance = new Vector2(2f, -2f);
 
             UIFactory.SetLayoutElement(slot,
@@ -355,6 +355,15 @@ namespace fierrof.ActionBar
                 float x     = Plugin.PositionX[i].Value / 100f;
                 float y     = Plugin.PositionY[i].Value / 100f;
                 float scale = Plugin.Scale[i].Value / 100f;
+                int   gap   = Plugin.SlotGap[i].Value;
+
+                // Update gap if changed
+                if (gap != _lastGap[i])
+                {
+                    var layout = _containers[i].GetComponent<HorizontalLayoutGroup>();
+                    if (layout != null) layout.spacing = gap;
+                    _lastGap[i] = gap;
+                }
 
                 if (x == _lastPosX[i] && y == _lastPosY[i] && scale == _lastScale[i])
                     continue;

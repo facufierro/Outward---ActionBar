@@ -24,6 +24,7 @@ namespace fierrof.ActionBar
         public static ConfigEntry<int>[]  PositionX = new ConfigEntry<int>[MAX_BARS];
         public static ConfigEntry<int>[]  PositionY = new ConfigEntry<int>[MAX_BARS];
         public static ConfigEntry<int>[]  Scale     = new ConfigEntry<int>[MAX_BARS];
+        public static ConfigEntry<int>[]  SlotGap   = new ConfigEntry<int>[MAX_BARS];
         
         public static ConfigEntry<bool> SetHotkeyMode;
 
@@ -85,6 +86,10 @@ namespace fierrof.ActionBar
                     new ConfigDescription($"Size of the action bar in percent",
                         new AcceptableValueRange<int>(1, 200)));
 
+                SlotGap[b] = Config.Bind(section, "Slot Gap", 8,
+                    new ConfigDescription($"Space between slots in pixels",
+                        new AcceptableValueRange<int>(0, 20)));
+
                 SlotKeys[b] = new ConfigEntry<KeyCode>[MAX_SLOTS];
                 for (int s = 0; s < MAX_SLOTS; s++)
                 {
@@ -141,6 +146,7 @@ namespace fierrof.ActionBar
                 PositionX[barIndex].Value = (int)PositionX[barIndex].DefaultValue;
                 PositionY[barIndex].Value = (int)PositionY[barIndex].DefaultValue;
                 Scale[barIndex].Value     = (int)Scale[barIndex].DefaultValue;
+                SlotGap[barIndex].Value   = (int)SlotGap[barIndex].DefaultValue;
 
                 for (int s = 0; s < MAX_SLOTS; s++)
                     SlotKeys[barIndex][s].Value = (KeyCode)SlotKeys[barIndex][s].DefaultValue;
