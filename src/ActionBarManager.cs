@@ -103,6 +103,11 @@ namespace fierrof.ActionBar
 
                 var drag = _containers[i].AddComponent<BarDragHandler>();
                 drag.BarIndex = i;
+
+                // Set initial visibility from config so disabled bars don't flash
+                bool enabled = Plugin.Enabled[i].Value;
+                _containers[i].SetActive(enabled);
+                _lastEnabled[i] = enabled;
             }
 
             BuildConfigOverlay();
