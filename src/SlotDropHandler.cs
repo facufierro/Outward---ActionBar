@@ -40,6 +40,7 @@ namespace fierrof.ActionBar
         private Text  _keyLabel;
         private Image _bgImage;
         private Outline _outline;
+        private Image[] _dynamicBorderEdges;
         private CanvasGroup _slotCanvasGroup;
 
         // Cooldown UI
@@ -220,6 +221,7 @@ namespace fierrof.ActionBar
         {
             EnsureBgImage();
             EnsureOutline();
+            EnsureDynamicBorder();
 
             if (IsEditMode)
             {
@@ -241,7 +243,8 @@ namespace fierrof.ActionBar
                         break;
                 }
 
-                _outline.effectColor = IsDynamic ? DynamicBorderColor : Color.black;
+                _outline.effectColor = Color.black;
+                SetDynamicBorderVisible(IsDynamic);
             }
             else
             {
@@ -258,7 +261,8 @@ namespace fierrof.ActionBar
                         break;
                 }
 
-                _outline.effectColor = IsDynamic ? DynamicBorderColor : Color.black;
+                _outline.effectColor = Color.black;
+                SetDynamicBorderVisible(IsDynamic);
             }
         }
 
@@ -285,8 +289,7 @@ namespace fierrof.ActionBar
                     _slotCanvasGroup.alpha = show ? 1f : 0f;
                     _slotCanvasGroup.blocksRaycasts = show;
                     _slotCanvasGroup.interactable = show;
-                    _bgImage.color = show ? new Color(0.18f, 0.16f, 0.08f, 0.85f)
-                                          : new Color(0.12f, 0.12f, 0.12f, 0.85f);
+                    _bgImage.color = new Color(0.3f, 0.25f, 0.05f, 0.85f);
                     break;
                 case SlotMode.Disabled:
                     _slotCanvasGroup.alpha = 0f;
@@ -295,8 +298,9 @@ namespace fierrof.ActionBar
                     break;
             }
 
-            // Dynamic should stack with hidden/active state visuals.
-            _outline.effectColor = IsDynamic ? DynamicBorderColor : Color.black;
+            // Dynamic should stack with hidden/active/disabled as border-only.
+            _outline.effectColor = Color.black;
+            SetDynamicBorderVisible(IsDynamic);
         }
 
         private static bool IsInventoryOpen()
@@ -647,6 +651,53 @@ namespace fierrof.ActionBar
         {
             if (_outline != null) return;
             _outline = GetComponent<Outline>();
+        }
+
+        private void EnsureDynamicBorder()
+        {
+            if (_dynamicBorderEdges != null) return;
+
+            _dynamicBorderEdges = new Image[4];
+            float thickness = 2f;
+
+            _dynamicBorderEdges[0] = CreateBorderEdge("DynamicBorderTop", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, 0f), new Vector2(0f, thickness));
+            _dynamicBorderEdges[1] = CreateBorderEdge("DynamicBorderBottom", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 0f), new Vector2(0f, thickness));
+            _dynamicBorderEdges[2] = CreateBorderEdge("DynamicBorderLeft", new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(0f, 0f), new Vector2(thickness, 0f));
+            _dynamicBorderEdges[3] = CreateBorderEdge("DynamicBorderRight", new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0.5f), new Vector2(0f, 0f), new Vector2(thickness, 0f));
+
+            SetDynamicBorderVisible(false);
+        }
+
+        private Image CreateBorderEdge(string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 anchoredPosition, Vector2 sizeDelta)
+        {
+            var go = new GameObject(name);
+            go.layer = 5;
+            go.transform.SetParent(transform, false);
+
+            var image = go.AddComponent<Image>();
+            image.color = DynamicBorderColor;
+            image.raycastTarget = false;
+
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.pivot = pivot;
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = sizeDelta;
+
+            return image;
+        }
+
+        private void SetDynamicBorderVisible(bool visible)
+        {
+            EnsureDynamicBorder();
+            if (_dynamicBorderEdges == null) return;
+
+            for (int i = 0; i < _dynamicBorderEdges.Length; i++)
+            {
+                if (_dynamicBorderEdges[i] != null)
+                    _dynamicBorderEdges[i].enabled = visible;
+            }
         }
 
         private void EnsureCanvasGroup()
