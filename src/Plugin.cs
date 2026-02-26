@@ -42,10 +42,10 @@ namespace fierrof.ActionBar
             Log = Logger;
 
             // Global Settings
-            SetHotkeyMode = Config.Bind("Global Settings", "Configure Hotkeys", false,
-                new ConfigDescription("Click to enter hotkey assignment mode.", null,
+            SetHotkeyMode = Config.Bind("Global Settings", "Edit Mode", false,
+                new ConfigDescription("Click to enter Edit Mode (drag bars, assign hotkeys).", null,
                 new ConfigurationManagerAttributes {
-                    CustomDrawer = DrawHotkeyModeButton,
+                    CustomDrawer = DrawEditModeButton,
                     HideDefaultButton = true,
                     Order = -1
                 }));
@@ -56,7 +56,8 @@ namespace fierrof.ActionBar
                 string section = $"Bar {b + 1} Settings";
                 
                 Enabled[b] = Config.Bind(section, "Enabled", b == 0,
-                    new ConfigDescription($"Enable Action Bar {b + 1}"));
+                    new ConfigDescription($"Enable Action Bar {b + 1}", null,
+                    new ConfigurationManagerAttributes { HideDefaultButton = true }));
 
                 SlotCount[b] = Config.Bind(section, "Slots", 8,
                     new ConfigDescription($"Number of quickslot buttons displayed for Bar {b + 1}",
@@ -93,6 +94,16 @@ namespace fierrof.ActionBar
                         null,
                         new ConfigurationManagerAttributes { Browsable = false }));
                 }
+
+                // Reset button — closure captures the bar index
+                int barIdx = b;
+                Config.Bind(section, "Reset Bar", false,
+                    new ConfigDescription($"Reset all settings for Bar {b + 1} to defaults (except Enabled)", null,
+                    new ConfigurationManagerAttributes {
+                        CustomDrawer = (ConfigEntryBase _) => DrawResetBarButton(barIdx),
+                        HideDefaultButton = true,
+                        Order = -100
+                    }));
             }
 
             new Harmony(GUID).PatchAll();
@@ -122,15 +133,31 @@ namespace fierrof.ActionBar
                 entry.BoxedValue = newValue;
         }
 
-        private static void DrawHotkeyModeButton(ConfigEntryBase entry)
+        private static void DrawResetBarButton(int barIndex)
         {
-            var label = SlotDropHandler.IsConfigMode ? "Exit Hotkey Mode" : "Configure Hotkeys";
+            if (GUILayout.Button($"Reset Bar {barIndex + 1} to Defaults", GUILayout.ExpandWidth(true)))
+            {
+                SlotCount[barIndex].Value = (int)SlotCount[barIndex].DefaultValue;
+                PositionX[barIndex].Value = (int)PositionX[barIndex].DefaultValue;
+                PositionY[barIndex].Value = (int)PositionY[barIndex].DefaultValue;
+                Scale[barIndex].Value     = (int)Scale[barIndex].DefaultValue;
+
+                for (int s = 0; s < MAX_SLOTS; s++)
+                    SlotKeys[barIndex][s].Value = (KeyCode)SlotKeys[barIndex][s].DefaultValue;
+
+                Log.LogMessage($"Bar {barIndex + 1}: reset to defaults.");
+            }
+        }
+
+        private static void DrawEditModeButton(ConfigEntryBase entry)
+        {
+            var label = SlotDropHandler.IsEditMode ? "Exit Edit Mode" : "Enter Edit Mode";
 
             if (GUILayout.Button(label, GUILayout.ExpandWidth(true)))
             {
-                SlotDropHandler.IsConfigMode = !SlotDropHandler.IsConfigMode;
+                SlotDropHandler.IsEditMode = !SlotDropHandler.IsEditMode;
 
-                if (SlotDropHandler.IsConfigMode)
+                if (SlotDropHandler.IsEditMode)
                     CloseConfigWindow();
             }
         }

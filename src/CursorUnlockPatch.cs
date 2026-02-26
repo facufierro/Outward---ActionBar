@@ -12,7 +12,7 @@ namespace fierrof.ActionBar
     {
         static void Postfix(ref bool __result)
         {
-            if (SlotDropHandler.IsConfigMode)
+            if (SlotDropHandler.IsEditMode)
                 __result = true;
         }
     }

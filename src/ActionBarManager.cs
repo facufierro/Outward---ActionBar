@@ -95,6 +95,14 @@ namespace fierrof.ActionBar
                 var fitter           = _containers[i].AddComponent<ContentSizeFitter>();
                 fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
                 fitter.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
+
+                // Invisible raycast target so the container itself is draggable
+                var containerBg = _containers[i].AddComponent<Image>();
+                containerBg.color = new Color(0f, 0f, 0f, 0f);
+                containerBg.raycastTarget = true;
+
+                var drag = _containers[i].AddComponent<BarDragHandler>();
+                drag.BarIndex = i;
             }
 
             BuildConfigOverlay();
@@ -130,7 +138,7 @@ namespace fierrof.ActionBar
             text.fontSize = 36;
             text.alignment = TextAnchor.MiddleCenter;
             text.color = Color.white;
-            text.text = "HOTKEY CONFIGURATION MODE\n<size=24>Hover a slot and press a key to bind. Press ESC to exit.</size>";
+            text.text = "EDIT MODE\n<size=24>Hover a slot and press a key to bind it.\nDrag a bar to reposition it. Press ESC to exit.</size>";
 
             var outline = textGO.AddComponent<Outline>();
             outline.effectColor = Color.black;
@@ -281,7 +289,7 @@ namespace fierrof.ActionBar
 
         private void HandleConfigModeState()
         {
-            if (SlotDropHandler.IsConfigMode && !_wasConfigMode)
+            if (SlotDropHandler.IsEditMode && !_wasConfigMode)
             {
                 _configOverlay.SetActive(true);
                 Time.timeScale = 0f; // Pause game
@@ -289,7 +297,7 @@ namespace fierrof.ActionBar
                 Cursor.visible = true;
                 _wasConfigMode = true;
             }
-            else if (!SlotDropHandler.IsConfigMode && _wasConfigMode)
+            else if (!SlotDropHandler.IsEditMode && _wasConfigMode)
             {
                 _configOverlay.SetActive(false);
                 Time.timeScale = 1f; // Resume game
@@ -298,9 +306,9 @@ namespace fierrof.ActionBar
             }
 
             // Global ESC to exit config mode
-            if (SlotDropHandler.IsConfigMode && Input.GetKeyDown(KeyCode.Escape))
+            if (SlotDropHandler.IsEditMode && Input.GetKeyDown(KeyCode.Escape))
             {
-                SlotDropHandler.IsConfigMode = false;
+                SlotDropHandler.IsEditMode = false;
             }
         }
 

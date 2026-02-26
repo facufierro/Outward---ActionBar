@@ -18,7 +18,7 @@ namespace fierrof.ActionBar
         public static bool IsPointerOverSlot { get; private set; }
 
         /// <summary>Global config mode toggle — set by Plugin's config button.</summary>
-        public static bool IsConfigMode { get; set; }
+        public static bool IsEditMode { get; set; }
 
         /// <summary>The item currently assigned to this slot.</summary>
         public Item AssignedItem { get; private set; }
@@ -43,7 +43,7 @@ namespace fierrof.ActionBar
 
         public void OnDrop(PointerEventData eventData)
         {
-            if (IsConfigMode) return; // don't assign items in config mode
+            if (IsEditMode) return; // don't assign items in config mode
 
             var itemDisplay = GetDraggedItem(eventData);
             if (itemDisplay?.RefItem == null) return;
@@ -57,18 +57,18 @@ namespace fierrof.ActionBar
 
         void Update()
         {
-            if (_isHovered && Input.GetMouseButtonDown(1) && AssignedItem != null && !IsConfigMode)
+            if (_isHovered && Input.GetMouseButtonDown(1) && AssignedItem != null && !IsEditMode)
             {
                 ClearSlot();
                 return;
             }
 
             // Config mode: hover + press any key to assign keybind
-            if (IsConfigMode && _isHovered)
+            if (IsEditMode && _isHovered)
             {
                 if (Input.GetKeyDown(KeyCode.Escape))
                 {
-                    IsConfigMode = false;
+                    IsEditMode = false;
                     return;
                 }
 
