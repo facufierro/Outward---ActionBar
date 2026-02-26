@@ -33,6 +33,7 @@ namespace fierrof.ActionBar
         public void OnBeginDrag(PointerEventData eventData)
         {
             if (!SlotDropHandler.IsEditMode) return;
+            if (eventData.button != PointerEventData.InputButton.Left) return;
             _dragging = true;
         }
 

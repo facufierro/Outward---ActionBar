@@ -179,6 +179,7 @@ namespace fierrof.ActionBar
             if (IsEditMode) return; // edit mode always shows all
 
             EnsureCanvasGroup();
+            EnsureBgImage();
 
             switch (Mode)
             {
@@ -186,6 +187,7 @@ namespace fierrof.ActionBar
                     _slotCanvasGroup.alpha = 1f;
                     _slotCanvasGroup.blocksRaycasts = true;
                     _slotCanvasGroup.interactable = true;
+                    _bgImage.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
                     break;
                 case SlotMode.Hidden:
                     bool inventoryOpen = IsInventoryOpen();
@@ -194,6 +196,8 @@ namespace fierrof.ActionBar
                     _slotCanvasGroup.alpha = show ? 1f : 0f;
                     _slotCanvasGroup.blocksRaycasts = show;
                     _slotCanvasGroup.interactable = show;
+                    // Subtle yellow tint so you know it's a hidden slot
+                    _bgImage.color = show ? new Color(0.18f, 0.16f, 0.08f, 0.85f) : new Color(0.12f, 0.12f, 0.12f, 0.85f);
                     break;
                 case SlotMode.Disabled:
                     _slotCanvasGroup.alpha = 0f;
