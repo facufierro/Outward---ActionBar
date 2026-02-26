@@ -6,8 +6,10 @@ using UnityEngine.UI;
 namespace fierrof.ActionBar
 {
     /// <summary>
-    /// Owns the entire custom action bar lifecycle:
-    /// canvas setup, slot creation/destruction, config sync, and vanilla suppression.
+    /// Owns the custom action bar lifecycle.
+    /// Embedded inside CharacterUI's Canvas/GameplayPanels so that drag visuals
+    /// and our bar share the same GraphicRaycaster. Uses overrideSorting to
+    /// control visual layering only.
     /// </summary>
     public class ActionBarManager : MonoBehaviour
     {
@@ -28,30 +30,33 @@ namespace fierrof.ActionBar
         public void Setup(Transform vanillaBar)
         {
             _vanillaBar = vanillaBar;
-            BuildCanvas();
+            BuildUI();
             SyncSlots();
         }
 
-        // ── Canvas ─────────────────────────────────────────────
+        // ── UI Build ───────────────────────────────────────────
 
-        private void BuildCanvas()
+        private void BuildUI()
         {
-            Object.DontDestroyOnLoad(gameObject);
             gameObject.layer = 5;
 
-            var canvas          = gameObject.AddComponent<Canvas>();
-            canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 10; // Above game UI so our IDropHandler intercepts drops
+            // RectTransform to fill the parent (GameplayPanels)
+            var rt = gameObject.AddComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
 
-            var scaler                 = gameObject.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.screenMatchMode     = CanvasScaler.ScreenMatchMode.Shrink;
+            // overrideSorting makes our bar render ABOVE the DropPanel (0)
+            // and above the default game elements, but the drag cursor
+            // (which renders on the game's main canvas) stays on top.
+            var canvas = gameObject.AddComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 1;
 
             gameObject.AddComponent<GraphicRaycaster>();
 
-            // CanvasGroup to toggle visibility without disabling the GameObject
-            // (disabling the GO would stop Update from running)
+            // CanvasGroup for visibility toggling
             _canvasGroup = gameObject.AddComponent<CanvasGroup>();
             _canvasGroup.alpha = 0f;
             _canvasGroup.blocksRaycasts = false;
@@ -119,15 +124,22 @@ namespace fierrof.ActionBar
                            && !NetworkLevelLoader.Instance.IsGameplayLoading
                            && CharacterManager.Instance?.GetFirstLocalCharacter() != null;
 
-            // Toggle visibility via alpha (not SetActive, which would kill Update)
-            float targetAlpha = inGameplay ? 1f : 0f;
+            if (!inGameplay)
+            {
+                if (_canvasGroup.alpha != 0f)
+                {
+                    _canvasGroup.alpha = 0f;
+                    _canvasGroup.blocksRaycasts = false;
+                }
+                return;
+            }
+
+            float targetAlpha = 1f;
             if (_canvasGroup.alpha != targetAlpha)
             {
                 _canvasGroup.alpha = targetAlpha;
-                _canvasGroup.blocksRaycasts = inGameplay;
+                _canvasGroup.blocksRaycasts = true;
             }
-
-            if (!inGameplay) return;
 
             SuppressVanillaBar();
             ApplyConfig();
@@ -137,11 +149,9 @@ namespace fierrof.ActionBar
         {
             if (_vanillaBar == null) return;
 
-            // Disable the direct target
             if (_vanillaBar.gameObject.activeSelf)
                 _vanillaBar.gameObject.SetActive(false);
 
-            // Also kill the parent QuickSlot container — the game may re-enable children
             var parent = _vanillaBar.parent;
             if (parent != null && parent.gameObject.activeSelf)
                 parent.gameObject.SetActive(false);

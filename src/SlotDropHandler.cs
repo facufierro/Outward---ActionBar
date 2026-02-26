@@ -20,65 +20,32 @@ namespace fierrof.ActionBar
         public Item AssignedItem { get; private set; }
 
         private Image _iconImage;
-        private Canvas _dragBoostCanvas;
 
         public void OnPointerEnter(PointerEventData eventData)
         {
             IsPointerOverSlot = true;
-
-            // Boost the dragged item's render order above our bar
-            if (eventData.dragging && eventData.pointerDrag != null)
-            {
-                _dragBoostCanvas = eventData.pointerDrag.GetComponent<Canvas>();
-                if (_dragBoostCanvas == null)
-                    _dragBoostCanvas = eventData.pointerDrag.AddComponent<Canvas>();
-                _dragBoostCanvas.overrideSorting = true;
-                _dragBoostCanvas.sortingOrder = 100;
-            }
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
             IsPointerOverSlot = false;
-            CleanupDragBoost();
-        }
-
-        private void CleanupDragBoost()
-        {
-            if (_dragBoostCanvas != null)
-            {
-                Object.Destroy(_dragBoostCanvas);
-                _dragBoostCanvas = null;
-            }
         }
 
         public void OnDrop(PointerEventData eventData)
         {
-            CleanupDragBoost();
-
             var itemDisplay = GetDraggedItem(eventData);
             if (itemDisplay?.RefItem == null) return;
 
             var item = itemDisplay.RefItem;
-            Plugin.Log.LogMessage($"[Slot {SlotIndex}] OnDrop: item='{item.Name}', quickslotable={item.IsQuickSlotable}");
-
-            if (!item.IsQuickSlotable)
-            {
-                Plugin.Log.LogMessage($"'{item.Name}' is not quickslotable — ignoring.");
-                return;
-            }
+            if (!item.IsQuickSlotable) return;
 
             AssignItem(item);
         }
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            // Right-click clears the slot
             if (eventData.button == PointerEventData.InputButton.Right && AssignedItem != null)
-            {
-                Plugin.Log.LogMessage($"Slot {SlotIndex}: cleared '{AssignedItem.Name}'.");
                 ClearSlot();
-            }
         }
 
         public void AssignItem(Item item)
