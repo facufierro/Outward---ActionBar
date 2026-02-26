@@ -11,7 +11,7 @@ namespace fierrof.ActionBar
     public class HudMover : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         public string ElementId;
-        public bool AnchorBottom; // For elements like tutorials where content is at the bottom
+        public bool AnchorBottom;
 
         private RectTransform _rect;
         private Vector2 _originalAnchoredPos;
@@ -118,28 +118,21 @@ namespace fierrof.ActionBar
 
                 var hRect = _handleObj.GetComponent<RectTransform>();
 
-                if (AnchorBottom)
-                {
-                    // Anchor handle at the bottom of the rect (for tutorials)
-                    hRect.anchorMin = new Vector2(0.5f, 0f);
-                    hRect.anchorMax = new Vector2(0.5f, 0f);
-                    hRect.pivot = new Vector2(0.5f, 0f);
-                }
-                else
-                {
-                    // Center on the element
-                    hRect.anchorMin = new Vector2(0.5f, 0.5f);
-                    hRect.anchorMax = new Vector2(0.5f, 0.5f);
-                    hRect.pivot = new Vector2(0.5f, 0.5f);
-                }
+                hRect.anchorMin = new Vector2(0.5f, 0.5f);
+                hRect.anchorMax = new Vector2(0.5f, 0.5f);
+                hRect.pivot     = new Vector2(0.5f, 0.5f);
 
-                // Clamp to sensible size: min 40, max 150
-                float w = Mathf.Max(_rect.rect.width + 10f, 60f);
-                float h = Mathf.Max(_rect.rect.height + 10f, 60f);
-                w = Mathf.Min(w, 150f);
-                h = Mathf.Min(h, 150f);
+                // For tall tutorial rects, find the actual icon child and match it
+                var contentRect = AnchorBottom ? FindContentChild(_rect) : null;
+                var sizeRef = contentRect ?? _rect;
+                float w = Mathf.Clamp(sizeRef.rect.width + 10f, 60f, 150f);
+                float h = Mathf.Clamp(sizeRef.rect.height + 10f, 60f, 150f);
                 hRect.sizeDelta = new Vector2(w, h);
-                hRect.anchoredPosition = Vector2.zero;
+
+                if (contentRect != null)
+                    hRect.position = contentRect.position;
+                else
+                    hRect.anchoredPosition = Vector2.zero;
 
                 // ── Label text sits just above the highlight ──
                 var labelGO = new GameObject("Label");
@@ -203,6 +196,21 @@ namespace fierrof.ActionBar
         public void ResetToOriginal()
         {
             _rect.anchoredPosition = _originalAnchoredPos;
+        }
+
+        private static RectTransform FindContentChild(RectTransform parent)
+        {
+            // Walk children recursively, return the first one with an Image component
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                var child = parent.GetChild(i).GetComponent<RectTransform>();
+                if (child == null || child.name == "HudMover_Handle") continue;
+                if (child.GetComponent<Image>() != null || child.GetComponent<RawImage>() != null)
+                    return child;
+                var deeper = FindContentChild(child);
+                if (deeper != null) return deeper;
+            }
+            return null;
         }
     }
 }

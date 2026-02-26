@@ -153,7 +153,7 @@ namespace fierrof.ActionBar
                     var mover = child.gameObject.AddComponent<HudMover>();
                     mover.ElementId = friendlyName;
 
-                    // Tutorial elements have icons at the bottom of tall rects
+                    // Tutorial rects are tall; anchor handle at bottom where the icon is
                     if (name.StartsWith("Tutorialization"))
                         mover.AnchorBottom = true;
 
