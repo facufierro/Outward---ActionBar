@@ -46,6 +46,9 @@ namespace fierrof.ActionBar
                 _slots[i] = new List<GameObject>();
             }
 
+            // Add the HUD mover manager to this same GameObject
+            gameObject.AddComponent<HudMoverManager>();
+
             BuildUI();
             
             for (int i = 0; i < Plugin.MAX_BARS; i++)
@@ -127,7 +130,7 @@ namespace fierrof.ActionBar
 
             var bg = _configOverlay.AddComponent<Image>();
             bg.color = new Color(0f, 0f, 0f, 0.7f); // Dark tint
-            bg.raycastTarget = true; // Block clicks to game world
+            bg.raycastTarget = false; // Allow clicks to pass through to HUD elements
 
             var textGO = new GameObject("InstructionText");
             textGO.transform.SetParent(_configOverlay.transform, false);
