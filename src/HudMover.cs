@@ -156,6 +156,46 @@ namespace fierrof.ActionBar
                 labelRect.pivot = new Vector2(0.5f, 0f);
                 labelRect.anchoredPosition = new Vector2(0f, 2f);
                 labelRect.sizeDelta = new Vector2(0f, 16f);
+
+                // ── Visual Proxy (for hidden elements like Backpack/Bandage) ──
+                if (contentRect != null)
+                {
+                    var sourceImage = contentRect.GetComponent<Image>();
+                    var sourceRaw = contentRect.GetComponent<RawImage>();
+
+                    if (sourceImage != null && sourceImage.sprite != null)
+                    {
+                        var proxyGO = new GameObject("VisualProxy");
+                        proxyGO.transform.SetParent(_handleObj.transform, false);
+                        var proxyImg = proxyGO.AddComponent<Image>();
+                        proxyImg.sprite = sourceImage.sprite;
+                        proxyImg.color = new Color(1f, 1f, 1f, 0.7f); // slightly transparent
+                        proxyImg.raycastTarget = false;
+
+                        var proxyRect = proxyGO.GetComponent<RectTransform>();
+                        proxyRect.anchorMin = new Vector2(0.5f, 0.5f);
+                        proxyRect.anchorMax = new Vector2(0.5f, 0.5f);
+                        proxyRect.pivot = new Vector2(0.5f, 0.5f);
+                        proxyRect.sizeDelta = contentRect.rect.size;
+                        proxyRect.anchoredPosition = Vector2.zero;
+                    }
+                    else if (sourceRaw != null && sourceRaw.texture != null)
+                    {
+                        var proxyGO = new GameObject("VisualProxy_Raw");
+                        proxyGO.transform.SetParent(_handleObj.transform, false);
+                        var proxyRaw = proxyGO.AddComponent<RawImage>();
+                        proxyRaw.texture = sourceRaw.texture;
+                        proxyRaw.color = new Color(1f, 1f, 1f, 0.7f); // slightly transparent
+                        proxyRaw.raycastTarget = false;
+
+                        var proxyRect = proxyGO.GetComponent<RectTransform>();
+                        proxyRect.anchorMin = new Vector2(0.5f, 0.5f);
+                        proxyRect.anchorMax = new Vector2(0.5f, 0.5f);
+                        proxyRect.pivot = new Vector2(0.5f, 0.5f);
+                        proxyRect.sizeDelta = contentRect.rect.size;
+                        proxyRect.anchoredPosition = Vector2.zero;
+                    }
+                }
             }
             _handleObj.SetActive(true);
         }
