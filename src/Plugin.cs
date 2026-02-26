@@ -145,6 +145,18 @@ namespace fierrof.ActionBar
                 for (int s = 0; s < MAX_SLOTS; s++)
                     SlotKeys[barIndex][s].Value = (KeyCode)SlotKeys[barIndex][s].DefaultValue;
 
+                // Reset slot modes to Active
+                var allHandlers = Object.FindObjectsOfType<SlotDropHandler>();
+                foreach (var handler in allHandlers)
+                {
+                    if (handler.BarIndex == barIndex)
+                        handler.Mode = SlotMode.Active;
+                }
+
+                // Save if character is loaded
+                var manager = Object.FindObjectOfType<ActionBarManager>();
+                if (manager != null) manager.SaveSlots();
+
                 Log.LogMessage($"Bar {barIndex + 1}: reset to defaults.");
             }
         }
