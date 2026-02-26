@@ -5,9 +5,10 @@ using System.Linq;
 namespace fierrof.ActionBar
 {
     /// <summary>
-    /// Saves and loads per-character slot assignments.
+    /// Saves and loads per-character slot assignments and modes.
     /// File: {BepInExConfigDir}/ActionBar_Slots/{characterUID}.txt
-    /// Format: one ItemID per line (-1 = empty slot).
+    /// Format: one line per slot position: "ItemID|Mode" (-1 = empty, mode = 0/1/2).
+    /// 80 lines total (4 bars * 20 slots).
     /// </summary>
     public static class SlotSaveManager
     {
@@ -20,15 +21,14 @@ namespace fierrof.ActionBar
         public static void Save(string characterUID, SlotDropHandler[] slots)
         {
             // Always save exactly 80 lines (4 bars * 20 slots max)
-            var lines = Enumerable.Repeat("-1", Plugin.MAX_BARS * Plugin.MAX_SLOTS).ToArray();
+            var lines = Enumerable.Repeat("-1|0", Plugin.MAX_BARS * Plugin.MAX_SLOTS).ToArray();
 
             foreach (var slot in slots)
             {
-                if (slot.AssignedItem != null)
-                {
-                    int lineIndex = slot.BarIndex * Plugin.MAX_SLOTS + slot.SlotIndex;
-                    lines[lineIndex] = slot.AssignedItem.ItemID.ToString();
-                }
+                int lineIndex = slot.BarIndex * Plugin.MAX_SLOTS + slot.SlotIndex;
+                string itemId = slot.AssignedItem != null ? slot.AssignedItem.ItemID.ToString() : "-1";
+                int mode = (int)slot.Mode;
+                lines[lineIndex] = $"{itemId}|{mode}";
             }
 
             Directory.CreateDirectory(SaveDir);
@@ -49,13 +49,24 @@ namespace fierrof.ActionBar
 
                 foreach (var slot in slots)
                 {
-                    if (slot.AssignedItem != null) continue; // already loaded
-                    
                     int lineIndex = slot.BarIndex * Plugin.MAX_SLOTS + slot.SlotIndex;
                     if (lineIndex >= lines.Length) continue;
 
-                    if (!int.TryParse(lines[lineIndex].Trim(), out int itemID) || itemID < 0)
+                    string line = lines[lineIndex].Trim();
+                    
+                    // Parse "ItemID|Mode" or legacy "ItemID"
+                    string[] parts = line.Split('|');
+                    
+                    if (!int.TryParse(parts[0], out int itemID))
                         continue;
+
+                    // Load mode
+                    if (parts.Length > 1 && int.TryParse(parts[1], out int modeInt) && modeInt >= 0 && modeInt <= 2)
+                        slot.Mode = (SlotMode)modeInt;
+
+                    // Load item
+                    if (slot.AssignedItem != null) continue; // already loaded
+                    if (itemID < 0) continue;
 
                     var item = FindItem(character, itemID);
                     if (item != null)

@@ -296,6 +296,7 @@ namespace fierrof.ActionBar
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
                 _wasConfigMode = true;
+                RefreshAllSlotVisuals();
             }
             else if (!SlotDropHandler.IsEditMode && _wasConfigMode)
             {
@@ -303,12 +304,21 @@ namespace fierrof.ActionBar
                 Time.timeScale = 1f; // Resume game
                 Cursor.lockState = CursorLockMode.Confined;
                 _wasConfigMode = false;
+                RefreshAllSlotVisuals();
             }
 
             // Global ESC to exit config mode
             if (SlotDropHandler.IsEditMode && Input.GetKeyDown(KeyCode.Escape))
             {
                 SlotDropHandler.IsEditMode = false;
+            }
+        }
+
+        private void RefreshAllSlotVisuals()
+        {
+            foreach (var handler in GetAllSlotHandlers())
+            {
+                handler.RefreshEditModeVisuals();
             }
         }
 

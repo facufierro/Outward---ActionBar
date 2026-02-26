@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace fierrof.ActionBar
 {
     /// <summary>
-    /// Handles drag-and-drop, keybind assignment, and keybind activation for a slot.
+    /// Handles drag-and-drop, keybind assignment, mode cycling, and keybind activation for a slot.
     /// </summary>
     public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
     {
@@ -17,15 +17,21 @@ namespace fierrof.ActionBar
         /// <summary>True when the pointer is over any action bar slot.</summary>
         public static bool IsPointerOverSlot { get; private set; }
 
-        /// <summary>Global config mode toggle — set by Plugin's config button.</summary>
+        /// <summary>Global edit mode toggle — set by Plugin's config button.</summary>
         public static bool IsEditMode { get; set; }
 
         /// <summary>The item currently assigned to this slot.</summary>
         public Item AssignedItem { get; private set; }
 
+        /// <summary>Visibility/functionality mode for this slot.</summary>
+        public SlotMode Mode { get; set; } = SlotMode.Active;
+
         private bool  _isHovered;
         private Image _iconImage;
         private Text  _keyLabel;
+        private Text  _modeLabel;
+        private Image _bgImage;
+        private CanvasGroup _slotCanvasGroup;
 
         // ── Pointer events ─────────────────────────────────
 
@@ -43,7 +49,8 @@ namespace fierrof.ActionBar
 
         public void OnDrop(PointerEventData eventData)
         {
-            if (IsEditMode) return; // don't assign items in config mode
+            if (IsEditMode) return;
+            if (Mode == SlotMode.Disabled) return;
 
             var itemDisplay = GetDraggedItem(eventData);
             if (itemDisplay?.RefItem == null) return;
@@ -54,16 +61,25 @@ namespace fierrof.ActionBar
 
         // ── Update ─────────────────────────────────────────
 
-
         void Update()
         {
-            if (_isHovered && Input.GetMouseButtonDown(1) && AssignedItem != null && !IsEditMode)
+            // Right-click behavior
+            if (_isHovered && Input.GetMouseButtonDown(1))
             {
-                ClearSlot();
-                return;
+                if (IsEditMode)
+                {
+                    CycleMode();
+                    return;
+                }
+                
+                if (AssignedItem != null)
+                {
+                    ClearSlot();
+                    return;
+                }
             }
 
-            // Config mode: hover + press any key to assign keybind
+            // Edit mode: hover + press any key to assign keybind
             if (IsEditMode && _isHovered)
             {
                 if (Input.GetKeyDown(KeyCode.Escape))
@@ -86,7 +102,11 @@ namespace fierrof.ActionBar
                 return;
             }
 
+            // Gameplay visibility
+            UpdateVisibility();
+
             // Gameplay: press bound key to activate item
+            if (Mode == SlotMode.Disabled) return;
             if (AssignedItem == null) return;
             if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS) return;
 
@@ -98,6 +118,96 @@ namespace fierrof.ActionBar
                 if (!IsGameplay()) return;
                 AssignedItem.TryQuickSlotUse();
             }
+        }
+
+        // ── Mode cycling ──────────────────────────────────
+
+        private void CycleMode()
+        {
+            switch (Mode)
+            {
+                case SlotMode.Active:   Mode = SlotMode.Hidden; break;
+                case SlotMode.Hidden:   Mode = SlotMode.Disabled; break;
+                case SlotMode.Disabled: Mode = SlotMode.Active; break;
+            }
+
+            UpdateModeVisual();
+            Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: mode set to {Mode}.");
+
+            var manager = GetComponentInParent<ActionBarManager>();
+            if (manager != null) manager.SaveSlots();
+        }
+
+        private void UpdateModeVisual()
+        {
+            EnsureModeLabel();
+            EnsureBgImage();
+
+            if (IsEditMode)
+            {
+                // Always show all slots in edit mode
+                EnsureCanvasGroup();
+                _slotCanvasGroup.alpha = 1f;
+                _slotCanvasGroup.blocksRaycasts = true;
+                _slotCanvasGroup.interactable = true;
+
+                switch (Mode)
+                {
+                    case SlotMode.Active:
+                        _modeLabel.text = "";
+                        _bgImage.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
+                        break;
+                    case SlotMode.Hidden:
+                        _modeLabel.text = "HIDDEN";
+                        _bgImage.color = new Color(0.3f, 0.25f, 0.05f, 0.85f); // dim yellow
+                        break;
+                    case SlotMode.Disabled:
+                        _modeLabel.text = "OFF";
+                        _bgImage.color = new Color(0.3f, 0.05f, 0.05f, 0.85f); // dim red
+                        break;
+                }
+            }
+            else
+            {
+                _modeLabel.text = "";
+                _bgImage.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
+            }
+        }
+
+        private void UpdateVisibility()
+        {
+            if (IsEditMode) return; // edit mode always shows all
+
+            EnsureCanvasGroup();
+
+            switch (Mode)
+            {
+                case SlotMode.Active:
+                    _slotCanvasGroup.alpha = 1f;
+                    _slotCanvasGroup.blocksRaycasts = true;
+                    _slotCanvasGroup.interactable = true;
+                    break;
+                case SlotMode.Hidden:
+                    bool inventoryOpen = IsInventoryOpen();
+                    bool hasItem = AssignedItem != null;
+                    bool show = inventoryOpen || hasItem;
+                    _slotCanvasGroup.alpha = show ? 1f : 0f;
+                    _slotCanvasGroup.blocksRaycasts = show;
+                    _slotCanvasGroup.interactable = show;
+                    break;
+                case SlotMode.Disabled:
+                    _slotCanvasGroup.alpha = 0f;
+                    _slotCanvasGroup.blocksRaycasts = false;
+                    _slotCanvasGroup.interactable = false;
+                    break;
+            }
+        }
+
+        private static bool IsInventoryOpen()
+        {
+            var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+            if (character?.CharacterUI == null) return false;
+            return character.CharacterUI.GetIsMenuDisplayed(CharacterUI.MenuScreens.Inventory);
         }
 
         // ── Item management ────────────────────────────────
@@ -189,6 +299,13 @@ namespace fierrof.ActionBar
             }
         }
 
+        // ── Edit mode visual refresh ──────────────────────
+
+        public void RefreshEditModeVisuals()
+        {
+            UpdateModeVisual();
+        }
+
         // ── UI setup ───────────────────────────────────────
 
         private void Start()
@@ -216,6 +333,8 @@ namespace fierrof.ActionBar
             // Ensure key label stays on top of the icon
             if (_keyLabel != null)
                 _keyLabel.transform.SetAsLastSibling();
+            if (_modeLabel != null)
+                _modeLabel.transform.SetAsLastSibling();
         }
 
         private void EnsureIconImage()
@@ -262,6 +381,46 @@ namespace fierrof.ActionBar
             rect.anchorMax = Vector2.one;
             rect.offsetMin = new Vector2(2f, 2f);
             rect.offsetMax = new Vector2(-2f, -2f);
+        }
+
+        private void EnsureModeLabel()
+        {
+            if (_modeLabel != null) return;
+
+            var labelGO = new GameObject("ModeLabel");
+            labelGO.layer = 5;
+            labelGO.transform.SetParent(transform, false);
+
+            _modeLabel = labelGO.AddComponent<Text>();
+            _modeLabel.font      = Font.CreateDynamicFontFromOSFont("Arial", 10);
+            _modeLabel.fontSize  = 9;
+            _modeLabel.alignment = TextAnchor.LowerCenter;
+            _modeLabel.color     = new Color(1f, 1f, 1f, 0.9f);
+            _modeLabel.raycastTarget = false;
+
+            var outline = labelGO.AddComponent<Outline>();
+            outline.effectColor    = new Color(0f, 0f, 0f, 0.8f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            var rect = labelGO.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(2f, 2f);
+            rect.offsetMax = new Vector2(-2f, -2f);
+        }
+
+        private void EnsureBgImage()
+        {
+            if (_bgImage != null) return;
+            _bgImage = GetComponent<Image>();
+        }
+
+        private void EnsureCanvasGroup()
+        {
+            if (_slotCanvasGroup != null) return;
+            _slotCanvasGroup = GetComponent<CanvasGroup>();
+            if (_slotCanvasGroup == null)
+                _slotCanvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
 
         // ── Helpers ────────────────────────────────────────
