@@ -11,9 +11,13 @@ namespace fierrof.ActionBar
     /// </summary>
     public class ActionBarManager : MonoBehaviour
     {
-        private Transform     _vanillaBar;
-        private GameObject    _canvas;
-        private GameObject    _container;
+        private const int   SLOT_WIDTH  = 54;
+        private const int   SLOT_HEIGHT = 81; // 1.5× taller than wide
+        private const int   SLOT_GAP    = 4;
+
+        private Transform        _vanillaBar;
+        private GameObject       _container;
+        private CanvasGroup      _canvasGroup;
         private List<GameObject> _slots = new List<GameObject>();
 
         private int   _lastSlotCount;
@@ -32,33 +36,36 @@ namespace fierrof.ActionBar
 
         private void BuildCanvas()
         {
-            // Independent overlay canvas (same pattern SideLoader uses)
-            _canvas = gameObject;
-            Object.DontDestroyOnLoad(_canvas);
-            _canvas.layer = 5;
+            Object.DontDestroyOnLoad(gameObject);
+            gameObject.layer = 5;
 
-            var canvas       = _canvas.AddComponent<Canvas>();
-            canvas.renderMode  = RenderMode.ScreenSpaceOverlay;
+            var canvas          = gameObject.AddComponent<Canvas>();
+            canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 50;
 
-            var scaler = _canvas.AddComponent<CanvasScaler>();
+            var scaler                 = gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution  = new Vector2(1920f, 1080f);
-            scaler.screenMatchMode      = CanvasScaler.ScreenMatchMode.Shrink;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.screenMatchMode     = CanvasScaler.ScreenMatchMode.Shrink;
 
-            _canvas.AddComponent<GraphicRaycaster>();
+            gameObject.AddComponent<GraphicRaycaster>();
 
-            // Slot container with horizontal layout
-            _container = UIFactory.CreateUIObject("SlotContainer", _canvas);
+            // CanvasGroup to toggle visibility without disabling the GameObject
+            // (disabling the GO would stop Update from running)
+            _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            _canvasGroup.alpha = 0f;
+            _canvasGroup.blocksRaycasts = false;
+
+            _container = UIFactory.CreateUIObject("SlotContainer", gameObject);
 
             UIFactory.SetLayoutGroup<HorizontalLayoutGroup>(
                 _container,
                 forceWidth: false, forceHeight: false,
                 childControlWidth: false, childControlHeight: false,
-                spacing: 4
+                spacing: SLOT_GAP
             );
 
-            var fitter = _container.AddComponent<ContentSizeFitter>();
+            var fitter           = _container.AddComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fitter.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
         }
@@ -69,18 +76,13 @@ namespace fierrof.ActionBar
         {
             int target = Plugin.SlotCount.Value;
 
-            // Add missing slots
             while (_slots.Count < target)
-            {
                 _slots.Add(CreateSlot(_slots.Count));
-            }
 
-            // Remove excess slots
             while (_slots.Count > target)
             {
-                var last = _slots[_slots.Count - 1];
+                Destroy(_slots[_slots.Count - 1]);
                 _slots.RemoveAt(_slots.Count - 1);
-                Destroy(last);
             }
 
             _lastSlotCount = target;
@@ -88,18 +90,19 @@ namespace fierrof.ActionBar
 
         private GameObject CreateSlot(int index)
         {
-            var slot = UIFactory.CreateUIObject($"Slot_{index}", _container, new Vector2(64f, 64f));
+            var slot = UIFactory.CreateUIObject($"Slot_{index}", _container,
+                           new Vector2(SLOT_WIDTH, SLOT_HEIGHT));
 
-            var bg      = slot.AddComponent<Image>();
-            bg.color    = new Color(0.12f, 0.12f, 0.12f, 0.85f);
+            var bg   = slot.AddComponent<Image>();
+            bg.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
 
-            var outline         = slot.AddComponent<Outline>();
+            var outline            = slot.AddComponent<Outline>();
             outline.effectColor    = new Color(0.6f, 0.6f, 0.6f, 1f);
-            outline.effectDistance  = new Vector2(2f, -2f);
+            outline.effectDistance = new Vector2(2f, -2f);
 
             UIFactory.SetLayoutElement(slot,
-                minWidth: 64, minHeight: 64,
-                preferredWidth: 64, preferredHeight: 64);
+                minWidth: SLOT_WIDTH,       minHeight: SLOT_HEIGHT,
+                preferredWidth: SLOT_WIDTH, preferredHeight: SLOT_HEIGHT);
 
             return slot;
         }
@@ -108,21 +111,43 @@ namespace fierrof.ActionBar
 
         void Update()
         {
+            bool inGameplay = NetworkLevelLoader.Instance != null
+                           && !NetworkLevelLoader.Instance.IsGameplayPaused
+                           && !NetworkLevelLoader.Instance.IsGameplayLoading
+                           && CharacterManager.Instance?.GetFirstLocalCharacter() != null;
+
+            // Toggle visibility via alpha (not SetActive, which would kill Update)
+            float targetAlpha = inGameplay ? 1f : 0f;
+            if (_canvasGroup.alpha != targetAlpha)
+            {
+                _canvasGroup.alpha = targetAlpha;
+                _canvasGroup.blocksRaycasts = inGameplay;
+            }
+
+            if (!inGameplay) return;
+
             SuppressVanillaBar();
             ApplyConfig();
         }
 
         private void SuppressVanillaBar()
         {
-            if (_vanillaBar != null && _vanillaBar.gameObject.activeSelf)
+            if (_vanillaBar == null) return;
+
+            // Disable the direct target
+            if (_vanillaBar.gameObject.activeSelf)
                 _vanillaBar.gameObject.SetActive(false);
+
+            // Also kill the parent QuickSlot container — the game may re-enable children
+            var parent = _vanillaBar.parent;
+            if (parent != null && parent.gameObject.activeSelf)
+                parent.gameObject.SetActive(false);
         }
 
         private void ApplyConfig()
         {
             if (_container == null) return;
 
-            // Re-sync slot count if config changed
             if (Plugin.SlotCount.Value != _lastSlotCount)
                 SyncSlots();
 
@@ -130,11 +155,10 @@ namespace fierrof.ActionBar
             float y     = Plugin.PositionY.Value;
             float scale = Plugin.Scale.Value;
 
-            // Only touch the RectTransform if something actually changed
             if (x == _lastPosX && y == _lastPosY && scale == _lastScale)
                 return;
 
-            var rect = _container.GetComponent<RectTransform>();
+            var rect              = _container.GetComponent<RectTransform>();
             rect.anchorMin        = new Vector2(x, y);
             rect.anchorMax        = new Vector2(x, y);
             rect.pivot            = new Vector2(0.5f, 0f);
