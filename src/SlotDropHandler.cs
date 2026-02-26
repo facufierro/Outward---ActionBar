@@ -53,9 +53,9 @@ namespace fierrof.ActionBar
 
         // ── Update ─────────────────────────────────────────
 
+
         void Update()
         {
-            // Right-click to clear slot
             if (_isHovered && Input.GetMouseButtonDown(1) && AssignedItem != null && !IsConfigMode)
             {
                 ClearSlot();
@@ -181,6 +181,10 @@ namespace fierrof.ActionBar
                 _iconImage.color   = Color.clear;
                 _iconImage.enabled = false;
             }
+
+            // Ensure key label stays on top of the icon
+            if (_keyLabel != null)
+                _keyLabel.transform.SetAsLastSibling();
         }
 
         private void EnsureIconImage()
