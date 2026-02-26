@@ -305,6 +305,21 @@ namespace fierrof.ActionBar
                 Cursor.visible = true;
                 _wasConfigMode = true;
                 RefreshAllSlotVisuals();
+
+                // Show yellow grab handles on action bar containers
+                for (int i = 0; i < Plugin.MAX_BARS; i++)
+                {
+                    if (_containers[i] != null)
+                    {
+                        var img = _containers[i].GetComponent<Image>();
+                        img.color = new Color(1f, 1f, 0f, 0.15f);
+
+                        // Add 4px overflow border so the bar is easy to grab
+                        var crt = _containers[i].GetComponent<RectTransform>();
+                        crt.offsetMin = crt.offsetMin - new Vector2(4f, 4f);
+                        crt.offsetMax = crt.offsetMax + new Vector2(4f, 4f);
+                    }
+                }
             }
             else if (!SlotDropHandler.IsEditMode && _wasConfigMode)
             {
@@ -313,6 +328,18 @@ namespace fierrof.ActionBar
                 Cursor.lockState = CursorLockMode.Confined;
                 _wasConfigMode = false;
                 RefreshAllSlotVisuals();
+
+                // Remove yellow handles and restore container size
+                for (int i = 0; i < Plugin.MAX_BARS; i++)
+                {
+                    if (_containers[i] != null)
+                    {
+                        _containers[i].GetComponent<Image>().color = Color.clear;
+                        var crt = _containers[i].GetComponent<RectTransform>();
+                        crt.offsetMin = crt.offsetMin + new Vector2(4f, 4f);
+                        crt.offsetMax = crt.offsetMax - new Vector2(4f, 4f);
+                    }
+                }
             }
 
             // Global ESC to exit config mode

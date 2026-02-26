@@ -17,11 +17,14 @@ namespace fierrof.ActionBar
         private Vector2 _dragOffset;
         private bool _dragging;
 
-        // Visual indicators for edit mode
-        private GameObject _labelObj;
-        private GameObject _highlightObj;
+        private GameObject _handleObj;   // contains both highlight + label
         private Canvas _addedCanvas;
         private GraphicRaycaster _addedRaycaster;
+        private CanvasGroup _canvasGroup;
+
+        // State tracking to restore after edit mode
+        private bool _wasActive;
+        private float _originalAlpha = -1f;
 
         void Awake()
         {
@@ -40,6 +43,16 @@ namespace fierrof.ActionBar
 
             _dragging = true;
             _dragOffset = eventData.position - new Vector2(_rect.position.x, _rect.position.y);
+        }
+
+        void Update()
+        {
+            if (SlotDropHandler.IsEditMode)
+            {
+                // Force this element visible so the game can't hide it mid-edit
+                if (!gameObject.activeSelf) gameObject.SetActive(true);
+                if (_canvasGroup != null && _canvasGroup.alpha < 0.05f) _canvasGroup.alpha = 1f;
+            }
         }
 
         public void OnDrag(PointerEventData eventData)
@@ -80,57 +93,70 @@ namespace fierrof.ActionBar
                     _addedRaycaster = gameObject.AddComponent<GraphicRaycaster>();
             }
 
-            // Show label
-            if (_labelObj == null)
+            // Capture state for restoring
+            _wasActive = gameObject.activeSelf;
+            _canvasGroup = GetComponent<CanvasGroup>();
+            if (_canvasGroup != null)
             {
-                _labelObj = new GameObject("HudMover_Label");
-                _labelObj.transform.SetParent(transform, false);
+                _originalAlpha = _canvasGroup.alpha;
+            }
 
-                var text = _labelObj.AddComponent<Text>();
+            // Force visibility right now
+            if (!gameObject.activeSelf) gameObject.SetActive(true);
+            if (_canvasGroup != null && _canvasGroup.alpha < 0.05f) _canvasGroup.alpha = 1f;
+
+            // Build the handle (highlight + label in one GameObject)
+            if (_handleObj == null)
+            {
+                _handleObj = new GameObject("HudMover_Handle");
+                _handleObj.transform.SetParent(transform, false);
+                _handleObj.transform.SetAsLastSibling();
+
+                // ── Yellow highlight background ──
+                var img = _handleObj.AddComponent<Image>();
+                img.color = new Color(1f, 1f, 0f, 0.15f);
+                img.raycastTarget = true; // needed for drag events
+
+                var hRect = _handleObj.GetComponent<RectTransform>();
+                hRect.anchorMin = new Vector2(0.5f, 0.5f);
+                hRect.anchorMax = new Vector2(0.5f, 0.5f);
+                hRect.pivot = new Vector2(0.5f, 0.5f);
+
+                // Clamp to sensible size: min 40, max 150
+                float w = Mathf.Clamp(_rect.rect.width + 10f, 40f, 150f);
+                float h = Mathf.Clamp(_rect.rect.height + 10f, 40f, 150f);
+                hRect.sizeDelta = new Vector2(w, h);
+                hRect.anchoredPosition = Vector2.zero;
+
+                // ── Label text sits just above the highlight ──
+                var labelGO = new GameObject("Label");
+                labelGO.transform.SetParent(_handleObj.transform, false);
+
+                var text = labelGO.AddComponent<Text>();
                 text.text = ElementId;
                 text.font = Font.CreateDynamicFontFromOSFont("Arial", 14);
                 text.fontSize = 12;
-                text.alignment = TextAnchor.MiddleCenter;
+                text.alignment = TextAnchor.LowerCenter;
                 text.color = Color.yellow;
                 text.raycastTarget = false;
 
-                var outline = _labelObj.AddComponent<Outline>();
+                var outline = labelGO.AddComponent<Outline>();
                 outline.effectColor = Color.black;
                 outline.effectDistance = new Vector2(1f, -1f);
 
-                var labelRect = _labelObj.GetComponent<RectTransform>();
+                var labelRect = labelGO.GetComponent<RectTransform>();
                 labelRect.anchorMin = new Vector2(0f, 1f);
                 labelRect.anchorMax = new Vector2(1f, 1f);
                 labelRect.pivot = new Vector2(0.5f, 0f);
                 labelRect.anchoredPosition = new Vector2(0f, 2f);
-                labelRect.sizeDelta = new Vector2(0f, 18f);
+                labelRect.sizeDelta = new Vector2(0f, 16f);
             }
-            _labelObj.SetActive(true);
-
-            // Show highlight border
-            if (_highlightObj == null)
-            {
-                _highlightObj = new GameObject("HudMover_Highlight");
-                _highlightObj.transform.SetParent(transform, false);
-                _highlightObj.transform.SetAsFirstSibling();
-
-                var img = _highlightObj.AddComponent<Image>();
-                img.color = new Color(1f, 1f, 0f, 0.15f); // subtle yellow overlay
-                img.raycastTarget = true; // needed for drag events
-
-                var hRect = _highlightObj.GetComponent<RectTransform>();
-                hRect.anchorMin = Vector2.zero;
-                hRect.anchorMax = Vector2.one;
-                hRect.offsetMin = Vector2.zero;
-                hRect.offsetMax = Vector2.zero;
-            }
-            _highlightObj.SetActive(true);
+            _handleObj.SetActive(true);
         }
 
         public void DisableEditVisuals()
         {
-            if (_labelObj != null) _labelObj.SetActive(false);
-            if (_highlightObj != null) _highlightObj.SetActive(false);
+            if (_handleObj != null) _handleObj.SetActive(false);
 
             // Remove added Canvas/Raycaster to not interfere with game UI
             if (_addedRaycaster != null)
@@ -143,6 +169,10 @@ namespace fierrof.ActionBar
                 Destroy(_addedCanvas);
                 _addedCanvas = null;
             }
+
+            // Restore visibility
+            if (!_wasActive) gameObject.SetActive(false);
+            if (_canvasGroup != null && _originalAlpha >= 0f) _canvasGroup.alpha = _originalAlpha;
         }
 
         // ── Position management ────────────────────────────

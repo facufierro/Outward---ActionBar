@@ -21,19 +21,44 @@ namespace fierrof.ActionBar
         private static string SavePath =>
             Path.Combine(BepInEx.Paths.ConfigPath, "ActionBar_HUD", "hud_positions.json");
 
-        // Known HUD element names to look for in CharacterUI
-        // We discover children recursively and match these names
+        // ── Exact-name matches (always attached regardless of depth) ──
+        // Names taken directly from the CharacterUI hierarchy log
         private static readonly Dictionary<string, string> KnownElements = new Dictionary<string, string>
         {
-            { "HealthBar",           "Health" },
-            { "ManaBar",             "Mana" },
-            { "StatusEffectPanel",   "Status Effects" },
-            { "QuickSlotPanel",      "Quick Slots" },
-            { "Temperature",         "Temperature" },
-            { "StabilityBar_1",      "Stability" },
-            { "StatusIcons",         "Status Icons" },
-            { "Compass",             "Compass" },
-            // Broader discovery below
+            // MainCharacterBars children (L4)
+            { "Health",                     "Health" },
+            { "Mana",                       "Mana" },
+            { "Stamina",                    "Stamina" },
+
+            // MainCharacterBars > Debug_CharacterNeedsBars children (L5)
+            { "Temperature",                "Temperature" },
+
+            // HUD direct children (L3)
+            { "Stability",                  "Stability" },
+            { "QuiverDisplay",              "Arrows" },
+            { "StatusEffect - Panel",       "Status Effects" },
+            { "InteractionDisplay",         "Interact Tooltip" },
+            { "QuickSlot",                  "Quick Slots" },
+            { "Compass",                    "Compass" },
+            { "Needs - Panel",              "Needs" },
+            { "TemperatureSensor",          "Temp Sensor" },
+            { "Tutorialization_DropBag",    "Tutorial: Drop Bag" },
+            { "Tutorialization_UseBandage", "Tutorial: Use Bandage" },
+        };
+
+        // ── Names that should NEVER get a HudMover (root containers, our stuff) ──
+        private static readonly HashSet<string> Blacklist = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Canvas",
+            "CharacterUI",
+            "GameplayPanels",
+            "SafeFrame",
+            "GeneralPanels",
+            "DebugPanels",
+            "DropPanel",
+            "ActionBar_Root",
+            "CharacterMainCharacterBars",
+            "SlotContainer",
         };
 
         void Awake()
@@ -72,9 +97,8 @@ namespace fierrof.ActionBar
             var root = characterUI.transform;
             Plugin.Log.LogMessage("=== HUD Discovery: Scanning CharacterUI children ===");
 
-            // Find all RectTransforms that are direct or near-direct children
-            // and are likely HUD panels
-            DiscoverRecursive(root, 0, 3); // scan up to 3 levels deep
+            // Scan deep – game nests HUD elements 5-8 levels in
+            DiscoverRecursive(root, 0, 10);
 
             LoadPositions();
             Plugin.Log.LogMessage($"HUD Mover: attached to {_movers.Count} elements.");
@@ -96,48 +120,23 @@ namespace fierrof.ActionBar
                 string indent = new string(' ', depth * 2);
                 Plugin.Log.LogMessage($"  {indent}[L{depth}] {name} (active={child.gameObject.activeSelf})");
 
-                // Check if this is a known element or a good candidate
+                bool isBlacklisted = Blacklist.Contains(name);
+
+                // Only attach to EXACT matches in KnownElements
                 string friendlyName;
-                bool isKnown = KnownElements.TryGetValue(name, out friendlyName);
+                bool shouldAttach = KnownElements.TryGetValue(name, out friendlyName);
 
-                // Also attach to anything with "Bar", "Panel", "Status", "Slot"
-                // in the name at depth 1-3 MUST EXCLUDE root panels!
-                if (!isKnown && depth <= 3)
-                {
-                    string lowerName = name.ToLower();
-                    bool isRootPanel = lowerName.Contains("gameplay") || 
-                                       lowerName.Contains("safeframe") ||
-                                       lowerName.Equals("canvas") ||
-                                       lowerName.Contains("menu") ||
-                                       lowerName.Contains("overlay") ||
-                                       lowerName.Equals("characterui") ||
-                                       lowerName.Contains("droppanel") ||
-                                       lowerName.Contains("actionbar_root") ||
-                                       lowerName.Contains("generalpanels") ||
-                                       lowerName.Contains("debugpanels");
-
-                    if (!isRootPanel)
-                    {
-                        if (name.Contains("Bar") || name.Contains("Panel") || 
-                            name.Contains("Status") || name.Contains("Gauge") ||
-                            name.Contains("Compass") || name.Contains("Temperature") ||
-                            name.Contains("Arrow"))
-                        {
-                            friendlyName = name;
-                            isKnown = true;
-                        }
-                    }
-                }
-
-                if (isKnown && child.GetComponent<HudMover>() == null)
+                if (shouldAttach && !isBlacklisted && child.GetComponent<HudMover>() == null)
                 {
                     var mover = child.gameObject.AddComponent<HudMover>();
                     mover.ElementId = friendlyName;
                     _movers.Add(mover);
                     Plugin.Log.LogMessage($"  >>> Attached HudMover: '{friendlyName}' ({child.name})");
+                    // Don't recurse into matched elements — we move the whole thing
+                    continue;
                 }
 
-                // Continue scanning children
+                // ALWAYS recurse into children (even if blacklisted root panel)
                 DiscoverRecursive(child, depth + 1, maxDepth);
             }
         }
