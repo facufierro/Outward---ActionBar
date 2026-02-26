@@ -159,6 +159,24 @@ namespace fierrof.ActionBar
         {
             foreach (var attr in attrs)
                 attr.Browsable = visible;
+
+            // Force the Configuration Manager to rebuild its display
+            RefreshConfigManager();
+        }
+
+        private static void RefreshConfigManager()
+        {
+            var configManagerType = System.Type.GetType(
+                "ConfigurationManager.ConfigurationManager, ConfigurationManager");
+            if (configManagerType == null) return;
+
+            var configManager = Object.FindObjectOfType(configManagerType);
+            if (configManager == null) return;
+
+            // Call BuildSettingList to force UI refresh
+            var method = configManagerType.GetMethod("BuildSettingList",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            method?.Invoke(configManager, null);
         }
 
         private static void DrawResetBarButton(int barIndex)
