@@ -320,31 +320,21 @@ namespace fierrof.ActionBar
                             handler.AssignItemSilent(item);
                             anyChanged = true;
                         }
+                        else if (handler.AssignedItem != null)
+                        {
+                            // Resolved entry references an unavailable item; do not keep stale assignment.
+                            handler.ClearSlotSilent();
+                            anyChanged = true;
+                        }
                     }
                 }
                 else
                 {
-                    // No preset for this context — show baseline (no change) or clear
-                    // Only clear if there's a baseline that says empty
-                    if (DynamicPresetManager.TryGetPreset("baseline", handler.BarIndex, handler.SlotIndex, out var baseline))
+                    // No preset at all for this context chain: revert to empty.
+                    if (handler.AssignedItem != null)
                     {
-                        if (baseline.ItemID <= 0 && handler.AssignedItem != null)
-                        {
-                            handler.ClearSlotSilent();
-                            anyChanged = true;
-                        }
-                        else if (baseline.ItemID > 0)
-                        {
-                            if (handler.AssignedItem == null || handler.AssignedItem.ItemID != baseline.ItemID)
-                            {
-                                var item = SlotSaveManager.FindItemStatic(character, baseline.ItemID);
-                                if (item != null)
-                                {
-                                    handler.AssignItemSilent(item);
-                                    anyChanged = true;
-                                }
-                            }
-                        }
+                        handler.ClearSlotSilent();
+                        anyChanged = true;
                     }
                 }
             }

@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -13,7 +12,7 @@ namespace fierrof.ActionBar
     /// dynamic slot behavior, cooldown overlay, and item count display for a slot.
     ///
     /// Mode (Active/Hidden/Disabled) and IsDynamic are independent flags.
-    /// A slot can be Hidden+Dynamic but Disabled cannot be Dynamic.
+    /// A slot can be Active/Hidden/Disabled and also Dynamic.
     /// </summary>
     public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
     {
@@ -36,19 +35,12 @@ namespace fierrof.ActionBar
         public bool IsDynamic { get; set; }
 
         private bool  _isHovered;
+        private static readonly Color DynamicBorderColor = new Color(0.14f, 0.48f, 0.14f, 1f);
         private Image _iconImage;
         private Text  _keyLabel;
         private Image _bgImage;
         private Outline _outline;
         private CanvasGroup _slotCanvasGroup;
-
-        // State indicator icons
-        private Image _modeStateIcon;
-        private Image _dynamicStateIcon;
-        private static Sprite _hiddenSprite;
-        private static Sprite _disabledSprite;
-        private static Sprite _dynamicSprite;
-        private static bool _spritesLoaded;
 
         // Cooldown UI
         private Image _cooldownOverlay;
@@ -57,54 +49,6 @@ namespace fierrof.ActionBar
         // Count UI
         private Text _countLabel;
         private Coroutine _countCoroutine;
-
-        // ── Sprite loading ────────────────────────────────
-
-        private static void LoadSprites()
-        {
-            if (_spritesLoaded) return;
-            _spritesLoaded = true;
-
-            _hiddenSprite   = LoadPNG("hidden-icon.png");
-            _disabledSprite = LoadPNG("disabled-icon.png");
-            _dynamicSprite  = LoadPNG("dynmic-icon.png"); // filename has typo in asset
-        }
-
-        private static Sprite LoadPNG(string filename)
-        {
-            string path = Path.Combine(
-                Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "",
-                "assets", filename);
-
-            if (!File.Exists(path))
-            {
-                // Try alternate path: next to DLL
-                path = Path.Combine(
-                    Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "",
-                    filename);
-            }
-
-            if (!File.Exists(path))
-            {
-                Plugin.Log.LogWarning($"Icon not found: {filename}");
-                return null;
-            }
-
-            try
-            {
-                byte[] data = File.ReadAllBytes(path);
-                var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-                tex.LoadImage(data);
-                tex.filterMode = FilterMode.Bilinear;
-                return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
-                    new Vector2(0.5f, 0.5f), 100f);
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.LogWarning($"Failed to load icon {filename}: {ex.Message}");
-                return null;
-            }
-        }
 
         // ── Pointer events ─────────────────────────────────
 
@@ -151,6 +95,13 @@ namespace fierrof.ActionBar
         {
             bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
 
+            // Outside edit mode: middle-click toggles dynamic on hovered slot.
+            if (!IsEditMode && _isHovered && Input.GetMouseButtonDown(2))
+            {
+                ToggleDynamic();
+                return;
+            }
+
             // Right-click behavior
             if (_isHovered && Input.GetMouseButtonDown(1))
             {
@@ -196,7 +147,7 @@ namespace fierrof.ActionBar
                     foreach (KeyCode key in Enum.GetValues(typeof(KeyCode)))
                     {
                         if (!Input.GetKeyDown(key)) continue;
-                        if (key == KeyCode.Mouse0 || key == KeyCode.Mouse1 || key == KeyCode.Mouse2) continue;
+                        if (key == KeyCode.Mouse0 || key == KeyCode.Mouse1) continue;
                         if (IsModifierKey(key)) continue;
                         SetKeybind(key);
                         return;
@@ -230,7 +181,7 @@ namespace fierrof.ActionBar
             switch (Mode)
             {
                 case SlotMode.Active:   Mode = SlotMode.Hidden; break;
-                case SlotMode.Hidden:   Mode = SlotMode.Disabled; IsDynamic = false; break;
+                case SlotMode.Hidden:   Mode = SlotMode.Disabled; break;
                 case SlotMode.Disabled: Mode = SlotMode.Active; break;
             }
 
@@ -243,18 +194,23 @@ namespace fierrof.ActionBar
 
         private void ToggleDynamic()
         {
-            if (Mode == SlotMode.Disabled) return; // can't make disabled slot dynamic
-
             IsDynamic = !IsDynamic;
+
+            var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+
+            // Always persist baseline state (including empty) when enabling dynamic.
+            if (IsDynamic)
+            {
+                int itemID = AssignedItem != null ? AssignedItem.ItemID : -1;
+                string itemUID = AssignedItem?.UID;
+                DynamicPresetManager.SetPreset("baseline", BarIndex, SlotIndex, itemID, itemUID);
+
+                if (character != null)
+                    DynamicPresetManager.SavePresets(character.UID);
+            }
+
             UpdateModeVisual();
             Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: dynamic={IsDynamic}.");
-
-            // When marking as dynamic, initialize baseline preset with current assignment
-            if (IsDynamic && AssignedItem != null)
-            {
-                DynamicPresetManager.SetPreset("baseline", BarIndex, SlotIndex,
-                    AssignedItem.ItemID, AssignedItem.UID);
-            }
 
             var manager = GetComponentInParent<ActionBarManager>();
             if (manager != null) manager.SaveSlots();
@@ -264,8 +220,6 @@ namespace fierrof.ActionBar
         {
             EnsureBgImage();
             EnsureOutline();
-            EnsureModeStateIcon();
-            EnsureDynamicStateIcon();
 
             if (IsEditMode)
             {
@@ -274,60 +228,37 @@ namespace fierrof.ActionBar
                 _slotCanvasGroup.blocksRaycasts = true;
                 _slotCanvasGroup.interactable = true;
 
-                // Keep a neutral slot color in edit mode; state is represented by icons.
-                _bgImage.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
-                _outline.effectColor = Color.black;
+                switch (Mode)
+                {
+                    case SlotMode.Active:
+                        _bgImage.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
+                        break;
+                    case SlotMode.Hidden:
+                        _bgImage.color = new Color(0.3f, 0.25f, 0.05f, 0.85f); // yellow-ish
+                        break;
+                    case SlotMode.Disabled:
+                        _bgImage.color = new Color(0.3f, 0.05f, 0.05f, 0.85f); // red-ish
+                        break;
+                }
 
-                // State icon: show the most relevant indicator
-                UpdateStateIcon();
+                _outline.effectColor = IsDynamic ? DynamicBorderColor : Color.black;
             }
             else
             {
-                _bgImage.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
-                _outline.effectColor = Color.black;
-                UpdateStateIcon();
-            }
-        }
+                switch (Mode)
+                {
+                    case SlotMode.Active:
+                        _bgImage.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
+                        break;
+                    case SlotMode.Hidden:
+                        _bgImage.color = new Color(0.3f, 0.25f, 0.05f, 0.85f);
+                        break;
+                    case SlotMode.Disabled:
+                        _bgImage.color = new Color(0.3f, 0.05f, 0.05f, 0.85f);
+                        break;
+                }
 
-        private void UpdateStateIcon()
-        {
-            EnsureModeStateIcon();
-            EnsureDynamicStateIcon();
-            if (_modeStateIcon == null || _dynamicStateIcon == null) return;
-
-            LoadSprites();
-
-            // Disabled is exclusive and suppresses other indicators.
-            if (Mode == SlotMode.Disabled)
-            {
-                _modeStateIcon.sprite = _disabledSprite;
-                _modeStateIcon.color = IsEditMode ? Color.white : new Color(1f, 1f, 1f, 0.55f);
-                _modeStateIcon.enabled = _disabledSprite != null;
-                _dynamicStateIcon.enabled = false;
-                return;
-            }
-
-            // Hidden and Dynamic can be active at the same time, so render both.
-            if (Mode == SlotMode.Hidden)
-            {
-                _modeStateIcon.sprite = _hiddenSprite;
-                _modeStateIcon.color = IsEditMode ? Color.white : new Color(1f, 1f, 1f, 0.55f);
-                _modeStateIcon.enabled = _hiddenSprite != null;
-            }
-            else
-            {
-                _modeStateIcon.enabled = false;
-            }
-
-            if (IsDynamic)
-            {
-                _dynamicStateIcon.sprite = _dynamicSprite;
-                _dynamicStateIcon.color = IsEditMode ? Color.white : new Color(1f, 1f, 1f, 0.55f);
-                _dynamicStateIcon.enabled = _dynamicSprite != null;
-            }
-            else
-            {
-                _dynamicStateIcon.enabled = false;
+                _outline.effectColor = IsDynamic ? DynamicBorderColor : Color.black;
             }
         }
 
@@ -364,8 +295,8 @@ namespace fierrof.ActionBar
                     break;
             }
 
-            // Keep a neutral border; state is represented by icons.
-            _outline.effectColor = Color.black;
+            // Dynamic should stack with hidden/active state visuals.
+            _outline.effectColor = IsDynamic ? DynamicBorderColor : Color.black;
         }
 
         private static bool IsInventoryOpen()
@@ -606,10 +537,6 @@ namespace fierrof.ActionBar
                 _keyLabel.transform.SetAsLastSibling();
             if (_countLabel != null)
                 _countLabel.transform.SetAsLastSibling();
-            if (_modeStateIcon != null)
-                _modeStateIcon.transform.SetAsLastSibling();
-            if (_dynamicStateIcon != null)
-                _dynamicStateIcon.transform.SetAsLastSibling();
         }
 
         // ── UI element creation ─────────────────────────────
@@ -708,56 +635,6 @@ namespace fierrof.ActionBar
             rect.anchorMax = Vector2.one;
             rect.offsetMin = new Vector2(2f, 2f);
             rect.offsetMax = new Vector2(-2f, -2f);
-        }
-
-        private void EnsureModeStateIcon()
-        {
-            if (_modeStateIcon != null) return;
-
-            LoadSprites();
-
-            var go = new GameObject("ModeStateIcon");
-            go.layer = 5;
-            go.transform.SetParent(transform, false);
-
-            _modeStateIcon = go.AddComponent<Image>();
-            _modeStateIcon.preserveAspect = true;
-            _modeStateIcon.raycastTarget = false;
-            _modeStateIcon.enabled = false;
-            _modeStateIcon.color = Color.white;
-
-            // Mode icon in top-left corner.
-            var rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0f, 1f);
-            rect.anchorMax = new Vector2(0f, 1f);
-            rect.pivot = new Vector2(0f, 1f);
-            rect.sizeDelta = new Vector2(16f, 16f);
-            rect.anchoredPosition = new Vector2(2f, -2f);
-        }
-
-        private void EnsureDynamicStateIcon()
-        {
-            if (_dynamicStateIcon != null) return;
-
-            LoadSprites();
-
-            var go = new GameObject("DynamicStateIcon");
-            go.layer = 5;
-            go.transform.SetParent(transform, false);
-
-            _dynamicStateIcon = go.AddComponent<Image>();
-            _dynamicStateIcon.preserveAspect = true;
-            _dynamicStateIcon.raycastTarget = false;
-            _dynamicStateIcon.enabled = false;
-            _dynamicStateIcon.color = Color.white;
-
-            // Dynamic icon in top-right corner so it can coexist with hidden icon.
-            var rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(1f, 1f);
-            rect.anchorMax = new Vector2(1f, 1f);
-            rect.pivot = new Vector2(1f, 1f);
-            rect.sizeDelta = new Vector2(16f, 16f);
-            rect.anchoredPosition = new Vector2(-2f, -2f);
         }
 
         private void EnsureBgImage()
