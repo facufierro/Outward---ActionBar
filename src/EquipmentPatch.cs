@@ -16,12 +16,12 @@ namespace fierrof.ActionBar
         [HarmonyPatch("OnEquip")]
         [HarmonyPatch(new Type[] { typeof(Character) })]
         [HarmonyPostfix]
-        static void AfterEquip(Equipment __instance, Character _character)
+        static void AfterEquip(Equipment __instance, Character _char)
         {
             try
             {
-                if (_character == null || _character.OwnerPlayerSys == null || !_character.IsLocalPlayer) return;
-                OnEquipmentChanged?.Invoke(_character);
+                if (_char == null || _char.OwnerPlayerSys == null || !_char.IsLocalPlayer) return;
+                OnEquipmentChanged?.Invoke(_char);
             }
             catch (Exception ex)
             {
@@ -32,12 +32,12 @@ namespace fierrof.ActionBar
         [HarmonyPatch("OnUnequip")]
         [HarmonyPatch(new Type[] { typeof(Character) })]
         [HarmonyPostfix]
-        static void AfterUnequip(Equipment __instance, Character _character)
+        static void AfterUnequip(Equipment __instance, Character _char)
         {
             try
             {
-                if (_character == null || _character.OwnerPlayerSys == null || !_character.IsLocalPlayer) return;
-                OnEquipmentChanged?.Invoke(_character);
+                if (_char == null || _char.OwnerPlayerSys == null || !_char.IsLocalPlayer) return;
+                OnEquipmentChanged?.Invoke(_char);
             }
             catch (Exception ex)
             {
