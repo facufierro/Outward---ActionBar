@@ -7,10 +7,14 @@ namespace fierrof.ActionBar
     /// <summary>
     /// Handles drag-and-drop onto a single action bar slot.
     /// When an item or skill is dropped, its icon is displayed in the slot.
+    /// Right-click clears the slot.
     /// </summary>
-    public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
+    public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
     {
         public int SlotIndex { get; set; }
+
+        /// <summary>True when the pointer is over any action bar slot.</summary>
+        public static bool IsPointerOverSlot { get; private set; }
 
         /// <summary>The item currently assigned to this slot (null = empty).</summary>
         public Item AssignedItem { get; private set; }
@@ -19,11 +23,12 @@ namespace fierrof.ActionBar
 
         public void OnPointerEnter(PointerEventData eventData)
         {
-            // Highlight could go here later
+            IsPointerOverSlot = true;
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
+            IsPointerOverSlot = false;
         }
 
         public void OnDrop(PointerEventData eventData)
@@ -33,8 +38,6 @@ namespace fierrof.ActionBar
 
             var item = itemDisplay.RefItem;
 
-            // Both items and skills can be dropped — skills inherit from Item
-            // and are also quickslotable
             if (!item.IsQuickSlotable)
             {
                 Plugin.Log.LogMessage($"'{item.Name}' is not quickslotable — ignoring.");
@@ -42,6 +45,16 @@ namespace fierrof.ActionBar
             }
 
             AssignItem(item);
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            // Right-click clears the slot
+            if (eventData.button == PointerEventData.InputButton.Right && AssignedItem != null)
+            {
+                Plugin.Log.LogMessage($"Slot {SlotIndex}: cleared '{AssignedItem.Name}'.");
+                ClearSlot();
+            }
         }
 
         public void AssignItem(Item item)
@@ -63,8 +76,8 @@ namespace fierrof.ActionBar
 
             if (AssignedItem != null && AssignedItem.ItemIcon != null)
             {
-                _iconImage.sprite = AssignedItem.ItemIcon;
-                _iconImage.color  = Color.white;
+                _iconImage.sprite  = AssignedItem.ItemIcon;
+                _iconImage.color   = Color.white;
                 _iconImage.enabled = true;
             }
             else
@@ -75,9 +88,6 @@ namespace fierrof.ActionBar
             }
         }
 
-        /// <summary>
-        /// Creates a child Image to display the item icon, stretched to fill the slot.
-        /// </summary>
         private void EnsureIconImage()
         {
             if (_iconImage != null) return;
@@ -91,12 +101,11 @@ namespace fierrof.ActionBar
             _iconImage.raycastTarget  = false;
             _iconImage.enabled        = false;
 
-            // Stretch to fill the slot with some padding
             var rect = iconGO.GetComponent<RectTransform>();
-            rect.anchorMin     = new Vector2(0.1f, 0.1f);
-            rect.anchorMax     = new Vector2(0.9f, 0.9f);
-            rect.offsetMin     = Vector2.zero;
-            rect.offsetMax     = Vector2.zero;
+            rect.anchorMin = new Vector2(0.1f, 0.1f);
+            rect.anchorMax = new Vector2(0.9f, 0.9f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         private ItemDisplay GetDraggedItem(PointerEventData eventData)
