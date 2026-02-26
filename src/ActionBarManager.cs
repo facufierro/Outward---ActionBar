@@ -314,10 +314,9 @@ namespace fierrof.ActionBar
                         var img = _containers[i].GetComponent<Image>();
                         img.color = new Color(1f, 1f, 0f, 0.15f);
 
-                        // Add 4px overflow border so the bar is easy to grab
-                        var crt = _containers[i].GetComponent<RectTransform>();
-                        crt.offsetMin = crt.offsetMin - new Vector2(4f, 4f);
-                        crt.offsetMax = crt.offsetMax + new Vector2(4f, 4f);
+                        // Add 4px padding so the yellow extends beyond the slots
+                        var layout = _containers[i].GetComponent<HorizontalLayoutGroup>();
+                        layout.padding = new RectOffset(4, 4, 4, 4);
                     }
                 }
             }
@@ -335,9 +334,8 @@ namespace fierrof.ActionBar
                     if (_containers[i] != null)
                     {
                         _containers[i].GetComponent<Image>().color = Color.clear;
-                        var crt = _containers[i].GetComponent<RectTransform>();
-                        crt.offsetMin = crt.offsetMin + new Vector2(4f, 4f);
-                        crt.offsetMax = crt.offsetMax - new Vector2(4f, 4f);
+                        var layout = _containers[i].GetComponent<HorizontalLayoutGroup>();
+                        layout.padding = new RectOffset(0, 0, 0, 0);
                     }
                 }
             }

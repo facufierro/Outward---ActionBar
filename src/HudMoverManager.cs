@@ -40,6 +40,8 @@ namespace fierrof.ActionBar
             { "Compass",                    "Compass" },
             { "Needs - Panel",              "Needs" },
             { "TemperatureSensor",          "Temp Sensor" },
+            { "Tutorialization_DropBag",    "Backpack" },
+            { "Tutorialization_UseBandage", "Bandage" },
         };
 
         // ── Names that should NEVER get a HudMover (root containers, our stuff) ──
@@ -78,12 +80,9 @@ namespace fierrof.ActionBar
             // Handle edit mode transitions
             if (SlotDropHandler.IsEditMode && !_wasEditMode)
             {
-                // Force all mover GameObjects active BEFORE enabling visuals
-                // (Update() won't run on inactive objects, so the manager must do this)
                 foreach (var m in _movers)
                 {
-                    if (m != null && !m.gameObject.activeSelf)
-                        m.gameObject.SetActive(true);
+                    if (m != null) ForceVisible(m.gameObject);
                 }
                 foreach (var m in _movers) m.EnableEditVisuals();
                 _wasEditMode = true;
@@ -93,17 +92,26 @@ namespace fierrof.ActionBar
                 foreach (var m in _movers) m.DisableEditVisuals();
                 _wasEditMode = false;
             }
+        }
 
-            // While in edit mode, keep forcing visibility every frame
-            // in case the game hides elements mid-session
-            if (SlotDropHandler.IsEditMode)
+        // LateUpdate runs AFTER the game's own Update/LateUpdate scripts,
+        // so our force-visibility wins even if the game deactivates elements.
+        void LateUpdate()
+        {
+            if (!SlotDropHandler.IsEditMode) return;
+
+            foreach (var m in _movers)
             {
-                foreach (var m in _movers)
-                {
-                    if (m != null && !m.gameObject.activeSelf)
-                        m.gameObject.SetActive(true);
-                }
+                if (m != null) ForceVisible(m.gameObject);
             }
+        }
+
+        private void ForceVisible(GameObject go)
+        {
+            if (!go.activeSelf) go.SetActive(true);
+
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg != null && cg.alpha < 0.05f) cg.alpha = 1f;
         }
 
         private void DiscoverAndAttach(CharacterUI characterUI)
