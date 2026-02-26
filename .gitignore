@@ -2,6 +2,7 @@
 bin/
 obj/
 *.dll.config
+.claude
 
 # User-specific files
 *.rsuser
