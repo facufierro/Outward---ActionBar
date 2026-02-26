@@ -106,12 +106,18 @@ namespace fierrof.ActionBar
             AssignedItem = item;
             UpdateIcon();
             Plugin.Log.LogMessage($"Slot {SlotIndex}: assigned '{item.Name}'.");
+
+            var manager = GetComponentInParent<ActionBarManager>();
+            if (manager != null) manager.SaveSlots();
         }
 
         public void ClearSlot()
         {
             AssignedItem = null;
             UpdateIcon();
+
+            var manager = GetComponentInParent<ActionBarManager>();
+            if (manager != null) manager.SaveSlots();
         }
 
         // ── Keybind management ─────────────────────────────

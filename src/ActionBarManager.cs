@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using SideLoader.UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,6 +28,7 @@ namespace fierrof.ActionBar
         
         private GameObject _configOverlay;
         private bool _wasConfigMode;
+        private string _loadedCharacterUID;
 
         // ── Setup ──────────────────────────────────────────────
 
@@ -185,10 +187,44 @@ namespace fierrof.ActionBar
                 _canvasGroup.blocksRaycasts = true;
             }
 
+            TryLoadSlots();
             HandleConfigModeState();
 
             SuppressVanillaBar();
             ApplyConfig();
+        }
+
+        // ── Slot persistence ──────────────────────────────────
+
+        private void TryLoadSlots()
+        {
+            var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+            if (character == null) return;
+
+            string uid = character.UID;
+            if (uid == _loadedCharacterUID) return;
+
+            _loadedCharacterUID = uid;
+            var handlers = GetSlotHandlers();
+            SlotSaveManager.Load(uid, handlers, character);
+        }
+
+        public void SaveSlots()
+        {
+            if (_loadedCharacterUID == null) return;
+
+            var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+            if (character == null) return;
+
+            SlotSaveManager.Save(_loadedCharacterUID, GetSlotHandlers());
+        }
+
+        public SlotDropHandler[] GetSlotHandlers()
+        {
+            return _slots
+                .Select(s => s.GetComponent<SlotDropHandler>())
+                .Where(h => h != null)
+                .ToArray();
         }
 
         private void HandleConfigModeState()
