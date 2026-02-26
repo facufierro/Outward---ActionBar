@@ -8,6 +8,7 @@
     <Configurations>Debug;Release</Configurations>
     <LangVersion>10.0</LangVersion>
     <DefaultItemExcludes>$(DefaultItemExcludes);_old\**</DefaultItemExcludes>
+    <NoWarn>$(NoWarn);MSB3277</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

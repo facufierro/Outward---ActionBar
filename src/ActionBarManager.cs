@@ -41,7 +41,7 @@ namespace fierrof.ActionBar
 
             var canvas          = gameObject.AddComponent<Canvas>();
             canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = -1; // Below game UI so dragged items render on top
+            canvas.sortingOrder = 10; // Above game UI so our IDropHandler intercepts drops
 
             var scaler                 = gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
