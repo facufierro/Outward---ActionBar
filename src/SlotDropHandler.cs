@@ -35,7 +35,7 @@ namespace fierrof.ActionBar
         public bool IsDynamic { get; set; }
 
         private bool  _isHovered;
-        private static readonly Color DynamicBorderColor = new Color(0.14f, 0.48f, 0.14f, 1f);
+        private static readonly Color DynamicBorderColor = new Color(0.08f, 0.30f, 0.08f, 1f);
         private Image _iconImage;
         private Text  _keyLabel;
         private Image _bgImage;
