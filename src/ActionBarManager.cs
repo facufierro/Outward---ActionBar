@@ -27,6 +27,7 @@ namespace fierrof.ActionBar
         private float[] _lastPosY = new float[Plugin.MAX_BARS];
         private float[] _lastScale = new float[Plugin.MAX_BARS];
         private int[]   _lastGap = new int[Plugin.MAX_BARS];
+        private int[]   _lastRows = new int[Plugin.MAX_BARS];
         private bool[]  _lastEnabled = new bool[Plugin.MAX_BARS];
 
         private CanvasGroup      _canvasGroup;
@@ -88,12 +89,14 @@ namespace fierrof.ActionBar
             {
                 _containers[i] = UIFactory.CreateUIObject($"SlotContainer_Bar{i+1}", gameObject);
 
-                UIFactory.SetLayoutGroup<HorizontalLayoutGroup>(
-                    _containers[i],
-                    forceWidth: false, forceHeight: false,
-                    childControlWidth: false, childControlHeight: false,
-                    spacing: Plugin.SlotGap[i].Value
-                );    
+                var grid = _containers[i].AddComponent<GridLayoutGroup>();
+                grid.cellSize        = new Vector2(SLOT_WIDTH, SLOT_HEIGHT);
+                grid.spacing         = new Vector2(Plugin.SlotGap[i].Value, Plugin.SlotGap[i].Value);
+                grid.constraint      = GridLayoutGroup.Constraint.FixedRowCount;
+                grid.constraintCount = Mathf.Clamp(Plugin.Rows[i].Value, 1, Plugin.SlotCount[i].Value);
+                grid.startCorner     = GridLayoutGroup.Corner.UpperLeft;
+                grid.startAxis       = GridLayoutGroup.Axis.Horizontal;
+                grid.childAlignment  = TextAnchor.UpperLeft;
 
                 var fitter           = _containers[i].AddComponent<ContentSizeFitter>();
                 fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -322,7 +325,7 @@ namespace fierrof.ActionBar
                         img.color = new Color(1f, 1f, 0f, 0.15f);
 
                         // Add 4px padding so the yellow extends beyond the slots
-                        var layout = _containers[i].GetComponent<HorizontalLayoutGroup>();
+                        var layout = _containers[i].GetComponent<GridLayoutGroup>();
                         layout.padding = new RectOffset(4, 4, 4, 4);
                     }
                 }
@@ -341,7 +344,7 @@ namespace fierrof.ActionBar
                     if (_containers[i] != null)
                     {
                         _containers[i].GetComponent<Image>().color = Color.clear;
-                        var layout = _containers[i].GetComponent<HorizontalLayoutGroup>();
+                        var layout = _containers[i].GetComponent<GridLayoutGroup>();
                         layout.padding = new RectOffset(0, 0, 0, 0);
                     }
                 }
@@ -397,12 +400,19 @@ namespace fierrof.ActionBar
                 float scale = Plugin.Scale[i].Value / 100f;
                 int   gap   = Plugin.SlotGap[i].Value;
 
-                // Update gap if changed
-                if (gap != _lastGap[i])
+                int rows = Mathf.Clamp(Plugin.Rows[i].Value, 1, Plugin.SlotCount[i].Value);
+
+                // Update gap/rows if changed
+                if (gap != _lastGap[i] || rows != _lastRows[i])
                 {
-                    var layout = _containers[i].GetComponent<HorizontalLayoutGroup>();
-                    if (layout != null) layout.spacing = gap;
-                    _lastGap[i] = gap;
+                    var grid = _containers[i].GetComponent<GridLayoutGroup>();
+                    if (grid != null)
+                    {
+                        grid.spacing         = new Vector2(gap, gap);
+                        grid.constraintCount = rows;
+                    }
+                    _lastGap[i]  = gap;
+                    _lastRows[i] = rows;
                 }
 
                 if (x == _lastPosX[i] && y == _lastPosY[i] && scale == _lastScale[i])

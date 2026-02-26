@@ -25,6 +25,7 @@ namespace fierrof.ActionBar
         public static ConfigEntry<int>[]  PositionY = new ConfigEntry<int>[MAX_BARS];
         public static ConfigEntry<int>[]  Scale     = new ConfigEntry<int>[MAX_BARS];
         public static ConfigEntry<int>[]  SlotGap   = new ConfigEntry<int>[MAX_BARS];
+        public static ConfigEntry<int>[]  Rows      = new ConfigEntry<int>[MAX_BARS];
         
         public static ConfigEntry<bool> SetHotkeyMode;
         public static ConfigEntry<bool> HideBackpack;
@@ -123,6 +124,12 @@ namespace fierrof.ActionBar
                 SlotGap[b] = Config.Bind(section, "Slot Gap", 8,
                     new ConfigDescription($"Space between slots in pixels",
                         new AcceptableValueRange<int>(0, 20), gapAttr));
+
+                var rowsAttr = new ConfigurationManagerAttributes { HideDefaultButton = true };
+                barAttrs.Add(rowsAttr);
+                Rows[b] = Config.Bind(section, "Rows", 1,
+                    new ConfigDescription($"Number of rows (1 = horizontal bar, more = grid)",
+                        new AcceptableValueRange<int>(1, MAX_SLOTS), rowsAttr));
 
                 SlotKeys[b] = new ConfigEntry<KeyCode>[MAX_SLOTS];
                 for (int s = 0; s < MAX_SLOTS; s++)
