@@ -9,12 +9,14 @@ namespace fierrof.ActionBar
     /// When an item or skill is dropped, its icon is displayed in the slot.
     /// Right-click clears the slot.
     /// </summary>
-    public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+    public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
     {
         public int SlotIndex { get; set; }
 
         /// <summary>True when the pointer is over any action bar slot.</summary>
         public static bool IsPointerOverSlot { get; private set; }
+
+        private bool _isHovered;
 
         /// <summary>The item currently assigned to this slot (null = empty).</summary>
         public Item AssignedItem { get; private set; }
@@ -24,11 +26,13 @@ namespace fierrof.ActionBar
         public void OnPointerEnter(PointerEventData eventData)
         {
             IsPointerOverSlot = true;
+            _isHovered = true;
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
             IsPointerOverSlot = false;
+            _isHovered = false;
         }
 
         public void OnDrop(PointerEventData eventData)
@@ -42,9 +46,11 @@ namespace fierrof.ActionBar
             AssignItem(item);
         }
 
-        public void OnPointerClick(PointerEventData eventData)
+        void Update()
         {
-            if (eventData.button == PointerEventData.InputButton.Right && AssignedItem != null)
+            // Right-click to clear (using Input instead of IPointerClickHandler
+            // because the game intercepts pointer click events)
+            if (_isHovered && Input.GetMouseButtonDown(1) && AssignedItem != null)
                 ClearSlot();
         }
 
@@ -93,8 +99,8 @@ namespace fierrof.ActionBar
             _iconImage.enabled        = false;
 
             var rect = iconGO.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.1f, 0.1f);
-            rect.anchorMax = new Vector2(0.9f, 0.9f);
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
         }
