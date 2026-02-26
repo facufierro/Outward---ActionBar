@@ -27,6 +27,8 @@ namespace fierrof.ActionBar
         public static ConfigEntry<int>[]  SlotGap   = new ConfigEntry<int>[MAX_BARS];
         
         public static ConfigEntry<bool> SetHotkeyMode;
+        public static ConfigEntry<bool> HideBackpack;
+        public static ConfigEntry<bool> HideBandage;
 
         public static ConfigEntry<KeyCode>[][] SlotKeys = new ConfigEntry<KeyCode>[MAX_BARS][];
 
@@ -58,6 +60,22 @@ namespace fierrof.ActionBar
                     HideDefaultButton = true,
                     Order = -2
                 }));
+
+            HideBackpack = Config.Bind("Global Settings", "Hide Backpack", false,
+                new ConfigDescription("Hide the backpack icon from the HUD.", null,
+                new ConfigurationManagerAttributes { Order = -3 }));
+
+            HideBackpack.SettingChanged += (sender, args) => {
+                if (HudMoverManager.Instance != null) HudMoverManager.Instance.UpdateVisibilityOnConfigChange();
+            };
+
+            HideBandage = Config.Bind("Global Settings", "Hide Bandage", false,
+                new ConfigDescription("Hide the bandage icon from the HUD.", null,
+                new ConfigurationManagerAttributes { Order = -4 }));
+
+            HideBandage.SettingChanged += (sender, args) => {
+                if (HudMoverManager.Instance != null) HudMoverManager.Instance.UpdateVisibilityOnConfigChange();
+            };
 
             // Bar Settings
             for (int b = 0; b < MAX_BARS; b++)

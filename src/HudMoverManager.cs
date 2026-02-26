@@ -98,14 +98,56 @@ namespace fierrof.ActionBar
         // so our force-visibility wins even if the game deactivates elements.
         void LateUpdate()
         {
-            if (!SlotDropHandler.IsEditMode) return;
-
-            foreach (var m in _movers)
+            if (SlotDropHandler.IsEditMode)
             {
-                if (m != null) ForceVisible(m.gameObject);
+                foreach (var m in _movers)
+                {
+                    if (m != null) ForceVisible(m.gameObject);
+                }
+            }
+            else
+            {
+                // Enforce Hidden states when out of Edit Mode
+                foreach (var m in _movers)
+                {
+                    if (m == null) continue;
+
+                    if (m.ElementId == "Backpack" && Plugin.HideBackpack.Value)
+                    {
+                        if (m.gameObject.activeSelf) m.gameObject.SetActive(false);
+                    }
+                    else if (m.ElementId == "Bandage" && Plugin.HideBandage.Value)
+                    {
+                        if (m.gameObject.activeSelf) m.gameObject.SetActive(false);
+                    }
+                }
             }
         }
 
+        public void UpdateVisibilityOnConfigChange()
+        {
+            if (SlotDropHandler.IsEditMode) return;
+
+            foreach (var m in _movers)
+            {
+                if (m == null) continue;
+
+                if (m.ElementId == "Backpack")
+                {
+                    if (Plugin.HideBackpack.Value && m.gameObject.activeSelf)
+                        m.gameObject.SetActive(false);
+                    else if (!Plugin.HideBackpack.Value && !m.gameObject.activeSelf)
+                        m.gameObject.SetActive(true); 
+                }
+                else if (m.ElementId == "Bandage")
+                {
+                    if (Plugin.HideBandage.Value && m.gameObject.activeSelf)
+                        m.gameObject.SetActive(false);
+                    else if (!Plugin.HideBandage.Value && !m.gameObject.activeSelf)
+                        m.gameObject.SetActive(true);
+                }
+            }
+        }
         private void ForceVisible(GameObject go)
         {
             if (!go.activeSelf) go.SetActive(true);
