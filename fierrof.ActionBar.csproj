@@ -86,6 +86,11 @@
       <Private>false</Private>
       <CopyLocal>false</CopyLocal>
     </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(OutwardManagedPath)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+      <CopyLocal>false</CopyLocal>
+    </Reference>
   </ItemGroup>
 
 </Project>

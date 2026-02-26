@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -5,9 +7,7 @@ using UnityEngine.UI;
 namespace fierrof.ActionBar
 {
     /// <summary>
-    /// Handles drag-and-drop onto a single action bar slot.
-    /// When an item or skill is dropped, its icon is displayed in the slot.
-    /// Right-click clears the slot.
+    /// Handles drag-and-drop, keybind assignment, and keybind activation for a slot.
     /// </summary>
     public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
     {
@@ -16,12 +16,17 @@ namespace fierrof.ActionBar
         /// <summary>True when the pointer is over any action bar slot.</summary>
         public static bool IsPointerOverSlot { get; private set; }
 
-        private bool _isHovered;
+        /// <summary>Global config mode toggle — set by Plugin's config button.</summary>
+        public static bool IsConfigMode { get; set; }
 
-        /// <summary>The item currently assigned to this slot (null = empty).</summary>
+        /// <summary>The item currently assigned to this slot.</summary>
         public Item AssignedItem { get; private set; }
 
+        private bool  _isHovered;
         private Image _iconImage;
+        private Text  _keyLabel;
+
+        // ── Pointer events ─────────────────────────────────
 
         public void OnPointerEnter(PointerEventData eventData)
         {
@@ -37,22 +42,64 @@ namespace fierrof.ActionBar
 
         public void OnDrop(PointerEventData eventData)
         {
+            if (IsConfigMode) return; // don't assign items in config mode
+
             var itemDisplay = GetDraggedItem(eventData);
             if (itemDisplay?.RefItem == null) return;
+            if (!itemDisplay.RefItem.IsQuickSlotable) return;
 
-            var item = itemDisplay.RefItem;
-            if (!item.IsQuickSlotable) return;
-
-            AssignItem(item);
+            AssignItem(itemDisplay.RefItem);
         }
+
+        // ── Update ─────────────────────────────────────────
 
         void Update()
         {
-            // Right-click to clear (using Input instead of IPointerClickHandler
-            // because the game intercepts pointer click events)
-            if (_isHovered && Input.GetMouseButtonDown(1) && AssignedItem != null)
+            // Right-click to clear slot
+            if (_isHovered && Input.GetMouseButtonDown(1) && AssignedItem != null && !IsConfigMode)
+            {
                 ClearSlot();
+                return;
+            }
+
+            // Config mode: hover + press any key to assign keybind
+            if (IsConfigMode && _isHovered)
+            {
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    IsConfigMode = false;
+                    return;
+                }
+
+                if (Input.anyKeyDown)
+                {
+                    foreach (KeyCode key in Enum.GetValues(typeof(KeyCode)))
+                    {
+                        if (Input.GetKeyDown(key) && key != KeyCode.Mouse0 && key != KeyCode.Mouse1)
+                        {
+                            SetKeybind(key);
+                            return;
+                        }
+                    }
+                }
+                return;
+            }
+
+            // Gameplay: press bound key to activate item
+            if (AssignedItem == null) return;
+            if (SlotIndex >= Plugin.MAX_SLOTS) return;
+
+            var boundKey = Plugin.SlotKeys[SlotIndex].Value;
+            if (boundKey == KeyCode.None) return;
+
+            if (Input.GetKeyDown(boundKey))
+            {
+                if (!IsGameplay()) return;
+                AssignedItem.TryQuickSlotUse();
+            }
         }
+
+        // ── Item management ────────────────────────────────
 
         public void AssignItem(Item item)
         {
@@ -65,6 +112,57 @@ namespace fierrof.ActionBar
         {
             AssignedItem = null;
             UpdateIcon();
+        }
+
+        // ── Keybind management ─────────────────────────────
+
+        private void SetKeybind(KeyCode key)
+        {
+            if (SlotIndex >= Plugin.MAX_SLOTS) return;
+            Plugin.SlotKeys[SlotIndex].Value = key;
+            UpdateKeyLabel();
+            Plugin.Log.LogMessage($"Slot {SlotIndex}: bound to '{key}'.");
+        }
+
+        public void UpdateKeyLabel()
+        {
+            EnsureKeyLabel();
+
+            if (SlotIndex >= Plugin.MAX_SLOTS)
+            {
+                _keyLabel.text = "";
+                return;
+            }
+
+            var key = Plugin.SlotKeys[SlotIndex].Value;
+            _keyLabel.text = key == KeyCode.None ? "" : FormatKeyName(key);
+        }
+
+        private static string FormatKeyName(KeyCode key)
+        {
+            switch (key)
+            {
+                case KeyCode.Alpha0: return "0";
+                case KeyCode.Alpha1: return "1";
+                case KeyCode.Alpha2: return "2";
+                case KeyCode.Alpha3: return "3";
+                case KeyCode.Alpha4: return "4";
+                case KeyCode.Alpha5: return "5";
+                case KeyCode.Alpha6: return "6";
+                case KeyCode.Alpha7: return "7";
+                case KeyCode.Alpha8: return "8";
+                case KeyCode.Alpha9: return "9";
+                case KeyCode.Minus:  return "-";
+                case KeyCode.Equals: return "=";
+                default: return key.ToString();
+            }
+        }
+
+        // ── UI setup ───────────────────────────────────────
+
+        private void Start()
+        {
+            UpdateKeyLabel();
         }
 
         private void UpdateIcon()
@@ -103,6 +201,42 @@ namespace fierrof.ActionBar
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
+        }
+
+        private void EnsureKeyLabel()
+        {
+            if (_keyLabel != null) return;
+
+            var labelGO = new GameObject("KeyLabel");
+            labelGO.layer = 5;
+            labelGO.transform.SetParent(transform, false);
+
+            _keyLabel = labelGO.AddComponent<Text>();
+            _keyLabel.font      = Font.CreateDynamicFontFromOSFont("Arial", 12);
+            _keyLabel.fontSize  = 11;
+            _keyLabel.alignment = TextAnchor.UpperRight;
+            _keyLabel.color     = new Color(1f, 1f, 1f, 0.8f);
+            _keyLabel.raycastTarget = false;
+
+            var outline = labelGO.AddComponent<Outline>();
+            outline.effectColor    = new Color(0f, 0f, 0f, 0.6f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            var rect = labelGO.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(2f, 2f);
+            rect.offsetMax = new Vector2(-2f, -2f);
+        }
+
+        // ── Helpers ────────────────────────────────────────
+
+        private static bool IsGameplay()
+        {
+            return NetworkLevelLoader.Instance != null
+                && !NetworkLevelLoader.Instance.IsGameplayPaused
+                && !NetworkLevelLoader.Instance.IsGameplayLoading
+                && CharacterManager.Instance?.GetFirstLocalCharacter() != null;
         }
 
         private ItemDisplay GetDraggedItem(PointerEventData eventData)
