@@ -55,40 +55,47 @@ namespace fierrof.ActionBar
             for (int b = 0; b < MAX_BARS; b++)
             {
                 string section = $"Bar {b + 1} Settings";
-                
-                Enabled[b] = Config.Bind(section, "Enabled", b == 0,
+                bool isEnabled = b == 0; // Bar 1 enabled by default
+
+                // Collect attributes for all entries in this bar so we can toggle Browsable
+                var barAttrs = new System.Collections.Generic.List<ConfigurationManagerAttributes>();
+
+                Enabled[b] = Config.Bind(section, "Enabled", isEnabled,
                     new ConfigDescription($"Enable Action Bar {b + 1}", null,
                     new ConfigurationManagerAttributes { HideDefaultButton = true }));
 
+                var slotsAttr = new ConfigurationManagerAttributes();
+                barAttrs.Add(slotsAttr);
                 SlotCount[b] = Config.Bind(section, "Slots", 8,
                     new ConfigDescription($"Number of quickslot buttons displayed for Bar {b + 1}",
-                        new AcceptableValueRange<int>(1, MAX_SLOTS)));
+                        new AcceptableValueRange<int>(1, MAX_SLOTS), slotsAttr));
 
+                var posXAttr = new ConfigurationManagerAttributes {
+                    CustomDrawer = DrawIntSlider, HideDefaultButton = true };
+                barAttrs.Add(posXAttr);
                 PositionX[b] = Config.Bind(section, "Position X", 85,
                     new ConfigDescription($"Horizontal position (0 = left, 100 = right)",
-                        new AcceptableValueRange<int>(0, 100),
-                    new ConfigurationManagerAttributes {
-                        CustomDrawer = DrawIntSlider,
-                        HideDefaultButton = true
-                    }));
+                        new AcceptableValueRange<int>(0, 100), posXAttr));
 
-                // Stack default Y positions slightly so they don't exactly overlap if all enabled
                 int defaultY = 5 + (b * 10);
+                var posYAttr = new ConfigurationManagerAttributes {
+                    CustomDrawer = DrawIntSlider, HideDefaultButton = true };
+                barAttrs.Add(posYAttr);
                 PositionY[b] = Config.Bind(section, "Position Y", defaultY,
                     new ConfigDescription($"Vertical position (0 = bottom, 100 = top)",
-                        new AcceptableValueRange<int>(0, 100),
-                    new ConfigurationManagerAttributes {
-                        CustomDrawer = DrawIntSlider,
-                        HideDefaultButton = true
-                    }));
+                        new AcceptableValueRange<int>(0, 100), posYAttr));
 
+                var scaleAttr = new ConfigurationManagerAttributes();
+                barAttrs.Add(scaleAttr);
                 Scale[b] = Config.Bind(section, "Scale", 100,
                     new ConfigDescription($"Size of the action bar in percent",
-                        new AcceptableValueRange<int>(1, 200)));
+                        new AcceptableValueRange<int>(1, 200), scaleAttr));
 
+                var gapAttr = new ConfigurationManagerAttributes();
+                barAttrs.Add(gapAttr);
                 SlotGap[b] = Config.Bind(section, "Slot Gap", 8,
                     new ConfigDescription($"Space between slots in pixels",
-                        new AcceptableValueRange<int>(0, 20)));
+                        new AcceptableValueRange<int>(0, 20), gapAttr));
 
                 SlotKeys[b] = new ConfigEntry<KeyCode>[MAX_SLOTS];
                 for (int s = 0; s < MAX_SLOTS; s++)
@@ -100,15 +107,25 @@ namespace fierrof.ActionBar
                         new ConfigurationManagerAttributes { Browsable = false }));
                 }
 
-                // Reset button — closure captures the bar index
+                // Reset button
                 int barIdx = b;
+                var resetAttr = new ConfigurationManagerAttributes {
+                    CustomDrawer = (ConfigEntryBase _) => DrawResetBarButton(barIdx),
+                    HideDefaultButton = true,
+                    Order = -100
+                };
+                barAttrs.Add(resetAttr);
                 Config.Bind(section, "Reset Bar", false,
                     new ConfigDescription($"Reset all settings for Bar {b + 1} to defaults (except Enabled)", null,
-                    new ConfigurationManagerAttributes {
-                        CustomDrawer = (ConfigEntryBase _) => DrawResetBarButton(barIdx),
-                        HideDefaultButton = true,
-                        Order = -100
-                    }));
+                    resetAttr));
+
+                // Set initial visibility and listen for changes
+                var capturedAttrs = barAttrs.ToArray();
+                SetBarConfigVisible(capturedAttrs, isEnabled);
+                Enabled[b].SettingChanged += (sender, args) => {
+                    bool nowEnabled = ((ConfigEntry<bool>)sender).Value;
+                    SetBarConfigVisible(capturedAttrs, nowEnabled);
+                };
             }
 
             new Harmony(GUID).PatchAll();
@@ -136,6 +153,12 @@ namespace fierrof.ActionBar
 
             if (newValue != value)
                 entry.BoxedValue = newValue;
+        }
+
+        private static void SetBarConfigVisible(ConfigurationManagerAttributes[] attrs, bool visible)
+        {
+            foreach (var attr in attrs)
+                attr.Browsable = visible;
         }
 
         private static void DrawResetBarButton(int barIndex)
