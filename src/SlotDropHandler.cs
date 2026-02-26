@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -7,7 +9,11 @@ using UnityEngine.UI;
 namespace fierrof.ActionBar
 {
     /// <summary>
-    /// Handles drag-and-drop, keybind assignment, mode cycling, and keybind activation for a slot.
+    /// Handles drag-and-drop, keybind assignment, mode cycling, keybind activation,
+    /// dynamic slot behavior, cooldown overlay, and item count display for a slot.
+    ///
+    /// Mode (Active/Hidden/Disabled) and IsDynamic are independent flags.
+    /// A slot can be Hidden+Dynamic but Disabled cannot be Dynamic.
     /// </summary>
     public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
     {
@@ -26,12 +32,79 @@ namespace fierrof.ActionBar
         /// <summary>Visibility/functionality mode for this slot.</summary>
         public SlotMode Mode { get; set; } = SlotMode.Active;
 
+        /// <summary>Whether this slot uses weapon-context dynamic presets.</summary>
+        public bool IsDynamic { get; set; }
+
         private bool  _isHovered;
         private Image _iconImage;
         private Text  _keyLabel;
-        private Text  _modeLabel;
         private Image _bgImage;
+        private Outline _outline;
         private CanvasGroup _slotCanvasGroup;
+
+        // State indicator icons
+        private Image _modeStateIcon;
+        private Image _dynamicStateIcon;
+        private static Sprite _hiddenSprite;
+        private static Sprite _disabledSprite;
+        private static Sprite _dynamicSprite;
+        private static bool _spritesLoaded;
+
+        // Cooldown UI
+        private Image _cooldownOverlay;
+        private Coroutine _cooldownCoroutine;
+
+        // Count UI
+        private Text _countLabel;
+        private Coroutine _countCoroutine;
+
+        // ── Sprite loading ────────────────────────────────
+
+        private static void LoadSprites()
+        {
+            if (_spritesLoaded) return;
+            _spritesLoaded = true;
+
+            _hiddenSprite   = LoadPNG("hidden-icon.png");
+            _disabledSprite = LoadPNG("disabled-icon.png");
+            _dynamicSprite  = LoadPNG("dynmic-icon.png"); // filename has typo in asset
+        }
+
+        private static Sprite LoadPNG(string filename)
+        {
+            string path = Path.Combine(
+                Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "",
+                "assets", filename);
+
+            if (!File.Exists(path))
+            {
+                // Try alternate path: next to DLL
+                path = Path.Combine(
+                    Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "",
+                    filename);
+            }
+
+            if (!File.Exists(path))
+            {
+                Plugin.Log.LogWarning($"Icon not found: {filename}");
+                return null;
+            }
+
+            try
+            {
+                byte[] data = File.ReadAllBytes(path);
+                var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                tex.LoadImage(data);
+                tex.filterMode = FilterMode.Bilinear;
+                return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
+                    new Vector2(0.5f, 0.5f), 100f);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"Failed to load icon {filename}: {ex.Message}");
+                return null;
+            }
+        }
 
         // ── Pointer events ─────────────────────────────────
 
@@ -57,23 +130,53 @@ namespace fierrof.ActionBar
             if (!itemDisplay.RefItem.IsQuickSlotable) return;
 
             AssignItem(itemDisplay.RefItem);
+
+            // If dynamic slot, save preset for current weapon context
+            if (IsDynamic)
+            {
+                var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+                if (character != null)
+                {
+                    string contextKey = DynamicPresetManager.GetContextKey(character);
+                    DynamicPresetManager.SetPreset(contextKey, BarIndex, SlotIndex,
+                        itemDisplay.RefItem.ItemID, itemDisplay.RefItem.UID);
+                    DynamicPresetManager.SavePresets(character.UID);
+                }
+            }
         }
 
         // ── Update ─────────────────────────────────────────
 
         void Update()
         {
+            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+
             // Right-click behavior
             if (_isHovered && Input.GetMouseButtonDown(1))
             {
                 if (IsEditMode)
                 {
-                    CycleMode();
+                    // Ctrl+Right-Click toggles Dynamic flag, plain Right-Click cycles mode
+                    if (ctrl)
+                        ToggleDynamic();
+                    else
+                        CycleMode();
                     return;
                 }
-                
+
                 if (AssignedItem != null)
                 {
+                    // If dynamic slot, also clear the preset for current context
+                    if (IsDynamic)
+                    {
+                        var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+                        if (character != null)
+                        {
+                            string contextKey = DynamicPresetManager.GetContextKey(character);
+                            DynamicPresetManager.RemovePreset(contextKey, BarIndex, SlotIndex);
+                            DynamicPresetManager.SavePresets(character.UID);
+                        }
+                    }
                     ClearSlot();
                     return;
                 }
@@ -92,11 +195,11 @@ namespace fierrof.ActionBar
                 {
                     foreach (KeyCode key in Enum.GetValues(typeof(KeyCode)))
                     {
-                        if (Input.GetKeyDown(key) && key != KeyCode.Mouse0 && key != KeyCode.Mouse1)
-                        {
-                            SetKeybind(key);
-                            return;
-                        }
+                        if (!Input.GetKeyDown(key)) continue;
+                        if (key == KeyCode.Mouse0 || key == KeyCode.Mouse1 || key == KeyCode.Mouse2) continue;
+                        if (IsModifierKey(key)) continue;
+                        SetKeybind(key);
+                        return;
                     }
                 }
                 return;
@@ -127,12 +230,31 @@ namespace fierrof.ActionBar
             switch (Mode)
             {
                 case SlotMode.Active:   Mode = SlotMode.Hidden; break;
-                case SlotMode.Hidden:   Mode = SlotMode.Disabled; break;
+                case SlotMode.Hidden:   Mode = SlotMode.Disabled; IsDynamic = false; break;
                 case SlotMode.Disabled: Mode = SlotMode.Active; break;
             }
 
             UpdateModeVisual();
-            Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: mode set to {Mode}.");
+            Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: mode={Mode}, dynamic={IsDynamic}.");
+
+            var manager = GetComponentInParent<ActionBarManager>();
+            if (manager != null) manager.SaveSlots();
+        }
+
+        private void ToggleDynamic()
+        {
+            if (Mode == SlotMode.Disabled) return; // can't make disabled slot dynamic
+
+            IsDynamic = !IsDynamic;
+            UpdateModeVisual();
+            Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: dynamic={IsDynamic}.");
+
+            // When marking as dynamic, initialize baseline preset with current assignment
+            if (IsDynamic && AssignedItem != null)
+            {
+                DynamicPresetManager.SetPreset("baseline", BarIndex, SlotIndex,
+                    AssignedItem.ItemID, AssignedItem.UID);
+            }
 
             var manager = GetComponentInParent<ActionBarManager>();
             if (manager != null) manager.SaveSlots();
@@ -140,46 +262,82 @@ namespace fierrof.ActionBar
 
         private void UpdateModeVisual()
         {
-            EnsureModeLabel();
             EnsureBgImage();
+            EnsureOutline();
+            EnsureModeStateIcon();
+            EnsureDynamicStateIcon();
 
             if (IsEditMode)
             {
-                // Always show all slots in edit mode
                 EnsureCanvasGroup();
                 _slotCanvasGroup.alpha = 1f;
                 _slotCanvasGroup.blocksRaycasts = true;
                 _slotCanvasGroup.interactable = true;
 
-                switch (Mode)
-                {
-                    case SlotMode.Active:
-                        _modeLabel.text = "";
-                        _bgImage.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
-                        break;
-                    case SlotMode.Hidden:
-                        _modeLabel.text = "HIDDEN";
-                        _bgImage.color = new Color(0.3f, 0.25f, 0.05f, 0.85f); // dim yellow
-                        break;
-                    case SlotMode.Disabled:
-                        _modeLabel.text = "OFF";
-                        _bgImage.color = new Color(0.3f, 0.05f, 0.05f, 0.85f); // dim red
-                        break;
-                }
+                // Keep a neutral slot color in edit mode; state is represented by icons.
+                _bgImage.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
+                _outline.effectColor = Color.black;
+
+                // State icon: show the most relevant indicator
+                UpdateStateIcon();
             }
             else
             {
-                _modeLabel.text = "";
                 _bgImage.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
+                _outline.effectColor = Color.black;
+                UpdateStateIcon();
+            }
+        }
+
+        private void UpdateStateIcon()
+        {
+            EnsureModeStateIcon();
+            EnsureDynamicStateIcon();
+            if (_modeStateIcon == null || _dynamicStateIcon == null) return;
+
+            LoadSprites();
+
+            // Disabled is exclusive and suppresses other indicators.
+            if (Mode == SlotMode.Disabled)
+            {
+                _modeStateIcon.sprite = _disabledSprite;
+                _modeStateIcon.color = IsEditMode ? Color.white : new Color(1f, 1f, 1f, 0.55f);
+                _modeStateIcon.enabled = _disabledSprite != null;
+                _dynamicStateIcon.enabled = false;
+                return;
+            }
+
+            // Hidden and Dynamic can be active at the same time, so render both.
+            if (Mode == SlotMode.Hidden)
+            {
+                _modeStateIcon.sprite = _hiddenSprite;
+                _modeStateIcon.color = IsEditMode ? Color.white : new Color(1f, 1f, 1f, 0.55f);
+                _modeStateIcon.enabled = _hiddenSprite != null;
+            }
+            else
+            {
+                _modeStateIcon.enabled = false;
+            }
+
+            if (IsDynamic)
+            {
+                _dynamicStateIcon.sprite = _dynamicSprite;
+                _dynamicStateIcon.color = IsEditMode ? Color.white : new Color(1f, 1f, 1f, 0.55f);
+                _dynamicStateIcon.enabled = _dynamicSprite != null;
+            }
+            else
+            {
+                _dynamicStateIcon.enabled = false;
             }
         }
 
         private void UpdateVisibility()
         {
-            if (IsEditMode) return; // edit mode always shows all
+            if (IsEditMode) return;
 
             EnsureCanvasGroup();
             EnsureBgImage();
+            EnsureOutline();
 
             switch (Mode)
             {
@@ -196,8 +354,8 @@ namespace fierrof.ActionBar
                     _slotCanvasGroup.alpha = show ? 1f : 0f;
                     _slotCanvasGroup.blocksRaycasts = show;
                     _slotCanvasGroup.interactable = show;
-                    // Subtle yellow tint so you know it's a hidden slot
-                    _bgImage.color = show ? new Color(0.18f, 0.16f, 0.08f, 0.85f) : new Color(0.12f, 0.12f, 0.12f, 0.85f);
+                    _bgImage.color = show ? new Color(0.18f, 0.16f, 0.08f, 0.85f)
+                                          : new Color(0.12f, 0.12f, 0.12f, 0.85f);
                     break;
                 case SlotMode.Disabled:
                     _slotCanvasGroup.alpha = 0f;
@@ -205,6 +363,9 @@ namespace fierrof.ActionBar
                     _slotCanvasGroup.interactable = false;
                     break;
             }
+
+            // Keep a neutral border; state is represented by icons.
+            _outline.effectColor = Color.black;
         }
 
         private static bool IsInventoryOpen()
@@ -220,19 +381,134 @@ namespace fierrof.ActionBar
         {
             AssignedItem = item;
             UpdateIcon();
+            StartTracking();
             Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: assigned '{item.Name}'.");
 
             var manager = GetComponentInParent<ActionBarManager>();
             if (manager != null) manager.SaveSlots();
         }
 
+        /// <summary>Assigns item without triggering save (used during load/preset apply).</summary>
+        public void AssignItemSilent(Item item)
+        {
+            AssignedItem = item;
+            UpdateIcon();
+            StartTracking();
+        }
+
         public void ClearSlot()
         {
             AssignedItem = null;
             UpdateIcon();
+            StopTracking();
 
             var manager = GetComponentInParent<ActionBarManager>();
             if (manager != null) manager.SaveSlots();
+        }
+
+        /// <summary>Clears without triggering save (used during preset apply).</summary>
+        public void ClearSlotSilent()
+        {
+            AssignedItem = null;
+            UpdateIcon();
+            StopTracking();
+        }
+
+        // ── Cooldown & count tracking ───────────────────────
+
+        private void StartTracking()
+        {
+            StopTracking();
+            if (AssignedItem == null) return;
+
+            if (AssignedItem is Skill skill)
+            {
+                EnsureCooldownOverlay();
+                _cooldownCoroutine = StartCoroutine(TrackCooldown(skill));
+            }
+
+            EnsureCountLabel();
+            _countCoroutine = StartCoroutine(TrackCount());
+        }
+
+        private void StopTracking()
+        {
+            if (_cooldownCoroutine != null)
+            {
+                StopCoroutine(_cooldownCoroutine);
+                _cooldownCoroutine = null;
+            }
+            if (_cooldownOverlay != null)
+                _cooldownOverlay.fillAmount = 0f;
+
+            if (_countCoroutine != null)
+            {
+                StopCoroutine(_countCoroutine);
+                _countCoroutine = null;
+            }
+            if (_countLabel != null)
+                _countLabel.text = "";
+        }
+
+        private IEnumerator TrackCooldown(Skill skill)
+        {
+            var progressMethod = skill.GetType().GetMethod("GetCooldownProgress",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            var remainingField = skill.GetType().GetField("m_remainingCooldownTime",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var cooldownField = skill.GetType().GetField("m_cooldownTime",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            while (true)
+            {
+                if (skill != null && skill.InCooldown())
+                {
+                    float progress = 0f;
+                    if (progressMethod != null)
+                    {
+                        progress = (float)progressMethod.Invoke(skill, null);
+                    }
+                    else if (remainingField != null && cooldownField != null)
+                    {
+                        float remaining = (float)remainingField.GetValue(skill);
+                        float total = (float)cooldownField.GetValue(skill);
+                        progress = total > 0f ? remaining / total : 0f;
+                    }
+                    _cooldownOverlay.fillAmount = Mathf.Clamp01(progress);
+                    _cooldownOverlay.color = new Color(0f, 0f, 0f, 0.6f);
+                }
+                else
+                {
+                    _cooldownOverlay.fillAmount = 0f;
+                }
+                yield return new WaitForSeconds(0.05f);
+            }
+        }
+
+        private IEnumerator TrackCount()
+        {
+            while (true)
+            {
+                if (AssignedItem != null)
+                {
+                    var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+                    if (character?.Inventory != null)
+                    {
+                        int count = 0;
+                        if (AssignedItem.GroupItemInDisplay || AssignedItem.IsStackable)
+                            count = character.Inventory.ItemCount(AssignedItem.ItemID);
+                        else
+                            count = AssignedItem.QuickSlotCountDisplay;
+
+                        _countLabel.text = count > 0 ? count.ToString() : "";
+                    }
+                }
+                else
+                {
+                    _countLabel.text = "";
+                }
+                yield return new WaitForSeconds(0.5f);
+            }
         }
 
         // ── Keybind management ─────────────────────────────
@@ -241,30 +517,21 @@ namespace fierrof.ActionBar
         {
             if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS) return;
 
-            // Unbind this key from any other slots first
             if (key != KeyCode.None)
             {
                 for (int b = 0; b < Plugin.MAX_BARS; b++)
-                {
                     for (int s = 0; s < Plugin.MAX_SLOTS; s++)
-                    {
                         if ((b != BarIndex || s != SlotIndex) && Plugin.SlotKeys[b][s].Value == key)
                         {
                             Plugin.SlotKeys[b][s].Value = KeyCode.None;
-                            Plugin.Log.LogMessage($"Bar {b + 1} Slot {s + 1}: unbound '{key}' because it was assigned to Bar {BarIndex + 1} Slot {SlotIndex + 1}.");
+                            Plugin.Log.LogMessage($"Bar {b + 1} Slot {s + 1}: unbound '{key}'.");
                         }
-                    }
-                }
             }
 
             Plugin.SlotKeys[BarIndex][SlotIndex].Value = key;
-            
-            // Update labels for all active slots
-            var allHandlers = FindObjectsOfType<SlotDropHandler>();
-            foreach (var handler in allHandlers)
-            {
+
+            foreach (var handler in FindObjectsOfType<SlotDropHandler>())
                 handler.UpdateKeyLabel();
-            }
 
             Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: bound to '{key}'.");
         }
@@ -272,13 +539,11 @@ namespace fierrof.ActionBar
         public void UpdateKeyLabel()
         {
             EnsureKeyLabel();
-
             if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS)
             {
                 _keyLabel.text = "";
                 return;
             }
-
             var key = Plugin.SlotKeys[BarIndex][SlotIndex].Value;
             _keyLabel.text = key == KeyCode.None ? "" : FormatKeyName(key);
         }
@@ -334,89 +599,177 @@ namespace fierrof.ActionBar
                 _iconImage.enabled = false;
             }
 
-            // Ensure key label stays on top of the icon
+            // Ensure overlays stay on top
+            if (_cooldownOverlay != null)
+                _cooldownOverlay.transform.SetAsLastSibling();
             if (_keyLabel != null)
                 _keyLabel.transform.SetAsLastSibling();
-            if (_modeLabel != null)
-                _modeLabel.transform.SetAsLastSibling();
+            if (_countLabel != null)
+                _countLabel.transform.SetAsLastSibling();
+            if (_modeStateIcon != null)
+                _modeStateIcon.transform.SetAsLastSibling();
+            if (_dynamicStateIcon != null)
+                _dynamicStateIcon.transform.SetAsLastSibling();
         }
+
+        // ── UI element creation ─────────────────────────────
 
         private void EnsureIconImage()
         {
             if (_iconImage != null) return;
 
-            var iconGO = new GameObject("Icon");
-            iconGO.layer = 5;
-            iconGO.transform.SetParent(transform, false);
+            var go = new GameObject("Icon");
+            go.layer = 5;
+            go.transform.SetParent(transform, false);
 
-            _iconImage = iconGO.AddComponent<Image>();
+            _iconImage = go.AddComponent<Image>();
             _iconImage.preserveAspect = true;
             _iconImage.raycastTarget  = false;
             _iconImage.enabled        = false;
 
-            var rect = iconGO.GetComponent<RectTransform>();
+            var rect = go.GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
         }
 
+        private void EnsureCooldownOverlay()
+        {
+            if (_cooldownOverlay != null) return;
+
+            var go = new GameObject("CooldownOverlay");
+            go.layer = 5;
+            go.transform.SetParent(transform, false);
+
+            _cooldownOverlay = go.AddComponent<Image>();
+            _cooldownOverlay.type = Image.Type.Filled;
+            _cooldownOverlay.fillMethod = Image.FillMethod.Radial360;
+            _cooldownOverlay.fillOrigin = (int)Image.Origin360.Top;
+            _cooldownOverlay.fillClockwise = true;
+            _cooldownOverlay.fillAmount = 0f;
+            _cooldownOverlay.color = new Color(0f, 0f, 0f, 0.6f);
+            _cooldownOverlay.raycastTarget = false;
+
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        private void EnsureCountLabel()
+        {
+            if (_countLabel != null) return;
+
+            var go = new GameObject("CountLabel");
+            go.layer = 5;
+            go.transform.SetParent(transform, false);
+
+            _countLabel = go.AddComponent<Text>();
+            _countLabel.font = Font.CreateDynamicFontFromOSFont("Arial", 12);
+            _countLabel.fontSize = 11;
+            _countLabel.alignment = TextAnchor.LowerRight;
+            _countLabel.color = new Color(1f, 1f, 1f, 0.9f);
+            _countLabel.raycastTarget = false;
+
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.8f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(2f, 2f);
+            rect.offsetMax = new Vector2(-2f, -2f);
+        }
+
         private void EnsureKeyLabel()
         {
             if (_keyLabel != null) return;
 
-            var labelGO = new GameObject("KeyLabel");
-            labelGO.layer = 5;
-            labelGO.transform.SetParent(transform, false);
+            var go = new GameObject("KeyLabel");
+            go.layer = 5;
+            go.transform.SetParent(transform, false);
 
-            _keyLabel = labelGO.AddComponent<Text>();
+            _keyLabel = go.AddComponent<Text>();
             _keyLabel.font      = Font.CreateDynamicFontFromOSFont("Arial", 12);
             _keyLabel.fontSize  = 11;
             _keyLabel.alignment = TextAnchor.UpperRight;
             _keyLabel.color     = new Color(1f, 1f, 1f, 0.8f);
             _keyLabel.raycastTarget = false;
 
-            var outline = labelGO.AddComponent<Outline>();
+            var outline = go.AddComponent<Outline>();
             outline.effectColor    = new Color(0f, 0f, 0f, 0.6f);
             outline.effectDistance = new Vector2(1f, -1f);
 
-            var rect = labelGO.GetComponent<RectTransform>();
+            var rect = go.GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = new Vector2(2f, 2f);
             rect.offsetMax = new Vector2(-2f, -2f);
         }
 
-        private void EnsureModeLabel()
+        private void EnsureModeStateIcon()
         {
-            if (_modeLabel != null) return;
+            if (_modeStateIcon != null) return;
 
-            var labelGO = new GameObject("ModeLabel");
-            labelGO.layer = 5;
-            labelGO.transform.SetParent(transform, false);
+            LoadSprites();
 
-            _modeLabel = labelGO.AddComponent<Text>();
-            _modeLabel.font      = Font.CreateDynamicFontFromOSFont("Arial", 10);
-            _modeLabel.fontSize  = 9;
-            _modeLabel.alignment = TextAnchor.LowerCenter;
-            _modeLabel.color     = new Color(1f, 1f, 1f, 0.9f);
-            _modeLabel.raycastTarget = false;
+            var go = new GameObject("ModeStateIcon");
+            go.layer = 5;
+            go.transform.SetParent(transform, false);
 
-            var outline = labelGO.AddComponent<Outline>();
-            outline.effectColor    = new Color(0f, 0f, 0f, 0.8f);
-            outline.effectDistance = new Vector2(1f, -1f);
+            _modeStateIcon = go.AddComponent<Image>();
+            _modeStateIcon.preserveAspect = true;
+            _modeStateIcon.raycastTarget = false;
+            _modeStateIcon.enabled = false;
+            _modeStateIcon.color = Color.white;
 
-            var rect = labelGO.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = new Vector2(2f, 2f);
-            rect.offsetMax = new Vector2(-2f, -2f);
+            // Mode icon in top-left corner.
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.sizeDelta = new Vector2(16f, 16f);
+            rect.anchoredPosition = new Vector2(2f, -2f);
+        }
+
+        private void EnsureDynamicStateIcon()
+        {
+            if (_dynamicStateIcon != null) return;
+
+            LoadSprites();
+
+            var go = new GameObject("DynamicStateIcon");
+            go.layer = 5;
+            go.transform.SetParent(transform, false);
+
+            _dynamicStateIcon = go.AddComponent<Image>();
+            _dynamicStateIcon.preserveAspect = true;
+            _dynamicStateIcon.raycastTarget = false;
+            _dynamicStateIcon.enabled = false;
+            _dynamicStateIcon.color = Color.white;
+
+            // Dynamic icon in top-right corner so it can coexist with hidden icon.
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.sizeDelta = new Vector2(16f, 16f);
+            rect.anchoredPosition = new Vector2(-2f, -2f);
         }
 
         private void EnsureBgImage()
         {
             if (_bgImage != null) return;
             _bgImage = GetComponent<Image>();
+        }
+
+        private void EnsureOutline()
+        {
+            if (_outline != null) return;
+            _outline = GetComponent<Outline>();
         }
 
         private void EnsureCanvasGroup()
@@ -428,6 +781,13 @@ namespace fierrof.ActionBar
         }
 
         // ── Helpers ────────────────────────────────────────
+
+        private static bool IsModifierKey(KeyCode key)
+        {
+            return key == KeyCode.LeftControl  || key == KeyCode.RightControl
+                || key == KeyCode.LeftAlt      || key == KeyCode.RightAlt
+                || key == KeyCode.LeftShift    || key == KeyCode.RightShift;
+        }
 
         private static bool IsGameplay()
         {

@@ -18,10 +18,10 @@ namespace fierrof.ActionBar
         private const int   SLOT_HEIGHT = 81; // 1.5× taller than wide
 
         private Transform        _vanillaBar;
-        
+
         private GameObject[] _containers = new GameObject[Plugin.MAX_BARS];
         private List<GameObject>[] _slots = new List<GameObject>[Plugin.MAX_BARS];
-        
+
         private int[]   _lastSlotCount = new int[Plugin.MAX_BARS];
         private float[] _lastPosX = new float[Plugin.MAX_BARS];
         private float[] _lastPosY = new float[Plugin.MAX_BARS];
@@ -31,17 +31,21 @@ namespace fierrof.ActionBar
         private bool[]  _lastEnabled = new bool[Plugin.MAX_BARS];
 
         private CanvasGroup      _canvasGroup;
-        
+
         private GameObject _configOverlay;
         private bool _wasConfigMode;
         private string _loadedCharacterUID;
+
+        // Equipment change tracking
+        private bool _equipmentChangePending;
+        private float _equipmentChangeDelay;
 
         // ── Setup ──────────────────────────────────────────────
 
         public void Setup(Transform vanillaBar)
         {
             _vanillaBar = vanillaBar;
-            
+
             for (int i = 0; i < Plugin.MAX_BARS; i++)
             {
                 _slots[i] = new List<GameObject>();
@@ -51,11 +55,26 @@ namespace fierrof.ActionBar
             gameObject.AddComponent<HudMoverManager>();
 
             BuildUI();
-            
+
             for (int i = 0; i < Plugin.MAX_BARS; i++)
             {
                 SyncSlots(i);
             }
+
+            // Listen for equipment changes
+            EquipmentPatch.OnEquipmentChanged += OnEquipmentChanged;
+        }
+
+        void OnDestroy()
+        {
+            EquipmentPatch.OnEquipmentChanged -= OnEquipmentChanged;
+        }
+
+        private void OnEquipmentChanged(Character character)
+        {
+            // Delay by one frame to let equipment state settle
+            _equipmentChangePending = true;
+            _equipmentChangeDelay = 0.1f;
         }
 
         // ── UI Build ───────────────────────────────────────────
@@ -155,6 +174,7 @@ namespace fierrof.ActionBar
                         "• Hover a slot & press a key to bind it\n" +
                         "• Drag yellow handles to move elements\n" +
                         "• Right-Click a slot to Hide/Disable it\n" +
+                        "• Ctrl+Right-Click to toggle Dynamic\n" +
                         "• Open Config (F5) to add/resize bars\n\n" +
                         "Press ESC to Exit</size>";
 
@@ -234,9 +254,103 @@ namespace fierrof.ActionBar
 
             TryLoadSlots();
             HandleConfigModeState();
+            HandleEquipmentChange();
 
             SuppressVanillaBar();
             ApplyConfig();
+        }
+
+        // ── Equipment change handling ────────────────────────
+
+        private void HandleEquipmentChange()
+        {
+            if (!_equipmentChangePending) return;
+
+            _equipmentChangeDelay -= Time.unscaledDeltaTime;
+            if (_equipmentChangeDelay > 0f) return;
+
+            _equipmentChangePending = false;
+
+            var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+            if (character == null) return;
+
+            ApplyDynamicPresets(character);
+        }
+
+        /// <summary>
+        /// Applies dynamic presets for current weapon context.
+        /// Called on equipment change and after initial slot load.
+        /// </summary>
+        public void ApplyDynamicPresets(Character character)
+        {
+            if (character == null) return;
+            if (!DynamicPresetManager.HasContextChanged(character)) return;
+
+            DynamicPresetManager.EnsureLoaded(character.UID);
+
+            var resolveKeys = DynamicPresetManager.GetResolveKeys(character);
+            var handlers = GetAllSlotHandlers();
+            bool anyChanged = false;
+
+            foreach (var handler in handlers)
+            {
+                if (!handler.IsDynamic) continue;
+
+                if (DynamicPresetManager.ResolvePreset(resolveKeys, handler.BarIndex, handler.SlotIndex,
+                    out var entry))
+                {
+                    if (entry.ItemID <= 0)
+                    {
+                        // Preset says empty
+                        if (handler.AssignedItem != null)
+                        {
+                            handler.ClearSlotSilent();
+                            anyChanged = true;
+                        }
+                    }
+                    else
+                    {
+                        // Already has the right item?
+                        if (handler.AssignedItem != null && handler.AssignedItem.ItemID == entry.ItemID)
+                            continue;
+
+                        var item = SlotSaveManager.FindItemStatic(character, entry.ItemID);
+                        if (item != null)
+                        {
+                            handler.AssignItemSilent(item);
+                            anyChanged = true;
+                        }
+                    }
+                }
+                else
+                {
+                    // No preset for this context — show baseline (no change) or clear
+                    // Only clear if there's a baseline that says empty
+                    if (DynamicPresetManager.TryGetPreset("baseline", handler.BarIndex, handler.SlotIndex, out var baseline))
+                    {
+                        if (baseline.ItemID <= 0 && handler.AssignedItem != null)
+                        {
+                            handler.ClearSlotSilent();
+                            anyChanged = true;
+                        }
+                        else if (baseline.ItemID > 0)
+                        {
+                            if (handler.AssignedItem == null || handler.AssignedItem.ItemID != baseline.ItemID)
+                            {
+                                var item = SlotSaveManager.FindItemStatic(character, baseline.ItemID);
+                                if (item != null)
+                                {
+                                    handler.AssignItemSilent(item);
+                                    anyChanged = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (anyChanged)
+                SaveSlots();
         }
 
         // ── Slot persistence ──────────────────────────────────
@@ -259,6 +373,7 @@ namespace fierrof.ActionBar
                 _slotsLoaded = false;
                 _totalLoadTime = 0f;
                 _retryInterval = 0f;
+                DynamicPresetManager.ResetContextSignature();
             }
 
             if (_slotsLoaded) return;
@@ -280,6 +395,11 @@ namespace fierrof.ActionBar
                     Plugin.Log.LogWarning("Some slotted items could not be found in inventory.");
                 else
                     Plugin.Log.LogMessage($"All slots loaded for {uid}.");
+
+                // Load dynamic presets and apply for current weapon context
+                DynamicPresetManager.EnsureLoaded(uid);
+                DynamicPresetManager.ResetContextSignature(); // Force re-apply
+                ApplyDynamicPresets(character);
             }
         }
 

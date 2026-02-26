@@ -60,8 +60,8 @@ namespace fierrof.ActionBar
                     if (!int.TryParse(parts[0], out int itemID))
                         continue;
 
-                    // Load mode
-                    if (parts.Length > 1 && int.TryParse(parts[1], out int modeInt) && modeInt >= 0 && modeInt <= 2)
+                    // Load mode (0=Active, 1=Hidden, 2=Disabled, 3=Dynamic)
+                    if (parts.Length > 1 && int.TryParse(parts[1], out int modeInt) && modeInt >= 0 && modeInt <= 3)
                         slot.Mode = (SlotMode)modeInt;
 
                     // Load item
@@ -83,6 +83,9 @@ namespace fierrof.ActionBar
                 return true; // don't retry on error
             }
         }
+
+        /// <summary>Public accessor for finding items by ID on a character.</summary>
+        public static Item FindItemStatic(Character character, int itemID) => FindItem(character, itemID);
 
         private static Item FindItem(Character character, int itemID)
         {

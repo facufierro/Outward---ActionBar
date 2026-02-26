@@ -59,6 +59,7 @@ Copy-Item "$manifestPath" -Destination $publishDir -Force
 Copy-Item "$solutionDir\README.md" -Destination $publishDir -Force
 Copy-Item "$solutionDir\CHANGELOG.md" -Destination $publishDir -Force
 if (Test-Path "$solutionDir\icon.png") { Copy-Item "$solutionDir\icon.png" -Destination $publishDir -Force }
+if (Test-Path "$solutionDir\assets") { Copy-Item "$solutionDir\assets" -Destination $publishDir -Recurse -Force }
 
 $pluginDll = "$projectDir\bin\Release\netstandard2.0\fierrof.ActionBar.dll"
 if (Test-Path $pluginDll) {
