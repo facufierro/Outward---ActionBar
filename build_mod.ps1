@@ -24,20 +24,22 @@ $modName = $manifest.name
 $author = "fierrof"
 $releaseVersion = $manifest.version_number
 
-# Auto-bump patch version
-$match = [regex]::Match($releaseVersion, '^(\d+)\.(\d+)\.(\d+)$')
-if ($match.Success) {
-    $major = [int]$match.Groups[1].Value
-    $minor = [int]$match.Groups[2].Value
-    $patch = [int]$match.Groups[3].Value
-    $patch++
-    
-    $releaseVersion = "$major.$minor.$patch"
-    $manifest.version_number = $releaseVersion
-    
-    # Save back to manifest
-    $manifest | ConvertTo-Json -Depth 10 | Set-Content -Path $manifestPath -Encoding UTF8
-    Write-Host "Auto-bumped version to $releaseVersion"
+# Auto-bump patch version (dev only)
+if ($Channel -eq "dev") {
+    $match = [regex]::Match($releaseVersion, '^(\d+)\.(\d+)\.(\d+)$')
+    if ($match.Success) {
+        $major = [int]$match.Groups[1].Value
+        $minor = [int]$match.Groups[2].Value
+        $patch = [int]$match.Groups[3].Value
+        $patch++
+
+        $releaseVersion = "$major.$minor.$patch"
+        $manifest.version_number = $releaseVersion
+
+        # Save back to manifest
+        $manifest | ConvertTo-Json -Depth 10 | Set-Content -Path $manifestPath -Encoding UTF8
+        Write-Host "Auto-bumped version to $releaseVersion"
+    }
 }
 
 $packageVersion = if ($Channel -eq "dev") { "$releaseVersion-dev" } else { $releaseVersion }

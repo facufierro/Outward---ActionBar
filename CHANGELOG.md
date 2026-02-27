@@ -1,8 +1,14 @@
 # Changelog
 
+
+## 2.0.0
+
+* Remade the whole thing from scratch
+
 ## 1.2.4
+
 - **Fixed**: Profiles not saving completely
-  
+
 ## 1.2.3
 
 - **Fixed**: Configs not refreshing when changed
