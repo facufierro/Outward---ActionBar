@@ -172,6 +172,7 @@ namespace fierrof.ActionBar
             {
                 if (!IsGameplay()) return;
                 AssignedItem.TryQuickSlotUse();
+                StartCoroutine(RefreshCountDelayed());
             }
         }
 
@@ -420,30 +421,42 @@ namespace fierrof.ActionBar
             }
         }
 
+        private int GetItemCount(Character character)
+        {
+            if (AssignedItem == null) return 0;
+
+            if (AssignedItem is Skill skill && skill.RequiredItems != null && skill.RequiredItems.Length > 0)
+                return character.Inventory.ItemCount(skill.RequiredItems[0].Item.ItemID);
+
+            if (AssignedItem.GroupItemInDisplay || AssignedItem.IsStackable)
+                return character.Inventory.ItemCount(AssignedItem.ItemID);
+
+            return AssignedItem.QuickSlotCountDisplay;
+        }
+
+        private void UpdateCountLabel()
+        {
+            if (_countLabel == null) return;
+            var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+            if (character?.Inventory == null) { _countLabel.text = ""; return; }
+
+            int count = GetItemCount(character);
+            _countLabel.text = count > 0 ? count.ToString() : "";
+        }
+
         private IEnumerator TrackCount()
         {
             while (true)
             {
-                if (AssignedItem != null)
-                {
-                    var character = CharacterManager.Instance?.GetFirstLocalCharacter();
-                    if (character?.Inventory != null)
-                    {
-                        int count = 0;
-                        if (AssignedItem.GroupItemInDisplay || AssignedItem.IsStackable)
-                            count = character.Inventory.ItemCount(AssignedItem.ItemID);
-                        else
-                            count = AssignedItem.QuickSlotCountDisplay;
-
-                        _countLabel.text = count > 0 ? count.ToString() : "";
-                    }
-                }
-                else
-                {
-                    _countLabel.text = "";
-                }
+                UpdateCountLabel();
                 yield return new WaitForSeconds(0.5f);
             }
+        }
+
+        private IEnumerator RefreshCountDelayed()
+        {
+            yield return new WaitForSeconds(0.3f);
+            UpdateCountLabel();
         }
 
         // ── Keybind management ─────────────────────────────
