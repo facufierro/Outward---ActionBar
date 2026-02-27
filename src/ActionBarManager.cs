@@ -112,7 +112,7 @@ namespace fierrof.ActionBar
                 grid.cellSize        = new Vector2(SLOT_WIDTH, SLOT_HEIGHT);
                 grid.spacing         = new Vector2(Plugin.SlotGap[i].Value, Plugin.SlotGap[i].Value);
                 grid.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
-                grid.constraintCount = Mathf.Clamp(Plugin.SlotCount[i].Value, 1, Plugin.MAX_SLOTS);
+                grid.constraintCount = Mathf.Clamp(Plugin.SlotCount[i].Value, 1, Plugin.MAX_SLOTS_PER_ROW);
                 grid.startCorner     = GridLayoutGroup.Corner.UpperLeft;
                 grid.startAxis       = GridLayoutGroup.Axis.Horizontal;
                 grid.childAlignment  = TextAnchor.UpperLeft;
@@ -189,9 +189,9 @@ namespace fierrof.ActionBar
 
         private void SyncSlots(int barIndex)
         {
-            int slotsPerRow = Mathf.Clamp(Plugin.SlotCount[barIndex].Value, 1, Plugin.MAX_SLOTS);
-            int rows = Mathf.Clamp(Plugin.Rows[barIndex].Value, 1, Plugin.MAX_SLOTS);
-            int target = Mathf.Clamp(slotsPerRow * rows, 1, Plugin.MAX_SLOTS);
+            int slotsPerRow = Mathf.Clamp(Plugin.SlotCount[barIndex].Value, 1, Plugin.MAX_SLOTS_PER_ROW);
+            int rows = Mathf.Clamp(Plugin.Rows[barIndex].Value, 1, Plugin.MAX_ROWS);
+            int target = Mathf.Clamp(slotsPerRow * rows, 1, Plugin.MAX_SLOTS_PER_BAR);
 
             while (_slots[barIndex].Count < target)
                 _slots[barIndex].Add(CreateSlot(barIndex, _slots[barIndex].Count));
@@ -202,7 +202,18 @@ namespace fierrof.ActionBar
                 _slots[barIndex].RemoveAt(_slots[barIndex].Count - 1);
             }
 
-            _lastSlotCount[barIndex] = slotsPerRow;
+            var grid = _containers[barIndex]?.GetComponent<GridLayoutGroup>();
+            if (grid != null)
+            {
+                int gap = Plugin.SlotGap[barIndex].Value;
+                grid.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
+                grid.constraintCount = slotsPerRow;
+                grid.spacing         = new Vector2(gap, gap);
+            }
+
+            var rect = _containers[barIndex]?.GetComponent<RectTransform>();
+            if (rect != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
         }
 
         private GameObject CreateSlot(int barIndex, int slotIndex)
@@ -504,9 +515,9 @@ namespace fierrof.ActionBar
 
                 if (!enabled) continue;
 
-                int slotsPerRow = Mathf.Clamp(Plugin.SlotCount[i].Value, 1, Plugin.MAX_SLOTS);
-                int rows = Mathf.Clamp(Plugin.Rows[i].Value, 1, Plugin.MAX_SLOTS);
-                int targetSlots = Mathf.Clamp(slotsPerRow * rows, 1, Plugin.MAX_SLOTS);
+                int slotsPerRow = Mathf.Clamp(Plugin.SlotCount[i].Value, 1, Plugin.MAX_SLOTS_PER_ROW);
+                int rows = Mathf.Clamp(Plugin.Rows[i].Value, 1, Plugin.MAX_ROWS);
+                int targetSlots = Mathf.Clamp(slotsPerRow * rows, 1, Plugin.MAX_SLOTS_PER_BAR);
 
                 if (_slots[i].Count != targetSlots)
                     SyncSlots(i);
@@ -529,9 +540,6 @@ namespace fierrof.ActionBar
                     _lastRows[i] = rows;
                     _lastSlotCount[i] = slotsPerRow;
                 }
-
-                if (x == _lastPosX[i] && y == _lastPosY[i] && scale == _lastScale[i])
-                    continue;
 
                 var rect              = _containers[i].GetComponent<RectTransform>();
                 rect.anchorMin        = new Vector2(x, y);

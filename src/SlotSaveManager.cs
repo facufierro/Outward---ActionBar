@@ -8,7 +8,7 @@ namespace fierrof.ActionBar
     /// Saves and loads per-character slot assignments and modes.
     /// File: {BepInExConfigDir}/ActionBar_Slots/{characterUID}.txt
     /// Format: one line per slot position: "ItemID|Mode" (-1 = empty, mode = 0/1/2).
-    /// 80 lines total (4 bars * 20 slots).
+    /// Total lines = Plugin.MAX_BARS * Plugin.MAX_SLOTS_PER_BAR.
     /// </summary>
     public static class SlotSaveManager
     {
@@ -20,12 +20,12 @@ namespace fierrof.ActionBar
 
         public static void Save(string characterUID, SlotDropHandler[] slots)
         {
-            // Always save exactly 80 lines (4 bars * 20 slots max)
-            var lines = Enumerable.Repeat("-1|0", Plugin.MAX_BARS * Plugin.MAX_SLOTS).ToArray();
+            // Always save exactly Plugin.MAX_BARS * Plugin.MAX_SLOTS_PER_BAR lines
+            var lines = Enumerable.Repeat("-1|0", Plugin.MAX_BARS * Plugin.MAX_SLOTS_PER_BAR).ToArray();
 
             foreach (var slot in slots)
             {
-                int lineIndex = slot.BarIndex * Plugin.MAX_SLOTS + slot.SlotIndex;
+                int lineIndex = slot.BarIndex * Plugin.MAX_SLOTS_PER_BAR + slot.SlotIndex;
                 string itemId = slot.AssignedItem != null ? slot.AssignedItem.ItemID.ToString() : "-1";
                 int mode = (int)slot.Mode;
                 lines[lineIndex] = $"{itemId}|{mode}";
@@ -49,7 +49,7 @@ namespace fierrof.ActionBar
 
                 foreach (var slot in slots)
                 {
-                    int lineIndex = slot.BarIndex * Plugin.MAX_SLOTS + slot.SlotIndex;
+                    int lineIndex = slot.BarIndex * Plugin.MAX_SLOTS_PER_BAR + slot.SlotIndex;
                     if (lineIndex >= lines.Length) continue;
 
                     string line = lines[lineIndex].Trim();

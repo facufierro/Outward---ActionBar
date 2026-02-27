@@ -163,9 +163,9 @@ namespace fierrof.ActionBar
             // Gameplay: press bound key to activate item
             if (Mode == SlotMode.Disabled) return;
             if (AssignedItem == null) return;
-            if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS) return;
+            if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS_PER_BAR) return;
 
-            var boundKey = Plugin.SlotKeys[BarIndex][SlotIndex].Value;
+            var boundKey = Plugin.GetBoundKey(BarIndex, SlotIndex);
             if (boundKey == KeyCode.None) return;
 
             if (Input.GetKeyDown(boundKey))
@@ -450,20 +450,21 @@ namespace fierrof.ActionBar
 
         private void SetKeybind(KeyCode key)
         {
-            if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS) return;
+            if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS_PER_BAR) return;
+            if (SlotIndex >= Plugin.MAX_BINDABLE_SLOTS) return;
 
             if (key != KeyCode.None)
             {
                 for (int b = 0; b < Plugin.MAX_BARS; b++)
-                    for (int s = 0; s < Plugin.MAX_SLOTS; s++)
-                        if ((b != BarIndex || s != SlotIndex) && Plugin.SlotKeys[b][s].Value == key)
+                    for (int s = 0; s < Plugin.MAX_BINDABLE_SLOTS; s++)
+                        if ((b != BarIndex || s != SlotIndex) && Plugin.GetBoundKey(b, s) == key)
                         {
-                            Plugin.SlotKeys[b][s].Value = KeyCode.None;
+                            Plugin.SetBoundKey(b, s, KeyCode.None);
                             Plugin.Log.LogMessage($"Bar {b + 1} Slot {s + 1}: unbound '{key}'.");
                         }
             }
 
-            Plugin.SlotKeys[BarIndex][SlotIndex].Value = key;
+            Plugin.SetBoundKey(BarIndex, SlotIndex, key);
 
             foreach (var handler in FindObjectsOfType<SlotDropHandler>())
                 handler.UpdateKeyLabel();
@@ -474,12 +475,12 @@ namespace fierrof.ActionBar
         public void UpdateKeyLabel()
         {
             EnsureKeyLabel();
-            if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS)
+            if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS_PER_BAR)
             {
                 _keyLabel.text = "";
                 return;
             }
-            var key = Plugin.SlotKeys[BarIndex][SlotIndex].Value;
+            var key = Plugin.GetBoundKey(BarIndex, SlotIndex);
             _keyLabel.text = key == KeyCode.None ? "" : FormatKeyName(key);
         }
 

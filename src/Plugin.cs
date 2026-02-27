@@ -17,7 +17,10 @@ namespace fierrof.ActionBar
         public static ManualLogSource Log;
 
         public const int MAX_BARS = 4;
-        public const int MAX_SLOTS = 20;
+        public const int MAX_ROWS = 20;
+        public const int MAX_SLOTS_PER_ROW = 20;
+        public const int MAX_SLOTS_PER_BAR = MAX_ROWS * MAX_SLOTS_PER_ROW;
+        public const int MAX_BINDABLE_SLOTS = 20;
 
         public static ConfigEntry<bool>[] Enabled   = new ConfigEntry<bool>[MAX_BARS];
         public static ConfigEntry<int>[]  SlotCount = new ConfigEntry<int>[MAX_BARS];
@@ -96,7 +99,7 @@ namespace fierrof.ActionBar
                 barAttrs.Add(slotsAttr);
                 SlotCount[b] = Config.Bind(section, "Slots", 8,
                     new ConfigDescription($"Number of quickslot buttons displayed for Bar {b + 1}",
-                        new AcceptableValueRange<int>(1, MAX_SLOTS), slotsAttr));
+                        new AcceptableValueRange<int>(1, MAX_SLOTS_PER_ROW), slotsAttr));
 
                 var posXAttr = new ConfigurationManagerAttributes {
                     CustomDrawer = DrawIntSlider, HideDefaultButton = true };
@@ -129,12 +132,14 @@ namespace fierrof.ActionBar
                 barAttrs.Add(rowsAttr);
                 Rows[b] = Config.Bind(section, "Rows", 1,
                     new ConfigDescription($"Number of rows (1 = horizontal bar, more = grid)",
-                        new AcceptableValueRange<int>(1, MAX_SLOTS), rowsAttr));
+                        new AcceptableValueRange<int>(1, MAX_ROWS), rowsAttr));
 
-                SlotKeys[b] = new ConfigEntry<KeyCode>[MAX_SLOTS];
-                for (int s = 0; s < MAX_SLOTS; s++)
+                SlotKeys[b] = new ConfigEntry<KeyCode>[MAX_BINDABLE_SLOTS];
+                for (int s = 0; s < MAX_BINDABLE_SLOTS; s++)
                 {
-                    KeyCode defaultKey = (b == 0) ? DefaultKeys[s] : KeyCode.None;
+                    KeyCode defaultKey = (b == 0 && s < DefaultKeys.Length)
+                        ? DefaultKeys[s]
+                        : KeyCode.None;
                     SlotKeys[b][s] = Config.Bind($"Bar {b + 1} Keybinds", $"Slot{s + 1}", defaultKey,
                         new ConfigDescription($"Key for slot {s + 1} on Bar {b + 1}",
                         null,
@@ -228,16 +233,32 @@ namespace fierrof.ActionBar
                 PositionY[barIndex].Value = (int)PositionY[barIndex].DefaultValue;
                 Scale[barIndex].Value     = (int)Scale[barIndex].DefaultValue;
                 SlotGap[barIndex].Value   = (int)SlotGap[barIndex].DefaultValue;
+                Rows[barIndex].Value      = (int)Rows[barIndex].DefaultValue;
 
-                for (int s = 0; s < MAX_SLOTS; s++)
+                for (int s = 0; s < MAX_BINDABLE_SLOTS; s++)
                     SlotKeys[barIndex][s].Value = (KeyCode)SlotKeys[barIndex][s].DefaultValue;
 
-                // Reset slot modes to Active
+                // Reset slot runtime state to defaults
                 var allHandlers = Object.FindObjectsOfType<SlotDropHandler>();
                 foreach (var handler in allHandlers)
                 {
                     if (handler.BarIndex == barIndex)
+                    {
+                        if (handler.AssignedItem != null)
+                            handler.ClearSlotSilent();
+
                         handler.Mode = SlotMode.Active;
+                        handler.IsDynamic = false;
+                        handler.RefreshEditModeVisuals();
+                    }
+                }
+
+                var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+                if (character != null)
+                {
+                    DynamicPresetManager.EnsureLoaded(character.UID);
+                    DynamicPresetManager.ClearBarPresets(barIndex);
+                    DynamicPresetManager.SavePresets(character.UID);
                 }
 
                 // Save if character is loaded
@@ -287,6 +308,22 @@ namespace fierrof.ActionBar
 
             var prop = configManagerType.GetProperty("DisplayingWindow");
             prop?.SetValue(configManager, false, null);
+        }
+
+        public static KeyCode GetBoundKey(int barIndex, int slotIndex)
+        {
+            if (barIndex < 0 || barIndex >= MAX_BARS) return KeyCode.None;
+            if (slotIndex < 0 || slotIndex >= MAX_BINDABLE_SLOTS) return KeyCode.None;
+
+            return SlotKeys[barIndex][slotIndex].Value;
+        }
+
+        public static void SetBoundKey(int barIndex, int slotIndex, KeyCode key)
+        {
+            if (barIndex < 0 || barIndex >= MAX_BARS) return;
+            if (slotIndex < 0 || slotIndex >= MAX_BINDABLE_SLOTS) return;
+
+            SlotKeys[barIndex][slotIndex].Value = key;
         }
     }
 }

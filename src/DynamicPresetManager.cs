@@ -138,6 +138,31 @@ namespace fierrof.ActionBar
             }
         }
 
+        public static void ClearBarPresets(int barIndex)
+        {
+            string slotPrefix = $"{barIndex}_";
+            var emptyContexts = new List<string>();
+
+            foreach (var kvp in _presets)
+            {
+                var slots = kvp.Value;
+                if (slots == null) continue;
+
+                var keysToRemove = slots.Keys
+                    .Where(k => k.StartsWith(slotPrefix, StringComparison.Ordinal))
+                    .ToArray();
+
+                foreach (var key in keysToRemove)
+                    slots.Remove(key);
+
+                if (slots.Count == 0)
+                    emptyContexts.Add(kvp.Key);
+            }
+
+            foreach (var contextKey in emptyContexts)
+                _presets.Remove(contextKey);
+        }
+
         /// <summary>
         /// Resolves the best preset for a slot given current weapon context.
         /// Tries combo → main → off → baseline in order.
