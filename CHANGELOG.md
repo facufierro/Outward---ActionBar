@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.1
+
+* Fixed droppable skils, If you dropped a skill and it disappeared, you can relearn it using Debug Mode (There are mods that activate it).
 
 ## 2.0.0
 
