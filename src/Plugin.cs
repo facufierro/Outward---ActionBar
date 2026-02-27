@@ -26,7 +26,6 @@ namespace fierrof.ActionBar
         public static ConfigEntry<int>[]  Scale     = new ConfigEntry<int>[MAX_BARS];
         public static ConfigEntry<int>[]  SlotGap   = new ConfigEntry<int>[MAX_BARS];
         public static ConfigEntry<int>[]  Rows      = new ConfigEntry<int>[MAX_BARS];
-        private static bool[]             _syncingRowsAndSlots = new bool[MAX_BARS];
         
         public static ConfigEntry<bool> SetHotkeyMode;
         public static ConfigEntry<bool> HideBackpack;
@@ -131,32 +130,6 @@ namespace fierrof.ActionBar
                 Rows[b] = Config.Bind(section, "Rows", 1,
                     new ConfigDescription($"Number of rows (1 = horizontal bar, more = grid)",
                         new AcceptableValueRange<int>(1, MAX_SLOTS), rowsAttr));
-
-                int previousRows = Rows[b].Value;
-                Rows[b].SettingChanged += (sender, args) =>
-                {
-                    if (_syncingRowsAndSlots[barIdx])
-                        return;
-
-                    int oldRows = Mathf.Max(1, previousRows);
-                    int newRows = Mathf.Max(1, Rows[barIdx].Value);
-
-                    if (newRows == oldRows)
-                        return;
-
-                    int currentSlots = Mathf.Max(1, SlotCount[barIdx].Value);
-                    int slotsPerRow = Mathf.Max(1, Mathf.CeilToInt(currentSlots / (float)oldRows));
-                    int targetSlots = Mathf.Clamp(slotsPerRow * newRows, 1, MAX_SLOTS);
-
-                    if (targetSlots != SlotCount[barIdx].Value)
-                    {
-                        _syncingRowsAndSlots[barIdx] = true;
-                        SlotCount[barIdx].Value = targetSlots;
-                        _syncingRowsAndSlots[barIdx] = false;
-                    }
-
-                    previousRows = newRows;
-                };
 
                 SlotKeys[b] = new ConfigEntry<KeyCode>[MAX_SLOTS];
                 for (int s = 0; s < MAX_SLOTS; s++)
