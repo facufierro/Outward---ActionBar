@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
@@ -36,6 +37,9 @@ namespace fierrof.ActionBar
         public static ConfigEntry<bool> HideBandage;
         public static ConfigEntry<int> LabelFontSize;
         public static ConfigEntry<int> CooldownFontSize;
+
+        public static Dictionary<string, ConfigEntry<int>> HudElementScale
+            = new Dictionary<string, ConfigEntry<int>>();
 
         public static ConfigEntry<KeyCode>[][] SlotKeys = new ConfigEntry<KeyCode>[MAX_BARS][];
         private static KeyCode[][] RuntimeSlotKeys = new KeyCode[MAX_BARS][];
@@ -96,6 +100,24 @@ namespace fierrof.ActionBar
                 new ConfigDescription("Font size for the cooldown timer.",
                     new AcceptableValueRange<int>(8, 30),
                     new ConfigurationManagerAttributes { Order = -6 }));
+
+            // HUD Element Scaling
+            foreach (var kvp in HudMoverManager.KnownElements)
+            {
+                string friendlyName = kvp.Value;
+                var entry = Config.Bind("HUD Element Scaling", $"{friendlyName} Scale", 100,
+                    new ConfigDescription($"Scale of {friendlyName} (100 = default)",
+                        new AcceptableValueRange<int>(25, 300)));
+
+                HudElementScale[friendlyName] = entry;
+
+                string capturedName = friendlyName;
+                entry.SettingChanged += (sender, args) =>
+                {
+                    if (HudMoverManager.Instance != null)
+                        HudMoverManager.Instance.ApplyScale(capturedName, ((ConfigEntry<int>)sender).Value);
+                };
+            }
 
             // Bar Settings
             for (int b = 0; b < MAX_BARS; b++)

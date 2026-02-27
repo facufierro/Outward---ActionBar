@@ -35,6 +35,17 @@ namespace fierrof.ActionBar
 
         public Vector2 OriginalPosition => _originalAnchoredPos;
 
+        private int _scalePercent = 100;
+        public int ScalePercent => _scalePercent;
+
+        public void SetScale(int percent)
+        {
+            _scalePercent = percent;
+            if (_rect == null) return;
+            float s = percent / 100f;
+            _rect.localScale = new Vector3(s, s, 1f);
+        }
+
         // ── Drag handling ──────────────────────────────────
 
         public void OnBeginDrag(PointerEventData eventData)
