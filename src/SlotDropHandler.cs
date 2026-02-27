@@ -434,7 +434,8 @@ namespace fierrof.ActionBar
             {
                 bool onCooldown = AssignedItem is Skill s && s.InCooldown();
                 bool noAmmo = hasRequiredItems && count <= 0;
-                _iconImage.color = (onCooldown || noAmmo) ? new Color(0.3f, 0.3f, 0.3f, 1f) : Color.white;
+                bool equipped = AssignedItem is Equipment eq && eq.IsEquipped;
+                _iconImage.color = (onCooldown || noAmmo || equipped) ? new Color(0.3f, 0.3f, 0.3f, 1f) : Color.white;
             }
         }
 
