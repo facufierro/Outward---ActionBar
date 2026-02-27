@@ -39,9 +39,8 @@ namespace fierrof.ActionBar
         private int _draggingBarIndex = -1;
         private Vector2 _dragAnchorOffset;
 
-        // Equipment change tracking
-        private bool _equipmentChangePending;
-        private float _equipmentChangeDelay;
+        // Equipment change tracking (per-frame)
+        private string _lastWeaponContext = "";
 
         // ── Setup ──────────────────────────────────────────────
 
@@ -64,20 +63,6 @@ namespace fierrof.ActionBar
                 SyncSlots(i);
             }
 
-            // Listen for equipment changes
-            EquipmentPatch.OnEquipmentChanged += OnEquipmentChanged;
-        }
-
-        void OnDestroy()
-        {
-            EquipmentPatch.OnEquipmentChanged -= OnEquipmentChanged;
-        }
-
-        private void OnEquipmentChanged(Character character)
-        {
-            // Delay by one frame to let equipment state settle
-            _equipmentChangePending = true;
-            _equipmentChangeDelay = 0.1f;
         }
 
         // ── UI Build ───────────────────────────────────────────
@@ -278,83 +263,85 @@ namespace fierrof.ActionBar
             ApplyConfig();
         }
 
-        // ── Equipment change handling ────────────────────────
+        // ── Equipment change handling (per-frame) ─────────────
 
         private void HandleEquipmentChange()
         {
-            if (!_equipmentChangePending) return;
-
-            _equipmentChangeDelay -= Time.unscaledDeltaTime;
-            if (_equipmentChangeDelay > 0f) return;
-
-            _equipmentChangePending = false;
+            if (!_slotsLoaded) return;
 
             var character = CharacterManager.Instance?.GetFirstLocalCharacter();
             if (character == null) return;
 
+            string ctx = SlotSaveManager.GetContextKey(character);
+            if (ctx == _lastWeaponContext) return;
+
+            _lastWeaponContext = ctx;
+
             ApplyDynamicPresets(character);
+            SaveSlots();
+
+            Plugin.Log.LogMessage($"Dynamic context changed to '{ctx}'.");
         }
 
         /// <summary>
         /// Applies dynamic presets for current weapon context.
-        /// Called on equipment change and after initial slot load.
         /// </summary>
         public void ApplyDynamicPresets(Character character)
         {
             if (character == null) return;
-            if (!DynamicPresetManager.HasContextChanged(character)) return;
 
-            DynamicPresetManager.EnsureLoaded(character.UID);
+            var resolveKeys = SlotSaveManager
+                .GetResolveKeys(character)
+                .Where(k => k != "baseline")
+                .ToArray();
 
-            var resolveKeys = DynamicPresetManager.GetResolveKeys(character);
-            var handlers = GetAllSlotHandlers();
-            bool anyChanged = false;
-
-            foreach (var handler in handlers)
+            foreach (var handler in GetAllSlotHandlers())
             {
                 if (!handler.IsDynamic) continue;
 
-                if (DynamicPresetManager.ResolvePreset(resolveKeys, handler.BarIndex, handler.SlotIndex,
-                    out var entry))
+                if (SlotSaveManager.TryResolvePreset(handler.BarIndex, handler.SlotIndex, resolveKeys, out int itemID))
                 {
-                    if (entry.ItemID <= 0)
+                    // Override applies only when non-empty. Empty override falls back to base.
+                    if (itemID > 0)
                     {
-                        // Preset says empty
-                        if (handler.AssignedItem != null)
-                        {
-                            handler.ClearSlotSilent();
-                            anyChanged = true;
-                        }
-                    }
-                    else
-                    {
-                        // Already has the right item?
-                        if (handler.AssignedItem != null && handler.AssignedItem.ItemID == entry.ItemID)
+                        if (handler.AssignedItemID == itemID && handler.AssignedItem != null)
                             continue;
 
-                        var item = SlotSaveManager.FindItemStatic(character, entry.ItemID);
+                        var item = SlotSaveManager.FindItem(character, itemID);
                         if (item != null)
-                        {
                             handler.AssignItemSilent(item);
-                            anyChanged = true;
-                        }
-                        else if (handler.AssignedItem != null)
+                        else
                         {
-                            // Resolved entry references an unavailable item; do not keep stale assignment.
+                            // Avoid keeping stale icon/reference from previous context.
                             handler.ClearSlotSilent();
-                            anyChanged = true;
+                            handler.SetAssignedItemIdOnly(itemID);
                         }
+
+                        continue;
                     }
                 }
+
+                // No equipped-context override: use base slot state.
+                if (handler.BaseItemID <= 0)
+                {
+                    if (handler.AssignedItemID > 0)
+                        handler.ClearSlotSilent();
+                    continue;
+                }
+
+                if (handler.AssignedItemID == handler.BaseItemID && handler.AssignedItem != null)
+                    continue;
+
+                var baseItem = SlotSaveManager.FindItem(character, handler.BaseItemID);
+                if (baseItem != null)
+                    handler.AssignItemSilent(baseItem);
                 else
                 {
-                    // No preset found for any context in the chain:
-                    // keep whatever is currently assigned (from save file).
+                    // Avoid keeping stale icon/reference from previous context.
+                    handler.ClearSlotSilent();
+                    handler.SetAssignedItemIdOnly(handler.BaseItemID);
                 }
             }
-
-            if (anyChanged)
-                SaveSlots();
         }
 
         // ── Slot persistence ──────────────────────────────────
@@ -370,40 +357,35 @@ namespace fierrof.ActionBar
 
             string uid = character.UID;
 
-            // New character — reset load state
+            // New character — reset everything
             if (uid != _loadedCharacterUID)
             {
                 _loadedCharacterUID = uid;
                 _slotsLoaded = false;
                 _totalLoadTime = 0f;
-                _retryInterval = 0f;
-                DynamicPresetManager.ResetContextSignature();
+                _retryInterval = 0.5f; // force immediate first load pass
+                _lastWeaponContext = "";
+                SlotSaveManager.Reset();
             }
 
             if (_slotsLoaded) return;
 
             _totalLoadTime += Time.unscaledDeltaTime;
             _retryInterval += Time.unscaledDeltaTime;
-
-            // Wait 0.5s between retries
             if (_retryInterval < 0.5f) return;
             _retryInterval = 0f;
 
-            var allHandlers = GetAllSlotHandlers();
-            bool allFound = SlotSaveManager.Load(uid, allHandlers, character);
+            bool allFound = SlotSaveManager.Load(uid, GetAllSlotHandlers(), character);
 
             if (allFound || _totalLoadTime > 10f)
             {
+                ApplyDynamicPresets(character);
+                _lastWeaponContext = SlotSaveManager.GetContextKey(character);
+                SaveSlots(); // persist final state
                 _slotsLoaded = true;
+
                 if (!allFound)
                     Plugin.Log.LogWarning("Some slotted items could not be found in inventory.");
-                else
-                    Plugin.Log.LogMessage($"All slots loaded for {uid}.");
-
-                // Load dynamic presets and apply for current weapon context
-                DynamicPresetManager.EnsureLoaded(uid);
-                DynamicPresetManager.ResetContextSignature(); // Force re-apply
-                ApplyDynamicPresets(character);
             }
         }
 

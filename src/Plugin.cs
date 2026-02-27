@@ -13,7 +13,7 @@ namespace fierrof.ActionBar
     {
         public const string GUID    = "fierrof.actionbar";
         public const string NAME    = "ActionBar";
-        public const string VERSION = "2.1.0";
+        public const string VERSION = "2.2.0";
 
         public static ManualLogSource Log;
 
@@ -192,7 +192,7 @@ namespace fierrof.ActionBar
             InitializeRuntimeKeybinds();
 
             new Harmony(GUID).PatchAll();
-            Log.LogMessage($"{NAME} v{VERSION} loaded.");
+            Log.LogMessage($"{NAME} v{VERSION} loaded. [dynamic-context-save-fix]");
         }
 
         private static void InitializeRuntimeKeybinds()
@@ -362,13 +362,7 @@ namespace fierrof.ActionBar
                     }
                 }
 
-                var character = CharacterManager.Instance?.GetFirstLocalCharacter();
-                if (character != null)
-                {
-                    DynamicPresetManager.EnsureLoaded(character.UID);
-                    DynamicPresetManager.ClearBarPresets(barIndex);
-                    DynamicPresetManager.SavePresets(character.UID);
-                }
+                SlotSaveManager.ClearBarPresets(barIndex);
 
                 // Save if character is loaded
                 var manager = Object.FindObjectOfType<ActionBarManager>();

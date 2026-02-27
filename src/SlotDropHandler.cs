@@ -28,6 +28,12 @@ namespace fierrof.ActionBar
         /// <summary>The item currently assigned to this slot.</summary>
         public Item AssignedItem { get; private set; }
 
+        /// <summary>Stable item id cache for the assigned slot item, resilient to transient Unity object nulls.</summary>
+        public int AssignedItemID { get; private set; } = -1;
+
+        /// <summary>Base saved slot state used when no dynamic override matches current equipment context.</summary>
+        public int BaseItemID { get; private set; } = -1;
+
         /// <summary>Visibility/functionality mode for this slot.</summary>
         public SlotMode Mode { get; set; } = SlotMode.Active;
 
@@ -74,20 +80,35 @@ namespace fierrof.ActionBar
             if (itemDisplay?.RefItem == null) return;
             if (!itemDisplay.RefItem.IsQuickSlotable) return;
 
-            AssignItem(itemDisplay.RefItem);
+            int droppedItemId = itemDisplay.RefItem.ItemID;
+            var character = CharacterManager.Instance?.GetFirstLocalCharacter();
 
-            // If dynamic slot, save preset for current weapon context
+            // Update model BEFORE AssignItem (which triggers Save)
             if (IsDynamic)
             {
-                var character = CharacterManager.Instance?.GetFirstLocalCharacter();
                 if (character != null)
                 {
-                    string contextKey = DynamicPresetManager.GetContextKey(character);
-                    DynamicPresetManager.SetPreset(contextKey, BarIndex, SlotIndex,
-                        itemDisplay.RefItem.ItemID, itemDisplay.RefItem.UID);
-                    DynamicPresetManager.SavePresets(character.UID);
+                    string contextKey = SlotSaveManager.GetContextKey(character);
+                    if (contextKey == "baseline")
+                    {
+                        SetBaseItemIdOnly(droppedItemId);
+                    }
+                    else
+                    {
+                        SlotSaveManager.SetPreset(BarIndex, SlotIndex, contextKey, droppedItemId);
+                    }
+                }
+                else
+                {
+                    SetBaseItemIdOnly(droppedItemId);
                 }
             }
+            else
+            {
+                SetBaseItemIdOnly(droppedItemId);
+            }
+
+            AssignItem(itemDisplay.RefItem); // This triggers SaveSlots → Save (writes everything)
         }
 
         // ── Update ─────────────────────────────────────────
@@ -95,6 +116,9 @@ namespace fierrof.ActionBar
         void Update()
         {
             bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+
+            if (AssignedItem == null && AssignedItemID > 0)
+                TryRehydrateAssignedItem();
 
             // Outside edit mode: middle-click toggles dynamic on hovered slot.
             if (!IsEditMode && _isHovered && Input.GetMouseButtonDown(2))
@@ -116,20 +140,42 @@ namespace fierrof.ActionBar
                     return;
                 }
 
-                if (AssignedItem != null)
+                if (AssignedItemID > 0)
                 {
-                    // If dynamic slot, also clear the preset for current context
+                    // Dynamic clear: clear context override when equipped, clear base when unequipped.
                     if (IsDynamic)
                     {
                         var character = CharacterManager.Instance?.GetFirstLocalCharacter();
                         if (character != null)
                         {
-                            string contextKey = DynamicPresetManager.GetContextKey(character);
-                            DynamicPresetManager.RemovePreset(contextKey, BarIndex, SlotIndex);
-                            DynamicPresetManager.SavePresets(character.UID);
+                            string contextKey = SlotSaveManager.GetContextKey(character);
+                            if (contextKey == "baseline")
+                            {
+                                SetBaseItemIdOnly(-1);
+                                ClearSlot();
+                                return;
+                            }
+
+                            SlotSaveManager.RemovePreset(BarIndex, SlotIndex, contextKey);
+
+                            if (BaseItemID > 0)
+                            {
+                                var baseItem = SlotSaveManager.FindItem(character, BaseItemID);
+                                if (baseItem != null)
+                                    AssignItem(baseItem);
+                                else
+                                    ClearSlot();
+                            }
+                            else
+                            {
+                                ClearSlot();
+                            }
+                            return;
                         }
                     }
-                    ClearSlot();
+
+                    SetBaseItemIdOnly(-1);
+                    ClearSlot(); // triggers SaveSlots → Save (writes everything)
                     return;
                 }
             }
@@ -200,20 +246,28 @@ namespace fierrof.ActionBar
 
             var character = CharacterManager.Instance?.GetFirstLocalCharacter();
 
-            // Always persist baseline state (including empty) when enabling dynamic.
             if (IsDynamic)
             {
-                int itemID = AssignedItem != null ? AssignedItem.ItemID : -1;
-                string itemUID = AssignedItem?.UID;
-                DynamicPresetManager.SetPreset("baseline", BarIndex, SlotIndex, itemID, itemUID);
+                // Preserve current slot state as base when enabling dynamic.
+                SetBaseItemIdOnly(AssignedItemID);
 
-                if (character != null)
-                    DynamicPresetManager.SavePresets(character.UID);
+                // Enabling: persist current item to current weapon context only
+                int itemID = AssignedItemID > 0 ? AssignedItemID : -1;
+                string contextKey = character != null
+                    ? SlotSaveManager.GetContextKey(character)
+                    : "baseline";
+                SlotSaveManager.SetPreset(BarIndex, SlotIndex, contextKey, itemID);
+            }
+            else
+            {
+                // Disabling: clean up all presets for this slot
+                SlotSaveManager.RemoveAllPresets(BarIndex, SlotIndex);
             }
 
             UpdateModeVisual();
             Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: dynamic={IsDynamic}.");
 
+            // TXT save: non-dynamic slots now save their item, dynamic slots save -1
             var manager = GetComponentInParent<ActionBarManager>();
             if (manager != null) manager.SaveSlots();
         }
@@ -285,7 +339,7 @@ namespace fierrof.ActionBar
                     break;
                 case SlotMode.Hidden:
                     bool inventoryOpen = IsInventoryOpen();
-                    bool hasItem = AssignedItem != null;
+                    bool hasItem = AssignedItemID > 0;
                     bool show = inventoryOpen || hasItem;
                     _slotCanvasGroup.alpha = show ? 1f : 0f;
                     _slotCanvasGroup.blocksRaycasts = show;
@@ -311,11 +365,24 @@ namespace fierrof.ActionBar
             return character.CharacterUI.GetIsMenuDisplayed(CharacterUI.MenuScreens.Inventory);
         }
 
+        private void TryRehydrateAssignedItem()
+        {
+            var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+            if (character == null) return;
+
+            var item = SlotSaveManager.FindItem(character, AssignedItemID);
+            if (item != null)
+                AssignItemSilent(item);
+        }
+
         // ── Item management ────────────────────────────────
 
         public void AssignItem(Item item)
         {
             AssignedItem = item;
+            AssignedItemID = item != null ? item.ItemID : -1;
+            if (!IsDynamic)
+                SetBaseItemIdOnly(AssignedItemID);
             UpdateIcon();
             StartTracking();
             Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: assigned '{item.Name}'.");
@@ -328,6 +395,7 @@ namespace fierrof.ActionBar
         public void AssignItemSilent(Item item)
         {
             AssignedItem = item;
+            AssignedItemID = item != null ? item.ItemID : -1;
             UpdateIcon();
             StartTracking();
         }
@@ -335,6 +403,9 @@ namespace fierrof.ActionBar
         public void ClearSlot()
         {
             AssignedItem = null;
+            AssignedItemID = -1;
+            if (!IsDynamic)
+                SetBaseItemIdOnly(-1);
             UpdateIcon();
             StopTracking();
 
@@ -346,8 +417,19 @@ namespace fierrof.ActionBar
         public void ClearSlotSilent()
         {
             AssignedItem = null;
+            AssignedItemID = -1;
             UpdateIcon();
             StopTracking();
+        }
+
+        public void SetAssignedItemIdOnly(int itemID)
+        {
+            AssignedItemID = itemID > 0 ? itemID : -1;
+        }
+
+        public void SetBaseItemIdOnly(int itemID)
+        {
+            BaseItemID = itemID > 0 ? itemID : -1;
         }
 
         // ── Cooldown & count tracking ───────────────────────
