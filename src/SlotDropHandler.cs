@@ -499,6 +499,24 @@ namespace fierrof.ActionBar
                 case KeyCode.Alpha9: return "9";
                 case KeyCode.Minus:  return "-";
                 case KeyCode.Equals: return "=";
+                case KeyCode.BackQuote: return "`";
+                case KeyCode.LeftBracket: return "[";
+                case KeyCode.RightBracket: return "]";
+                case KeyCode.Backslash: return "\\";
+                case KeyCode.Semicolon: return ";";
+                case KeyCode.Quote: return "'";
+                case KeyCode.Comma: return ",";
+                case KeyCode.Period: return ".";
+                case KeyCode.Slash: return "/";
+                case KeyCode.LeftShift: return "LShift";
+                case KeyCode.RightShift: return "RShift";
+                case KeyCode.LeftControl: return "LCtrl";
+                case KeyCode.RightControl: return "RCtrl";
+                case KeyCode.LeftAlt: return "LAlt";
+                case KeyCode.RightAlt: return "RAlt";
+                case KeyCode.Space: return "Space";
+                case KeyCode.Return: return "Enter";
+                case KeyCode.KeypadEnter: return "NumEnt";
                 default: return key.ToString();
             }
         }
