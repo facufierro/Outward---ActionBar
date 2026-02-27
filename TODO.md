@@ -1,0 +1,3 @@
+- resetbutton is not reseting slot states.
+- add reset buttons to all configs for bars.
+- 
