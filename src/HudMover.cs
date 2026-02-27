@@ -15,6 +15,8 @@ namespace fierrof.ActionBar
 
         private RectTransform _rect;
         private Vector2 _originalAnchoredPos;
+        private Vector3 _originalScale;
+        private int _scalePercent = 100;
         private Vector2 _dragOffset;
         private bool _dragging;
 
@@ -31,9 +33,11 @@ namespace fierrof.ActionBar
         {
             _rect = GetComponent<RectTransform>();
             _originalAnchoredPos = _rect.anchoredPosition;
+            _originalScale = _rect.localScale;
         }
 
         public Vector2 OriginalPosition => _originalAnchoredPos;
+        public int ScalePercent => _scalePercent;
 
         // ── Drag handling ──────────────────────────────────
 
@@ -233,9 +237,18 @@ namespace fierrof.ActionBar
             return _rect.anchoredPosition;
         }
 
+        public void SetScale(int percent)
+        {
+            _scalePercent = percent;
+            float s = percent / 100f;
+            _rect.localScale = new Vector3(s, s, 1f);
+        }
+
         public void ResetToOriginal()
         {
             _rect.anchoredPosition = _originalAnchoredPos;
+            _scalePercent = 100;
+            _rect.localScale = _originalScale;
         }
 
         private static RectTransform FindContentChild(RectTransform parent)
