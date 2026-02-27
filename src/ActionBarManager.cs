@@ -348,12 +348,8 @@ namespace fierrof.ActionBar
                 }
                 else
                 {
-                    // No preset at all for this context chain: revert to empty.
-                    if (handler.AssignedItem != null)
-                    {
-                        handler.ClearSlotSilent();
-                        anyChanged = true;
-                    }
+                    // No preset found for any context in the chain:
+                    // keep whatever is currently assigned (from save file).
                 }
             }
 

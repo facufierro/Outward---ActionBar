@@ -77,7 +77,7 @@ namespace fierrof.ActionBar
 
                     var item = FindItem(character, itemID);
                     if (item != null)
-                        slot.AssignItem(item);
+                        slot.AssignItemSilent(item);
                     else
                         allFound = false;
                 }
