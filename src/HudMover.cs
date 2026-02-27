@@ -111,9 +111,9 @@ namespace fierrof.ActionBar
                 _handleObj.transform.SetParent(transform, false);
                 _handleObj.transform.SetAsLastSibling();
 
-                // ── Yellow highlight background ──
+                // ── Semi-transparent black highlight background ──
                 var img = _handleObj.AddComponent<Image>();
-                img.color = new Color(1f, 1f, 0f, 0.15f);
+                img.color = new Color(0f, 0f, 0f, 0.35f);
                 img.raycastTarget = true; // needed for drag events
 
                 var hRect = _handleObj.GetComponent<RectTransform>();

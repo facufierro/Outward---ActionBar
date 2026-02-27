@@ -428,15 +428,15 @@ namespace fierrof.ActionBar
                 _wasConfigMode = true;
                 RefreshAllSlotVisuals();
 
-                // Show yellow grab handles on action bar containers
+                // Show semi-transparent black grab handles on action bar containers
                 for (int i = 0; i < Plugin.MAX_BARS; i++)
                 {
                     if (_containers[i] != null)
                     {
                         var img = _containers[i].GetComponent<Image>();
-                        img.color = new Color(1f, 1f, 0f, 0.15f);
+                        img.color = new Color(0f, 0f, 0f, 0.35f);
 
-                        // Add 4px padding so the yellow extends beyond the slots
+                        // Add 4px padding so the handle tint extends beyond the slots
                         var layout = _containers[i].GetComponent<GridLayoutGroup>();
                         layout.padding = new RectOffset(4, 4, 4, 4);
                     }
@@ -450,7 +450,7 @@ namespace fierrof.ActionBar
                 _wasConfigMode = false;
                 RefreshAllSlotVisuals();
 
-                // Remove yellow handles and restore container size
+                // Remove handle tint and restore container size
                 for (int i = 0; i < Plugin.MAX_BARS; i++)
                 {
                     if (_containers[i] != null)
