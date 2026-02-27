@@ -28,7 +28,8 @@ namespace fierrof.ActionBar
                 int lineIndex = slot.BarIndex * Plugin.MAX_SLOTS_PER_BAR + slot.SlotIndex;
                 string itemId = slot.AssignedItem != null ? slot.AssignedItem.ItemID.ToString() : "-1";
                 int mode = (int)slot.Mode;
-                lines[lineIndex] = $"{itemId}|{mode}";
+                int dynamic = slot.IsDynamic ? 1 : 0;
+                lines[lineIndex] = $"{itemId}|{mode}|{dynamic}";
             }
 
             Directory.CreateDirectory(SaveDir);
@@ -60,9 +61,15 @@ namespace fierrof.ActionBar
                     if (!int.TryParse(parts[0], out int itemID))
                         continue;
 
-                    // Load mode (0=Active, 1=Hidden, 2=Disabled, 3=Dynamic)
-                    if (parts.Length > 1 && int.TryParse(parts[1], out int modeInt) && modeInt >= 0 && modeInt <= 3)
+                    // Load mode (0=Active, 1=Hidden, 2=Disabled)
+                    if (parts.Length > 1 && int.TryParse(parts[1], out int modeInt) && modeInt >= 0 && modeInt <= 2)
                         slot.Mode = (SlotMode)modeInt;
+
+                    // Load dynamic flag
+                    if (parts.Length > 2 && int.TryParse(parts[2], out int dynInt))
+                        slot.IsDynamic = dynInt == 1;
+
+                    slot.RefreshEditModeVisuals();
 
                     // Load item
                     if (slot.AssignedItem != null) continue; // already loaded
