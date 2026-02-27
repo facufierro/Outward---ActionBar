@@ -23,7 +23,7 @@ namespace fierrof.ActionBar
 
         // ── Exact-name matches (always attached regardless of depth) ──
         // Names taken directly from the CharacterUI hierarchy log
-        public static readonly Dictionary<string, string> KnownElements = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> KnownElements = new Dictionary<string, string>
         {
             // All bars as a group (L3)
             { "MainCharacterBars",          "Health / Mana / Stamina" },
@@ -165,7 +165,6 @@ namespace fierrof.ActionBar
             DiscoverRecursive(root, 0, 10);
 
             LoadPositions();
-            ApplyConfigScales();
             Plugin.Log.LogMessage($"HUD Mover: attached to {_movers.Count} elements.");
         }
 
@@ -211,30 +210,6 @@ namespace fierrof.ActionBar
             }
         }
 
-        // ── Scale ─────────────────────────────────────────────
-
-        public void ApplyConfigScales()
-        {
-            foreach (var m in _movers)
-            {
-                if (Plugin.HudElementScale.TryGetValue(m.ElementId, out var entry))
-                    m.SetScale(entry.Value);
-            }
-        }
-
-        public void ApplyScale(string elementId, int scalePercent)
-        {
-            foreach (var m in _movers)
-            {
-                if (m.ElementId == elementId)
-                {
-                    m.SetScale(scalePercent);
-                    SavePositions();
-                    return;
-                }
-            }
-        }
-
         // ── Save / Load ────────────────────────────────────
 
         public void SavePositions()
@@ -247,8 +222,8 @@ namespace fierrof.ActionBar
                 foreach (var m in _movers)
                 {
                     var pos = m.GetPosition();
-                    // Format: ElementId=X,Y,Scale
-                    lines.Add($"{m.ElementId}={pos.x:F2},{pos.y:F2},{m.ScalePercent}");
+                    // Format: ElementId=X,Y
+                    lines.Add($"{m.ElementId}={pos.x:F2},{pos.y:F2}");
                 }
                 
                 File.WriteAllLines(SavePath, lines);
@@ -270,28 +245,21 @@ namespace fierrof.ActionBar
                 var lines = File.ReadAllLines(SavePath);
                 var positions = new Dictionary<string, Vector2>();
 
-                var scales = new Dictionary<string, int>();
-
-                // Parse our simple format: "ElementId=x,y[,scale]" per line
+                // Parse our simple format: "ElementId=x,y" per line
                 foreach (var line in lines)
                 {
                     var parts = line.Split('=');
                     if (parts.Length != 2) continue;
 
                     var coords = parts[1].Split(',');
-                    if (coords.Length < 2) continue;
+                    if (coords.Length != 2) continue;
 
-                    if (float.TryParse(coords[0].Trim(), System.Globalization.NumberStyles.Float,
+                    if (float.TryParse(coords[0].Trim(), System.Globalization.NumberStyles.Float, 
                             System.Globalization.CultureInfo.InvariantCulture, out float x) &&
                         float.TryParse(coords[1].Trim(), System.Globalization.NumberStyles.Float,
                             System.Globalization.CultureInfo.InvariantCulture, out float y))
                     {
-                        string key = parts[0].Trim();
-                        positions[key] = new Vector2(x, y);
-
-                        // Optional third value: scale percent
-                        if (coords.Length >= 3 && int.TryParse(coords[2].Trim(), out int scale))
-                            scales[key] = scale;
+                        positions[parts[0].Trim()] = new Vector2(x, y);
                     }
                 }
 
@@ -301,10 +269,6 @@ namespace fierrof.ActionBar
                     {
                         m.SetPosition(pos.x, pos.y);
                         Plugin.Log.LogMessage($"HUD '{m.ElementId}': restored to ({pos.x:F1}, {pos.y:F1}).");
-                    }
-                    if (scales.TryGetValue(m.ElementId, out int s))
-                    {
-                        m.SetScale(s);
                     }
                 }
             }
@@ -317,19 +281,13 @@ namespace fierrof.ActionBar
         public void ResetAllPositions()
         {
             foreach (var m in _movers)
-            {
                 m.ResetToOriginal();
-
-                // Reset config entry to default too
-                if (Plugin.HudElementScale.TryGetValue(m.ElementId, out var entry))
-                    entry.Value = 100;
-            }
 
             // Delete save file
             if (File.Exists(SavePath))
                 File.Delete(SavePath);
 
-            Plugin.Log.LogMessage("HUD positions and scales reset to defaults.");
+            Plugin.Log.LogMessage("HUD positions reset to defaults.");
         }
 
         // We need to re-discover if scene changes
