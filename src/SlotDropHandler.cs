@@ -44,7 +44,7 @@ namespace fierrof.ActionBar
         private CanvasGroup _slotCanvasGroup;
 
         // Cooldown UI
-        private Image _cooldownOverlay;
+        private Text _cooldownLabel;
         private Coroutine _cooldownCoroutine;
 
         // Count UI
@@ -359,7 +359,7 @@ namespace fierrof.ActionBar
 
             if (AssignedItem is Skill skill)
             {
-                EnsureCooldownOverlay();
+                EnsureCooldownLabel();
                 _cooldownCoroutine = StartCoroutine(TrackCooldown(skill));
             }
 
@@ -374,8 +374,10 @@ namespace fierrof.ActionBar
                 StopCoroutine(_cooldownCoroutine);
                 _cooldownCoroutine = null;
             }
-            if (_cooldownOverlay != null)
-                _cooldownOverlay.fillAmount = 0f;
+            if (_cooldownLabel != null)
+                _cooldownLabel.text = "";
+            if (_iconImage != null)
+                _iconImage.color = AssignedItem != null ? Color.white : Color.clear;
 
             if (_countCoroutine != null)
             {
@@ -388,36 +390,24 @@ namespace fierrof.ActionBar
 
         private IEnumerator TrackCooldown(Skill skill)
         {
-            var progressMethod = skill.GetType().GetMethod("GetCooldownProgress",
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            var remainingField = skill.GetType().GetField("m_remainingCooldownTime",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var cooldownField = skill.GetType().GetField("m_cooldownTime",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
             while (true)
             {
                 if (skill != null && skill.InCooldown())
                 {
-                    float progress = 0f;
-                    if (progressMethod != null)
-                    {
-                        progress = (float)progressMethod.Invoke(skill, null);
-                    }
-                    else if (remainingField != null && cooldownField != null)
-                    {
-                        float remaining = (float)remainingField.GetValue(skill);
-                        float total = (float)cooldownField.GetValue(skill);
-                        progress = total > 0f ? remaining / total : 0f;
-                    }
-                    _cooldownOverlay.fillAmount = Mathf.Clamp01(progress);
-                    _cooldownOverlay.color = new Color(0f, 0f, 0f, 0.6f);
+                    if (_iconImage != null)
+                        _iconImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+
+                    float remaining = skill.RealCooldown * (1f - skill.CoolDownProgress);
+                    int seconds = Mathf.CeilToInt(remaining);
+                    _cooldownLabel.text = seconds > 0 ? seconds.ToString() : "";
                 }
                 else
                 {
-                    _cooldownOverlay.fillAmount = 0f;
+                    if (_iconImage != null)
+                        _iconImage.color = Color.white;
+                    _cooldownLabel.text = "";
                 }
-                yield return new WaitForSeconds(0.05f);
+                yield return new WaitForSeconds(0.1f);
             }
         }
 
@@ -566,8 +556,8 @@ namespace fierrof.ActionBar
             }
 
             // Ensure overlays stay on top
-            if (_cooldownOverlay != null)
-                _cooldownOverlay.transform.SetAsLastSibling();
+            if (_cooldownLabel != null)
+                _cooldownLabel.transform.SetAsLastSibling();
             if (_keyLabel != null)
                 _keyLabel.transform.SetAsLastSibling();
             if (_countLabel != null)
@@ -596,22 +586,27 @@ namespace fierrof.ActionBar
             rect.offsetMax = new Vector2(-2f, -2f);
         }
 
-        private void EnsureCooldownOverlay()
+        private void EnsureCooldownLabel()
         {
-            if (_cooldownOverlay != null) return;
+            if (_cooldownLabel != null) return;
 
-            var go = new GameObject("CooldownOverlay");
+            var go = new GameObject("CooldownLabel");
             go.layer = 5;
             go.transform.SetParent(transform, false);
 
-            _cooldownOverlay = go.AddComponent<Image>();
-            _cooldownOverlay.type = Image.Type.Filled;
-            _cooldownOverlay.fillMethod = Image.FillMethod.Radial360;
-            _cooldownOverlay.fillOrigin = (int)Image.Origin360.Top;
-            _cooldownOverlay.fillClockwise = true;
-            _cooldownOverlay.fillAmount = 0f;
-            _cooldownOverlay.color = new Color(0f, 0f, 0f, 0.6f);
-            _cooldownOverlay.raycastTarget = false;
+            _cooldownLabel = go.AddComponent<Text>();
+            _cooldownLabel.font = Font.CreateDynamicFontFromOSFont("Arial", 16);
+            _cooldownLabel.fontSize = 16;
+            _cooldownLabel.fontStyle = FontStyle.Bold;
+            _cooldownLabel.alignment = TextAnchor.MiddleCenter;
+            _cooldownLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+            _cooldownLabel.verticalOverflow = VerticalWrapMode.Overflow;
+            _cooldownLabel.color = Color.white;
+            _cooldownLabel.raycastTarget = false;
+
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.9f);
+            outline.effectDistance = new Vector2(1f, -1f);
 
             var rect = go.GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
