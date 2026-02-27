@@ -394,17 +394,12 @@ namespace fierrof.ActionBar
             {
                 if (skill != null && skill.InCooldown())
                 {
-                    if (_iconImage != null)
-                        _iconImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
-
                     float remaining = skill.RealCooldown * (1f - skill.CoolDownProgress);
                     int seconds = Mathf.CeilToInt(remaining);
                     _cooldownLabel.text = seconds > 0 ? seconds.ToString() : "";
                 }
                 else
                 {
-                    if (_iconImage != null)
-                        _iconImage.color = Color.white;
                     _cooldownLabel.text = "";
                 }
                 yield return new WaitForSeconds(0.1f);
@@ -431,7 +426,16 @@ namespace fierrof.ActionBar
             if (character?.Inventory == null) { _countLabel.text = ""; return; }
 
             int count = GetItemCount(character);
-            _countLabel.text = count > 0 ? count.ToString() : "";
+            bool hasRequiredItems = AssignedItem is Skill skill
+                && skill.RequiredItems != null && skill.RequiredItems.Length > 0;
+            _countLabel.text = count > 0 ? count.ToString() : (hasRequiredItems ? "0" : "");
+
+            if (_iconImage != null)
+            {
+                bool onCooldown = AssignedItem is Skill s && s.InCooldown();
+                bool noAmmo = hasRequiredItems && count <= 0;
+                _iconImage.color = (onCooldown || noAmmo) ? new Color(0.3f, 0.3f, 0.3f, 1f) : Color.white;
+            }
         }
 
         private IEnumerator TrackCount()
