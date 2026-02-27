@@ -34,6 +34,8 @@ namespace fierrof.ActionBar
         public static ConfigEntry<bool> SetHotkeyMode;
         public static ConfigEntry<bool> HideBackpack;
         public static ConfigEntry<bool> HideBandage;
+        public static ConfigEntry<int> LabelFontSize;
+        public static ConfigEntry<int> CooldownFontSize;
 
         public static ConfigEntry<KeyCode>[][] SlotKeys = new ConfigEntry<KeyCode>[MAX_BARS][];
         private static KeyCode[][] RuntimeSlotKeys = new KeyCode[MAX_BARS][];
@@ -84,6 +86,16 @@ namespace fierrof.ActionBar
             HideBandage.SettingChanged += (sender, args) => {
                 if (HudMoverManager.Instance != null) HudMoverManager.Instance.UpdateVisibilityOnConfigChange();
             };
+
+            LabelFontSize = Config.Bind("Global Settings", "Label Font Size", 11,
+                new ConfigDescription("Font size for hotkey and item count labels.",
+                    new AcceptableValueRange<int>(6, 24),
+                    new ConfigurationManagerAttributes { Order = -5 }));
+
+            CooldownFontSize = Config.Bind("Global Settings", "Cooldown Font Size", 16,
+                new ConfigDescription("Font size for the cooldown timer.",
+                    new AcceptableValueRange<int>(8, 30),
+                    new ConfigurationManagerAttributes { Order = -6 }));
 
             // Bar Settings
             for (int b = 0; b < MAX_BARS; b++)

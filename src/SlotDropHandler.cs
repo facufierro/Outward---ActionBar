@@ -598,9 +598,10 @@ namespace fierrof.ActionBar
             go.layer = 5;
             go.transform.SetParent(transform, false);
 
+            int cdSize = Plugin.CooldownFontSize.Value;
             _cooldownLabel = go.AddComponent<Text>();
-            _cooldownLabel.font = Font.CreateDynamicFontFromOSFont("Arial", 16);
-            _cooldownLabel.fontSize = 16;
+            _cooldownLabel.font = Font.CreateDynamicFontFromOSFont("Arial", cdSize);
+            _cooldownLabel.fontSize = cdSize;
             _cooldownLabel.fontStyle = FontStyle.Bold;
             _cooldownLabel.alignment = TextAnchor.MiddleCenter;
             _cooldownLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -627,9 +628,10 @@ namespace fierrof.ActionBar
             go.layer = 5;
             go.transform.SetParent(transform, false);
 
+            int lblSize = Plugin.LabelFontSize.Value;
             _countLabel = go.AddComponent<Text>();
-            _countLabel.font = Font.CreateDynamicFontFromOSFont("Arial", 12);
-            _countLabel.fontSize = 11;
+            _countLabel.font = Font.CreateDynamicFontFromOSFont("Arial", lblSize);
+            _countLabel.fontSize = lblSize;
             _countLabel.alignment = TextAnchor.LowerRight;
             _countLabel.color = new Color(1f, 1f, 1f, 0.9f);
             _countLabel.raycastTarget = false;
@@ -653,9 +655,10 @@ namespace fierrof.ActionBar
             go.layer = 5;
             go.transform.SetParent(transform, false);
 
+            int keySize = Plugin.LabelFontSize.Value;
             _keyLabel = go.AddComponent<Text>();
-            _keyLabel.font      = Font.CreateDynamicFontFromOSFont("Arial", 12);
-            _keyLabel.fontSize  = 11;
+            _keyLabel.font      = Font.CreateDynamicFontFromOSFont("Arial", keySize);
+            _keyLabel.fontSize  = keySize;
             _keyLabel.alignment = TextAnchor.UpperRight;
             _keyLabel.color     = new Color(1f, 1f, 1f, 0.8f);
             _keyLabel.raycastTarget = false;
