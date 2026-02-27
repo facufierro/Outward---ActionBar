@@ -31,10 +31,13 @@ namespace fierrof.ActionBar
         private bool[]  _lastEnabled = new bool[Plugin.MAX_BARS];
 
         private CanvasGroup      _canvasGroup;
+        private Canvas _uiCanvas;
 
         private GameObject _configOverlay;
         private bool _wasConfigMode;
         private string _loadedCharacterUID;
+        private int _draggingBarIndex = -1;
+        private Vector2 _dragAnchorOffset;
 
         // Equipment change tracking
         private bool _equipmentChangePending;
@@ -93,9 +96,9 @@ namespace fierrof.ActionBar
             // overrideSorting makes our bar render ABOVE the DropPanel (0)
             // and above the default game elements, but the drag cursor
             // (which renders on the game's main canvas) stays on top.
-            var canvas = gameObject.AddComponent<Canvas>();
-            canvas.overrideSorting = true;
-            canvas.sortingOrder = 1;
+            _uiCanvas = gameObject.AddComponent<Canvas>();
+            _uiCanvas.overrideSorting = true;
+            _uiCanvas.sortingOrder = 1;
 
             gameObject.AddComponent<GraphicRaycaster>();
 
@@ -168,15 +171,16 @@ namespace fierrof.ActionBar
             text.fontSize = 40;
             text.alignment = TextAnchor.UpperRight; // Align the actual text to the right
             text.color = Color.white;
-            text.text = "EDIT MODE\n" +
-                        "<size=26>\n" +
-                        "• Drag icons into slots to assign them\n" +
+            text.text = "INSTRUCTIONS\n" +
+                        "<size=26>" +
+                        "• Open Config (F5) to add/resize bars\n" +
+                        "• Drag skills and items into slots to assign them\n" +
+                        "• Middle-Click a slot to toggle it Dynamic\n\n" +
+                        "EDITOR MODE\n" +
                         "• Hover a slot & press a key to bind it\n" +
-                        "• Drag yellow handles to move elements\n" +
-                        "• Right-Click a slot to Hide/Disable it\n" +
-                        "• Ctrl+Right-Click to toggle Dynamic\n" +
-                        "• Open Config (F5) to add/resize bars\n\n" +
-                        "Press ESC to Exit</size>";
+                        "• Drag bars and ui elements to move them\n" +
+                        "• Right-Click a slot to Hide/Disable it" +
+                        "</size>";
 
             var outline = textGO.AddComponent<Outline>();
             outline.effectColor = Color.black;
@@ -267,6 +271,7 @@ namespace fierrof.ActionBar
 
             TryLoadSlots();
             HandleConfigModeState();
+            HandleBarDragging();
             HandleEquipmentChange();
 
             SuppressVanillaBar();
@@ -445,7 +450,7 @@ namespace fierrof.ActionBar
                     if (_containers[i] != null)
                     {
                         var img = _containers[i].GetComponent<Image>();
-                        img.color = new Color(0f, 0f, 0f, 0.35f);
+                        img.color = new Color(0.18f, 0.18f, 0.18f, 0.75f);
 
                         // Add 4px padding so the handle tint extends beyond the slots
                         var layout = _containers[i].GetComponent<GridLayoutGroup>();
@@ -459,6 +464,7 @@ namespace fierrof.ActionBar
                 Time.timeScale = 1f; // Resume game
                 Cursor.lockState = CursorLockMode.Confined;
                 _wasConfigMode = false;
+                _draggingBarIndex = -1;
                 RefreshAllSlotVisuals();
 
                 // Remove handle tint and restore container size
@@ -478,6 +484,107 @@ namespace fierrof.ActionBar
             {
                 SlotDropHandler.IsEditMode = false;
             }
+        }
+
+        private void HandleBarDragging()
+        {
+            if (!SlotDropHandler.IsEditMode)
+            {
+                _draggingBarIndex = -1;
+                return;
+            }
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                Vector2 mousePosition = Input.mousePosition;
+                _draggingBarIndex = GetBarIndexUnderMouse(mousePosition);
+
+                if (_draggingBarIndex >= 0 && _containers[_draggingBarIndex] != null)
+                {
+                    var barRect = _containers[_draggingBarIndex].GetComponent<RectTransform>();
+                    if (barRect != null && TryGetMouseNormalized(mousePosition, out var mouseNorm))
+                    {
+                        _dragAnchorOffset = barRect.anchorMin - mouseNorm;
+                    }
+                    else
+                    {
+                        _draggingBarIndex = -1;
+                    }
+                }
+            }
+
+            if (_draggingBarIndex < 0) return;
+
+            if (Input.GetMouseButton(0))
+            {
+                Vector2 mousePosition = Input.mousePosition;
+                if (!TryGetMouseNormalized(mousePosition, out var mouseNorm)) return;
+
+                var barRect = _containers[_draggingBarIndex].GetComponent<RectTransform>();
+                if (barRect == null) return;
+
+                Vector2 anchor = mouseNorm + _dragAnchorOffset;
+                anchor.x = Mathf.Clamp01(anchor.x);
+                anchor.y = Mathf.Clamp01(anchor.y);
+
+                barRect.anchorMin = anchor;
+                barRect.anchorMax = anchor;
+                barRect.anchoredPosition = Vector2.zero;
+            }
+
+            if (Input.GetMouseButtonUp(0))
+            {
+                if (_draggingBarIndex >= 0 && _containers[_draggingBarIndex] != null)
+                {
+                    var barRect = _containers[_draggingBarIndex].GetComponent<RectTransform>();
+                    if (barRect != null)
+                    {
+                        int newX = Mathf.RoundToInt(barRect.anchorMin.x * 100f);
+                        int newY = Mathf.RoundToInt(barRect.anchorMin.y * 100f);
+
+                        Plugin.PositionX[_draggingBarIndex].Value = Mathf.Clamp(newX, 0, 100);
+                        Plugin.PositionY[_draggingBarIndex].Value = Mathf.Clamp(newY, 0, 100);
+                    }
+                }
+
+                _draggingBarIndex = -1;
+            }
+        }
+
+        private int GetBarIndexUnderMouse(Vector2 mousePosition)
+        {
+            for (int i = Plugin.MAX_BARS - 1; i >= 0; i--)
+            {
+                if (_containers[i] == null || !_containers[i].activeInHierarchy) continue;
+
+                var rect = _containers[i].GetComponent<RectTransform>();
+                if (rect == null) continue;
+
+                var eventCamera = _uiCanvas != null ? _uiCanvas.worldCamera : null;
+                if (RectTransformUtility.RectangleContainsScreenPoint(rect, mousePosition, eventCamera))
+                    return i;
+            }
+
+            return -1;
+        }
+
+        private bool TryGetMouseNormalized(Vector2 mousePosition, out Vector2 normalized)
+        {
+            normalized = Vector2.zero;
+
+            var rootRect = GetComponent<RectTransform>();
+            if (rootRect == null) return false;
+
+            var eventCamera = _uiCanvas != null ? _uiCanvas.worldCamera : null;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rootRect, mousePosition, eventCamera, out var localPoint))
+                return false;
+
+            var rect = rootRect.rect;
+            if (rect.width <= 0f || rect.height <= 0f) return false;
+
+            normalized.x = Mathf.Clamp01((localPoint.x - rect.xMin) / rect.width);
+            normalized.y = Mathf.Clamp01((localPoint.y - rect.yMin) / rect.height);
+            return true;
         }
 
         private void RefreshAllSlotVisuals()
@@ -542,6 +649,15 @@ namespace fierrof.ActionBar
                 }
 
                 var rect              = _containers[i].GetComponent<RectTransform>();
+
+                if (i == _draggingBarIndex)
+                {
+                    _lastPosX[i] = rect.anchorMin.x;
+                    _lastPosY[i] = rect.anchorMin.y;
+                    _lastScale[i] = scale;
+                    continue;
+                }
+
                 rect.anchorMin        = new Vector2(x, y);
                 rect.anchorMax        = new Vector2(x, y);
                 rect.pivot            = new Vector2(0.5f, 0f); // Default to center-bottom alignment to keep slots centered

@@ -451,12 +451,11 @@ namespace fierrof.ActionBar
         private void SetKeybind(KeyCode key)
         {
             if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS_PER_BAR) return;
-            if (SlotIndex >= Plugin.MAX_BINDABLE_SLOTS) return;
 
             if (key != KeyCode.None)
             {
                 for (int b = 0; b < Plugin.MAX_BARS; b++)
-                    for (int s = 0; s < Plugin.MAX_BINDABLE_SLOTS; s++)
+                    for (int s = 0; s < Plugin.MAX_SLOTS_PER_BAR; s++)
                         if ((b != BarIndex || s != SlotIndex) && Plugin.GetBoundKey(b, s) == key)
                         {
                             Plugin.SetBoundKey(b, s, KeyCode.None);

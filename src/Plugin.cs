@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using System.IO;
 using UnityEngine;
 
 namespace fierrof.ActionBar
@@ -35,6 +36,9 @@ namespace fierrof.ActionBar
         public static ConfigEntry<bool> HideBandage;
 
         public static ConfigEntry<KeyCode>[][] SlotKeys = new ConfigEntry<KeyCode>[MAX_BARS][];
+        private static KeyCode[][] RuntimeSlotKeys = new KeyCode[MAX_BARS][];
+        private static string ExtraKeybindsPath =>
+            Path.Combine(BepInEx.Paths.ConfigPath, "ActionBar_ExtraKeybinds.txt");
 
         private static readonly KeyCode[] DefaultKeys = {
             KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4,
@@ -135,6 +139,7 @@ namespace fierrof.ActionBar
                         new AcceptableValueRange<int>(1, MAX_ROWS), rowsAttr));
 
                 SlotKeys[b] = new ConfigEntry<KeyCode>[MAX_BINDABLE_SLOTS];
+                RuntimeSlotKeys[b] = new KeyCode[MAX_SLOTS_PER_BAR];
                 for (int s = 0; s < MAX_BINDABLE_SLOTS; s++)
                 {
                     KeyCode defaultKey = (b == 0 && s < DefaultKeys.Length)
@@ -144,6 +149,12 @@ namespace fierrof.ActionBar
                         new ConfigDescription($"Key for slot {s + 1} on Bar {b + 1}",
                         null,
                         new ConfigurationManagerAttributes { Browsable = false }));
+
+                    int bindBar = b;
+                    int bindSlot = s;
+                    SlotKeys[b][s].SettingChanged += (sender, args) => {
+                        RuntimeSlotKeys[bindBar][bindSlot] = SlotKeys[bindBar][bindSlot].Value;
+                    };
                 }
 
                 // Reset button
@@ -166,8 +177,85 @@ namespace fierrof.ActionBar
                 };
             }
 
+            InitializeRuntimeKeybinds();
+
             new Harmony(GUID).PatchAll();
             Log.LogMessage($"{NAME} v{VERSION} loaded.");
+        }
+
+        private static void InitializeRuntimeKeybinds()
+        {
+            for (int b = 0; b < MAX_BARS; b++)
+            {
+                if (RuntimeSlotKeys[b] == null)
+                    RuntimeSlotKeys[b] = new KeyCode[MAX_SLOTS_PER_BAR];
+
+                for (int s = 0; s < MAX_SLOTS_PER_BAR; s++)
+                {
+                    RuntimeSlotKeys[b][s] = s < MAX_BINDABLE_SLOTS
+                        ? SlotKeys[b][s].Value
+                        : KeyCode.None;
+                }
+            }
+
+            LoadExtraKeybinds();
+        }
+
+        private static void LoadExtraKeybinds()
+        {
+            if (!File.Exists(ExtraKeybindsPath)) return;
+
+            try
+            {
+                foreach (var rawLine in File.ReadAllLines(ExtraKeybindsPath))
+                {
+                    var line = rawLine.Trim();
+                    if (string.IsNullOrEmpty(line)) continue;
+
+                    var parts = line.Split('=');
+                    if (parts.Length != 2) continue;
+
+                    var indices = parts[0].Split(',');
+                    if (indices.Length != 2) continue;
+
+                    if (!int.TryParse(indices[0], out int barIndex)) continue;
+                    if (!int.TryParse(indices[1], out int slotIndex)) continue;
+                    if (barIndex < 0 || barIndex >= MAX_BARS) continue;
+                    if (slotIndex < MAX_BINDABLE_SLOTS || slotIndex >= MAX_SLOTS_PER_BAR) continue;
+
+                    if (System.Enum.TryParse(parts[1], out KeyCode key))
+                        RuntimeSlotKeys[barIndex][slotIndex] = key;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Log.LogWarning($"Failed to load extra keybinds: {ex.Message}");
+            }
+        }
+
+        private static void SaveExtraKeybinds()
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(ExtraKeybindsPath));
+
+                var lines = new System.Collections.Generic.List<string>();
+                for (int b = 0; b < MAX_BARS; b++)
+                {
+                    for (int s = MAX_BINDABLE_SLOTS; s < MAX_SLOTS_PER_BAR; s++)
+                    {
+                        var key = RuntimeSlotKeys[b][s];
+                        if (key == KeyCode.None) continue;
+                        lines.Add($"{b},{s}={key}");
+                    }
+                }
+
+                File.WriteAllLines(ExtraKeybindsPath, lines.ToArray());
+            }
+            catch (System.Exception ex)
+            {
+                Log.LogWarning($"Failed to save extra keybinds: {ex.Message}");
+            }
         }
 
         private static void DrawIntSlider(ConfigEntryBase entry)
@@ -237,6 +325,15 @@ namespace fierrof.ActionBar
 
                 for (int s = 0; s < MAX_BINDABLE_SLOTS; s++)
                     SlotKeys[barIndex][s].Value = (KeyCode)SlotKeys[barIndex][s].DefaultValue;
+
+                for (int s = 0; s < MAX_SLOTS_PER_BAR; s++)
+                {
+                    RuntimeSlotKeys[barIndex][s] = s < MAX_BINDABLE_SLOTS
+                        ? SlotKeys[barIndex][s].Value
+                        : KeyCode.None;
+                }
+
+                SaveExtraKeybinds();
 
                 // Reset slot runtime state to defaults
                 var allHandlers = Object.FindObjectsOfType<SlotDropHandler>();
@@ -313,17 +410,22 @@ namespace fierrof.ActionBar
         public static KeyCode GetBoundKey(int barIndex, int slotIndex)
         {
             if (barIndex < 0 || barIndex >= MAX_BARS) return KeyCode.None;
-            if (slotIndex < 0 || slotIndex >= MAX_BINDABLE_SLOTS) return KeyCode.None;
+            if (slotIndex < 0 || slotIndex >= MAX_SLOTS_PER_BAR) return KeyCode.None;
 
-            return SlotKeys[barIndex][slotIndex].Value;
+            return RuntimeSlotKeys[barIndex][slotIndex];
         }
 
         public static void SetBoundKey(int barIndex, int slotIndex, KeyCode key)
         {
             if (barIndex < 0 || barIndex >= MAX_BARS) return;
-            if (slotIndex < 0 || slotIndex >= MAX_BINDABLE_SLOTS) return;
+            if (slotIndex < 0 || slotIndex >= MAX_SLOTS_PER_BAR) return;
 
-            SlotKeys[barIndex][slotIndex].Value = key;
+            RuntimeSlotKeys[barIndex][slotIndex] = key;
+
+            if (slotIndex < MAX_BINDABLE_SLOTS)
+                SlotKeys[barIndex][slotIndex].Value = key;
+            else
+                SaveExtraKeybinds();
         }
     }
 }

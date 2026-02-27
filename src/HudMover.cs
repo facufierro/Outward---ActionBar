@@ -113,7 +113,7 @@ namespace fierrof.ActionBar
 
                 // ── Semi-transparent black highlight background ──
                 var img = _handleObj.AddComponent<Image>();
-                img.color = new Color(0f, 0f, 0f, 0.35f);
+                img.color = new Color(0.18f, 0.18f, 0.18f, 0.75f);
                 img.raycastTarget = true; // needed for drag events
 
                 var hRect = _handleObj.GetComponent<RectTransform>();
