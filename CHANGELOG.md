@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.2
+## 2.1.0
 
 * Added resizing for every hud element
 * Fixed Interaction element not being able to be moved
