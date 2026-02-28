@@ -13,6 +13,7 @@ A complete remake of the ActionUI mod, focused on stability and configuration, i
 - **UI Positioning**: Position Hotbars with X/Y sliders or Drag & Drop.
 - **Multiple Action Bars:** Up to four action bars can be enabled at the same time.
 - **Config Manager Integration**: Uses Mefino's Config Manager instead of custom menu.
+- Resize Elements:Adds resize configs for all HUD elements.
 
 ### Removed
 

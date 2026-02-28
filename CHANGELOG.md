@@ -2,6 +2,8 @@
 
 ## 2.0.2
 
+* Added resizing for every hud element
+* Fixed Interaction element not being able to be moved
 * Fixed slot saving and dynmic slots not behaving as they should
 
 ## 2.0.1
