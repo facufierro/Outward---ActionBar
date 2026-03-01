@@ -607,6 +607,13 @@ namespace fierrof.ActionBar
                 case KeyCode.Space: return "Space";
                 case KeyCode.Return: return "Enter";
                 case KeyCode.KeypadEnter: return "NumEnt";
+                case KeyCode.Mouse0: return "M1";
+                case KeyCode.Mouse1: return "M2";
+                case KeyCode.Mouse2: return "M3";
+                case KeyCode.Mouse3: return "M4";
+                case KeyCode.Mouse4: return "M5";
+                case KeyCode.Mouse5: return "M6";
+                case KeyCode.Mouse6: return "M7";
                 default: return key.ToString();
             }
         }

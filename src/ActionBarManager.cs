@@ -360,6 +360,15 @@ namespace fierrof.ActionBar
             // New character — reset everything
             if (uid != _loadedCharacterUID)
             {
+                // Clear all slot UI state from previous character before loading new data
+                foreach (var handler in GetAllSlotHandlers())
+                {
+                    handler.ClearSlotSilent();
+                    handler.SetBaseItemIdOnly(-1);
+                    handler.IsDynamic = false;
+                    handler.Mode = SlotMode.Active;
+                }
+
                 _loadedCharacterUID = uid;
                 _slotsLoaded = false;
                 _totalLoadTime = 0f;

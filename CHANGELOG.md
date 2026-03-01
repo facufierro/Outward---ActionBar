@@ -1,4 +1,8 @@
 # Changelog
+## 2.1.1
+* Improved mouse labels
+* Fixed slot saving, was saving to global
+* Fixed font size for cd and hotkey labels
 
 ## 2.1.0
 
