@@ -101,6 +101,15 @@ namespace fierrof.ActionBar
                     new AcceptableValueRange<int>(8, 30),
                     new ConfigurationManagerAttributes { Order = -6 }));
 
+            LabelFontSize.SettingChanged += (sender, args) => {
+                foreach (var handler in FindObjectsOfType<SlotDropHandler>())
+                    handler.RefreshFontSizes();
+            };
+            CooldownFontSize.SettingChanged += (sender, args) => {
+                foreach (var handler in FindObjectsOfType<SlotDropHandler>())
+                    handler.RefreshFontSizes();
+            };
+
             // HUD Element Scaling
             foreach (var kvp in HudMoverManager.KnownElements)
             {

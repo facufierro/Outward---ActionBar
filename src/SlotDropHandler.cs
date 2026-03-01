@@ -673,6 +673,23 @@ namespace fierrof.ActionBar
             rect.offsetMax = new Vector2(-2f, -2f);
         }
 
+        public void RefreshFontSizes()
+        {
+            if (_cooldownLabel != null)
+            {
+                int cdSize = Plugin.CooldownFontSize.Value;
+                _cooldownLabel.fontSize = cdSize;
+            }
+            if (_countLabel != null)
+            {
+                _countLabel.fontSize = Plugin.LabelFontSize.Value;
+            }
+            if (_keyLabel != null)
+            {
+                _keyLabel.fontSize = Plugin.LabelFontSize.Value;
+            }
+        }
+
         private void EnsureCooldownLabel()
         {
             if (_cooldownLabel != null) return;
