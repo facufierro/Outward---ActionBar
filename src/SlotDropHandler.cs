@@ -217,6 +217,7 @@ namespace fierrof.ActionBar
             if (Input.GetKeyDown(boundKey))
             {
                 if (!IsGameplay()) return;
+                if (IsMenuOpen()) return;
                 AssignedItem.TryQuickSlotUse();
                 StartCoroutine(RefreshCountDelayed());
             }
@@ -863,6 +864,12 @@ namespace fierrof.ActionBar
                 && !NetworkLevelLoader.Instance.IsGameplayPaused
                 && !NetworkLevelLoader.Instance.IsGameplayLoading
                 && CharacterManager.Instance?.GetFirstLocalCharacter() != null;
+        }
+
+        private static bool IsMenuOpen()
+        {
+            var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+            return character?.CharacterUI != null && character.CharacterUI.IsMenuFocused;
         }
 
         private ItemDisplay GetDraggedItem(PointerEventData eventData)
