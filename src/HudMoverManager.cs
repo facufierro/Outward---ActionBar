@@ -28,17 +28,13 @@ namespace fierrof.ActionBar
             // All bars as a group (L3)
             { "MainCharacterBars",          "Health / Mana / Stamina" },
 
-            // MainCharacterBars > Debug_CharacterNeedsBars children (L5)
-            { "Temperature",                "Temperature" },
-
             // HUD direct children (L3)
             { "Stability",                  "Stability" },
             { "QuiverDisplay",              "Arrows" },
             { "StatusEffect - Panel",       "Status Effects" },
             { "InteractionDisplay",         "Interact Tooltip" },
             { "Compass",                    "Compass" },
-            { "Needs - Panel",              "Needs" },
-            { "TemperatureSensor",          "Temp Sensor" },
+            { "TemperatureSensor",          "Temperature" },
             { "Tutorialization_DropBag",    "Backpack" },
             { "Tutorialization_UseBandage", "Bandage" },
         };
