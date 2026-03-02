@@ -116,7 +116,7 @@ namespace fierrof.ActionBar
                 string friendlyName = kvp.Value;
                 var entry = Config.Bind("HUD Element Scaling", $"{friendlyName} Scale", 100,
                     new ConfigDescription($"Scale of {friendlyName} (100 = default)",
-                        new AcceptableValueRange<int>(25, 300)));
+                        new AcceptableValueRange<int>(0, 500)));
 
                 HudElementScale[friendlyName] = entry;
 
@@ -167,7 +167,7 @@ namespace fierrof.ActionBar
                 barAttrs.Add(scaleAttr);
                 Scale[b] = Config.Bind(section, "Scale", 100,
                     new ConfigDescription($"Size of the action bar in percent",
-                        new AcceptableValueRange<int>(1, 200), scaleAttr));
+                        new AcceptableValueRange<int>(0, 500), scaleAttr));
 
                 var gapAttr = new ConfigurationManagerAttributes { HideDefaultButton = true };
                 barAttrs.Add(gapAttr);
