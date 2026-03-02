@@ -47,3 +47,4 @@ ehthumbs.db
 
 # Thunderstore packages (handled by bin/ ignores, but being explicit just in case)
 *.zip
+TODO.md
