@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace fierrof.ActionBar
 {
@@ -163,9 +162,6 @@ namespace fierrof.ActionBar
             // Scan deep – game nests HUD elements 5-8 levels in
             DiscoverRecursive(root, 0, 10);
 
-            // DEBUG: dump full hierarchy of MainCharacterBars
-            DumpHierarchy(root, "MainCharacterBars", 15);
-
             LoadPositions();
 
             try { ApplyConfigScales(); }
@@ -210,8 +206,12 @@ namespace fierrof.ActionBar
 
                     _movers.Add(mover);
                     Plugin.Log.LogMessage($"  >>> Attached HudMover: '{friendlyName}' ({child.name})");
-                    // Still recurse — nested known elements (e.g. Mana inside MainCharacterBars)
-                    DiscoverRecursive(child, depth + 1, maxDepth);
+                    // Only recurse into MainCharacterBars (Mana is a direct child).
+                    // Do NOT recurse into other matched elements — names like "Mana",
+                    // "Health", "Stamina" also appear deep in menu UIs and would
+                    // incorrectly get HudMovers attached.
+                    if (name == "MainCharacterBars")
+                        DiscoverRecursive(child, depth + 1, maxDepth);
                     continue;
                 }
 
@@ -220,41 +220,6 @@ namespace fierrof.ActionBar
             }
         }
 
-        // ── DEBUG: Remove after inspection ─────────────────────
-        private void DumpHierarchy(Transform root, string targetName, int maxDepth)
-        {
-            var target = FindDeep(root, targetName);
-            if (target == null) { Plugin.Log.LogWarning($"DEBUG: '{targetName}' not found"); return; }
-
-            Plugin.Log.LogMessage($"=== DEBUG HIERARCHY: {targetName} ===");
-            DumpRecursive(target, 0, maxDepth);
-            Plugin.Log.LogMessage($"=== END DEBUG HIERARCHY ===");
-        }
-
-        private Transform FindDeep(Transform parent, string name)
-        {
-            if (parent.name == name) return parent;
-            for (int i = 0; i < parent.childCount; i++)
-            {
-                var result = FindDeep(parent.GetChild(i), name);
-                if (result != null) return result;
-            }
-            return null;
-        }
-
-        private void DumpRecursive(Transform t, int depth, int maxDepth)
-        {
-            if (depth > maxDepth) return;
-            string indent = new string(' ', depth * 2);
-            var rect = t.GetComponent<RectTransform>();
-            string size = rect != null ? $"size={rect.rect.width:F0}x{rect.rect.height:F0}" : "no-rect";
-            var img = t.GetComponent<Image>();
-            string imgInfo = img != null ? $" img={img.sprite?.name ?? "null"}" : "";
-            Plugin.Log.LogMessage($"  {indent}{t.name} (active={t.gameObject.activeSelf}, {size}{imgInfo}, children={t.childCount})");
-
-            for (int i = 0; i < t.childCount; i++)
-                DumpRecursive(t.GetChild(i), depth + 1, maxDepth);
-        }
 
         // ── Scale ─────────────────────────────────────────────
 

@@ -873,7 +873,18 @@ namespace fierrof.ActionBar
         private static bool IsMenuOpen()
         {
             var character = CharacterManager.Instance?.GetFirstLocalCharacter();
-            return character?.CharacterUI != null && character.CharacterUI.IsMenuFocused;
+            if (character?.CharacterUI == null) return false;
+            if (character.CharacterUI.IsMenuFocused) return true;
+
+            // IsMenuFocused doesn't cover dialogue panels
+            var modalMenus = character.CharacterUI.transform.Find("Canvas/GameplayPanels/ModalMenus");
+            if (modalMenus == null) return false;
+            for (int i = 0; i < modalMenus.childCount; i++)
+            {
+                if (modalMenus.GetChild(i).gameObject.activeSelf)
+                    return true;
+            }
+            return false;
         }
 
         private ItemDisplay GetDraggedItem(PointerEventData eventData)

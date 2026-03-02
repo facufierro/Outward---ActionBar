@@ -1,32 +1,34 @@
 # Changelog
+## 2.1.3
+- Fix sleep and thirst icon not showing
+- Fix hotkeys not being blocked when dialogs are open
 
 ## 2.1.2
-* Add mana/stamina checking for skills that require them
-* Added Mana move hanlder and resize config
-* Lock hotkeys when inventories are open!
-* Resize configs go from 0 to 500
-* Removed unused configs
-  
+- Add mana/stamina checking for skills that require them
+- Added Mana move hanlder and resize config
+- Lock hotkeys when inventories are open!
+- Resize configs go from 0 to 500
+- Removed unused configs
 
 ## 2.1.1
 
-* Improved mouse labels
-* Fixed slot saving, was saving to global
-* Fixed font size for cd and hotkey labels
+- Improved mouse labels
+- Fixed slot saving, was saving to global
+- Fixed font size for cd and hotkey labels
 
 ## 2.1.0
 
-* Added resizing for every hud element
-* Fixed Interaction element not being able to be moved
-* Fixed slot saving and dynmic slots not behaving as they should
+- Added resizing for every hud element
+- Fixed Interaction element not being able to be moved
+- Fixed slot saving and dynmic slots not behaving as they should
 
 ## 2.0.1
 
-* Fixed droppable skils, If you dropped a skill and it disappeared, you can relearn it using Debug Mode (There are mods that activate it).
+- Fixed droppable skils, If you dropped a skill and it disappeared, you can relearn it using Debug Mode (There are mods that activate it).
 
 ## 2.0.0
 
-* Remade the whole thing from scratch
+- Remade the whole thing from scratch
 
 ## 1.2.4
 
