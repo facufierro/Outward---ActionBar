@@ -1,5 +1,15 @@
 # Changelog
+
+## 2.1.2
+* Add mana/stamina checking for skills that require them
+* Added Mana move hanlder and resize config
+* Lock hotkeys when inventories are open!
+* Resize configs go from 0 to 500
+* Removed unused configs
+  
+
 ## 2.1.1
+
 * Improved mouse labels
 * Fixed slot saving, was saving to global
 * Fixed font size for cd and hotkey labels
