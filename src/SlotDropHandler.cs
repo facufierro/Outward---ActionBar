@@ -518,7 +518,11 @@ namespace fierrof.ActionBar
                 bool onCooldown = AssignedItem is Skill s && s.InCooldown();
                 bool noAmmo = hasRequiredItems && count <= 0;
                 bool equipped = AssignedItem is Equipment eq && eq.IsEquipped;
-                _iconImage.color = (onCooldown || noAmmo || equipped) ? new Color(0.3f, 0.3f, 0.3f, 1f) : Color.white;
+                bool noResources = AssignedItem is Skill sk
+                    && character?.Stats != null
+                    && (sk.ManaCost > character.Stats.CurrentMana
+                     || sk.StaminaCost > character.Stats.CurrentStamina);
+                _iconImage.color = (onCooldown || noAmmo || equipped || noResources) ? new Color(0.3f, 0.3f, 0.3f, 1f) : Color.white;
             }
         }
 
