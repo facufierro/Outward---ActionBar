@@ -74,20 +74,7 @@ namespace fierrof.ActionBar
             EnsureInit();
             if (_rect == null) return;
             float s = percent / 100f;
-
-            // Compensate position so the visual center stays in place
-            // (scaling happens around the pivot, which may not be centered)
-            Vector2 localCenter = _rect.rect.center;
-            Vector3 worldCenterBefore = _rect.TransformPoint(localCenter);
-
             _rect.localScale = new Vector3(s, s, 1f);
-
-            Vector3 worldCenterAfter = _rect.TransformPoint(localCenter);
-            _rect.position -= (worldCenterAfter - worldCenterBefore);
-
-            // Keep target in sync so LateUpdate doesn't fight
-            if (_hasTargetPosition)
-                _targetPosition = _rect.anchoredPosition;
         }
 
         // ── Drag handling ──────────────────────────────────
