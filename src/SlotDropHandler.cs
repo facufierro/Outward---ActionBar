@@ -14,7 +14,7 @@ namespace fierrof.ActionBar
     /// Mode (Active/Hidden/Disabled) and IsDynamic are independent flags.
     /// A slot can be Active/Hidden/Disabled and also Dynamic.
     /// </summary>
-    public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
+    public class SlotDropHandler : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         public int BarIndex { get; set; }
         public int SlotIndex { get; set; }
@@ -57,6 +57,11 @@ namespace fierrof.ActionBar
         private Text _countLabel;
         private Coroutine _countCoroutine;
 
+        // Slot-to-slot drag state
+        private bool _slotItemDragging;
+        private GameObject _dragGhost;
+        private RectTransform _dragGhostRect;
+
         // ── Pointer events ─────────────────────────────────
 
         public void OnPointerEnter(PointerEventData eventData)
@@ -76,6 +81,13 @@ namespace fierrof.ActionBar
             if (IsEditMode) return;
             if (Mode == SlotMode.Disabled) return;
 
+            var sourceSlot = GetDraggedSlot(eventData);
+            if (sourceSlot != null)
+            {
+                HandleSlotRearrange(sourceSlot);
+                return;
+            }
+
             var itemDisplay = GetDraggedItem(eventData);
             if (itemDisplay?.RefItem == null) return;
             if (!itemDisplay.RefItem.IsQuickSlotable) return;
@@ -83,32 +95,40 @@ namespace fierrof.ActionBar
             int droppedItemId = itemDisplay.RefItem.ItemID;
             var character = CharacterManager.Instance?.GetFirstLocalCharacter();
 
-            // Update model BEFORE AssignItem (which triggers Save)
-            if (IsDynamic)
-            {
-                if (character != null)
-                {
-                    string contextKey = SlotSaveManager.GetContextKey(character);
-                    if (contextKey == "baseline")
-                    {
-                        SetBaseItemIdOnly(droppedItemId);
-                    }
-                    else
-                    {
-                        SlotSaveManager.SetPreset(BarIndex, SlotIndex, contextKey, droppedItemId);
-                    }
-                }
-                else
-                {
-                    SetBaseItemIdOnly(droppedItemId);
-                }
-            }
-            else
-            {
-                SetBaseItemIdOnly(droppedItemId);
-            }
+            ApplyModelForDroppedItemId(droppedItemId, character);
+            ApplyAssignedItemWithoutSave(droppedItemId, itemDisplay.RefItem, character);
+            SaveSlots();
+        }
 
-            AssignItem(itemDisplay.RefItem); // This triggers SaveSlots → Save (writes everything)
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (IsEditMode) return;
+            if (eventData.button != PointerEventData.InputButton.Left) return;
+            if (Mode == SlotMode.Disabled) return;
+            if (AssignedItemID <= 0) return;
+
+            _slotItemDragging = true;
+            EnsureIconImage();
+            if (_iconImage != null && _iconImage.enabled)
+                _iconImage.color = new Color(1f, 1f, 1f, 0.5f);
+
+            CreateDragGhost();
+            UpdateDragGhostPosition(eventData);
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!_slotItemDragging) return;
+            UpdateDragGhostPosition(eventData);
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (!_slotItemDragging) return;
+            _slotItemDragging = false;
+
+            DestroyDragGhost();
+            UpdateCountLabel();
         }
 
         // ── Update ─────────────────────────────────────────
@@ -916,6 +936,151 @@ namespace fierrof.ActionBar
         {
             if (eventData?.pointerDrag == null) return null;
             return eventData.pointerDrag.GetComponent<ItemDisplay>();
+        }
+
+        private SlotDropHandler GetDraggedSlot(PointerEventData eventData)
+        {
+            if (eventData?.pointerDrag == null) return null;
+
+            var source = eventData.pointerDrag.GetComponent<SlotDropHandler>();
+            if (source == null || source == this) return null;
+            if (!source._slotItemDragging) return null;
+            if (source.Mode == SlotMode.Disabled) return null;
+
+            return source;
+        }
+
+        private void HandleSlotRearrange(SlotDropHandler sourceSlot)
+        {
+            int sourceItemId = sourceSlot.AssignedItemID;
+            if (sourceItemId <= 0) return;
+
+            int targetItemId = AssignedItemID;
+            var character = CharacterManager.Instance?.GetFirstLocalCharacter();
+
+            Item sourceItem = sourceSlot.AssignedItem;
+            Item targetItem = AssignedItem;
+
+            ApplyModelForDroppedItemId(sourceItemId, character);
+            ApplyAssignedItemWithoutSave(sourceItemId, sourceItem, character);
+
+            sourceSlot.ApplyModelForDroppedItemId(targetItemId, character);
+            sourceSlot.ApplyAssignedItemWithoutSave(targetItemId, targetItem, character);
+
+            SaveSlots();
+
+            Plugin.Log.LogMessage(
+                $"Moved slot item: Bar {sourceSlot.BarIndex + 1} Slot {sourceSlot.SlotIndex + 1} <-> Bar {BarIndex + 1} Slot {SlotIndex + 1}.");
+        }
+
+        private void ApplyModelForDroppedItemId(int itemId, Character character)
+        {
+            if (IsDynamic)
+            {
+                if (character == null)
+                {
+                    SetBaseItemIdOnly(itemId);
+                    return;
+                }
+
+                string contextKey = SlotSaveManager.GetContextKey(character);
+                if (contextKey == "baseline")
+                {
+                    SetBaseItemIdOnly(itemId);
+                }
+                else
+                {
+                    if (itemId > 0)
+                        SlotSaveManager.SetPreset(BarIndex, SlotIndex, contextKey, itemId);
+                    else
+                        SlotSaveManager.RemovePreset(BarIndex, SlotIndex, contextKey);
+                }
+
+                return;
+            }
+
+            SetBaseItemIdOnly(itemId);
+        }
+
+        private void ApplyAssignedItemWithoutSave(int itemId, Item preferredItem, Character character)
+        {
+            if (itemId <= 0)
+            {
+                ClearSlotSilent();
+                return;
+            }
+
+            Item resolvedItem = preferredItem;
+            if ((resolvedItem == null || resolvedItem.ItemID != itemId) && character != null)
+                resolvedItem = SlotSaveManager.FindItem(character, itemId);
+
+            if (resolvedItem != null)
+            {
+                AssignItemSilent(resolvedItem);
+                return;
+            }
+
+            ClearSlotSilent();
+            SetAssignedItemIdOnly(itemId);
+        }
+
+        private void SaveSlots()
+        {
+            var manager = GetComponentInParent<ActionBarManager>();
+            if (manager != null) manager.SaveSlots();
+        }
+
+        private void CreateDragGhost()
+        {
+            DestroyDragGhost();
+
+            if (AssignedItem == null || AssignedItem.ItemIcon == null)
+                return;
+
+            var parentCanvas = GetComponentInParent<Canvas>();
+            if (parentCanvas == null) return;
+
+            _dragGhost = new GameObject("SlotDragGhost");
+            _dragGhost.layer = 5;
+            _dragGhost.transform.SetParent(parentCanvas.transform, false);
+            _dragGhost.transform.SetAsLastSibling();
+
+            var ghostImage = _dragGhost.AddComponent<Image>();
+            ghostImage.sprite = AssignedItem.ItemIcon;
+            ghostImage.preserveAspect = true;
+            ghostImage.color = new Color(1f, 1f, 1f, 0.85f);
+            ghostImage.raycastTarget = false;
+
+            _dragGhostRect = _dragGhost.GetComponent<RectTransform>();
+            _dragGhostRect.sizeDelta = new Vector2(48f, 48f);
+        }
+
+        private void UpdateDragGhostPosition(PointerEventData eventData)
+        {
+            if (_dragGhostRect == null || eventData == null) return;
+
+            var parentCanvas = GetComponentInParent<Canvas>();
+            if (parentCanvas == null) return;
+
+            var canvasRect = parentCanvas.GetComponent<RectTransform>();
+            if (canvasRect == null) return;
+
+            Camera cam = parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay
+                ? null
+                : parentCanvas.worldCamera;
+
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, eventData.position, cam, out Vector2 local))
+                _dragGhostRect.anchoredPosition = local;
+        }
+
+        private void DestroyDragGhost()
+        {
+            if (_dragGhost != null)
+            {
+                Destroy(_dragGhost);
+                _dragGhost = null;
+                _dragGhostRect = null;
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using UnityEngine;
@@ -17,6 +18,8 @@ namespace fierrof.ActionBar
         private List<HudMover> _movers = new List<HudMover>();
         private bool _attached;
         private bool _wasEditMode;
+        private Coroutine _postLoadEnforceRoutine;
+        private readonly HashSet<string> _attachedElementIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static string SavePath =>
             Path.Combine(BepInEx.Paths.ConfigPath, "ActionBar_HUD", "hud_positions.json");
@@ -198,15 +201,42 @@ namespace fierrof.ActionBar
             var root = characterUI.transform;
             Plugin.Log.LogMessage("=== HUD Discovery: Scanning CharacterUI children ===");
 
+            _movers.Clear();
+            _attachedElementIds.Clear();
+
             // Scan deep – game nests HUD elements 5-8 levels in
             DiscoverRecursive(root, 0, 10);
 
             LoadPositions();
 
+            if (_postLoadEnforceRoutine != null)
+                StopCoroutine(_postLoadEnforceRoutine);
+            _postLoadEnforceRoutine = StartCoroutine(EnforceHudLayoutAfterLoad());
+
             try { ApplyConfigScales(); }
             catch (Exception ex) { Plugin.Log.LogWarning($"Failed to apply HUD scales: {ex.Message}"); }
 
             Plugin.Log.LogMessage($"HUD Mover: attached to {_movers.Count} elements.");
+        }
+
+        private IEnumerator EnforceHudLayoutAfterLoad()
+        {
+            // Run for a few frames after discovery/load so late canvas/layout passes
+            // (notably MainCharacterBars/Mana) can't snap elements back.
+            for (int i = 0; i < 20; i++)
+            {
+                Canvas.ForceUpdateCanvases();
+
+                foreach (var mover in _movers)
+                {
+                    if (mover == null) continue;
+                    mover.EnforceLayoutNow();
+                }
+
+                yield return null;
+            }
+
+            _postLoadEnforceRoutine = null;
         }
 
         private void DiscoverRecursive(Transform parent, int depth, int maxDepth)
@@ -230,6 +260,12 @@ namespace fierrof.ActionBar
                 // Only attach to EXACT matches in KnownElements
                 string friendlyName;
                 bool shouldAttach = KnownElements.TryGetValue(name, out friendlyName);
+                if (shouldAttach)
+                    shouldAttach = IsExpectedHudContext(name, child);
+
+                // Prevent duplicate ids when menu screens contain same-named nodes (e.g. Mana)
+                if (shouldAttach && _attachedElementIds.Contains(friendlyName))
+                    shouldAttach = false;
 
                 if (shouldAttach && !isBlacklisted)
                 {
@@ -245,6 +281,7 @@ namespace fierrof.ActionBar
                     }
 
                     _movers.Add(mover);
+                    _attachedElementIds.Add(friendlyName);
                     Plugin.Log.LogMessage($"  >>> Attached HudMover: '{friendlyName}' ({child.name})");
                     // Only recurse into MainCharacterBars (Mana is a direct child).
                     // Do NOT recurse into other matched elements — names like "Mana",
@@ -258,6 +295,16 @@ namespace fierrof.ActionBar
                 // ALWAYS recurse into children (even if blacklisted root panel)
                 DiscoverRecursive(child, depth + 1, maxDepth);
             }
+        }
+
+        private static bool IsExpectedHudContext(string elementName, Transform node)
+        {
+            // "Mana" appears in multiple menu prefabs (e.g., ManaIncrease).
+            // Only accept the gameplay HUD mana under MainCharacterBars.
+            if (elementName == "Mana")
+                return node.parent != null && node.parent.name == "MainCharacterBars";
+
+            return true;
         }
 
 
@@ -295,7 +342,7 @@ namespace fierrof.ActionBar
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(SavePath));
 
-                var lines = new List<string>();
+                var uniqueLines = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var m in _movers)
                 {
                     if (m == null) continue;
@@ -304,8 +351,14 @@ namespace fierrof.ActionBar
 
                     var pos = m.GetPosition();
                     // Format: ElementId=X,Y,Scale
-                    lines.Add($"{m.ElementId}={pos.x:F2},{pos.y:F2},{m.ScalePercent}");
+                    uniqueLines[m.ElementId] = $"{m.ElementId}={pos.x:F2},{pos.y:F2},{m.ScalePercent}";
                 }
+
+                var lines = uniqueLines.Values.ToList();
+
+                // Don't overwrite save with empty data (e.g. during scene transitions
+                // when _movers is cleared but save might be triggered)
+                if (lines.Count == 0 && File.Exists(SavePath)) return;
 
                 File.WriteAllLines(SavePath, lines);
                 Plugin.Log.LogMessage($"HUD positions saved to {SavePath}.");

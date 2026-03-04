@@ -7,7 +7,9 @@ namespace fierrof.ActionBar
     /// <summary>
     /// Attached to a game HUD element to make it draggable in Edit Mode.
     /// Stores the original position so it can be reset.
+    /// High execution order ensures our LateUpdate runs after game scripts.
     /// </summary>
+    [DefaultExecutionOrder(32000)]
     public class HudMover : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IScrollHandler
     {
         public string ElementId;
@@ -38,6 +40,7 @@ namespace fierrof.ActionBar
         private bool _hadSizeFitter;
         private MonoBehaviour _gameScript; // e.g. InteractionDisplay — repositions element each frame
         private bool _hadGameScript;
+        private LayoutElement _layoutElement;
 
         /// <summary>
         /// Lazily initializes _rect and captures the original position.
@@ -58,6 +61,16 @@ namespace fierrof.ActionBar
         void Awake()
         {
             EnsureInit();
+        }
+
+        void OnEnable()
+        {
+            Canvas.willRenderCanvases += HandleWillRenderCanvases;
+        }
+
+        void OnDisable()
+        {
+            Canvas.willRenderCanvases -= HandleWillRenderCanvases;
         }
 
         public Vector2 OriginalPosition => _originalAnchoredPos;
@@ -111,11 +124,45 @@ namespace fierrof.ActionBar
             EnsureInit();
 
             // Persistently enforce saved position so the game's layout system can't overwrite it
-            if (_hasTargetPosition && !_dragging && _rect != null)
-            {
-                if ((_rect.anchoredPosition - _targetPosition).sqrMagnitude > 0.01f)
-                    _rect.anchoredPosition = _targetPosition;
-            }
+            if (_hasTargetPosition && !_dragging)
+                EnforceTargetPosition();
+        }
+
+        private void HandleWillRenderCanvases()
+        {
+            if (!_hasTargetPosition || _dragging) return;
+            EnforceTargetPosition();
+        }
+
+        private void EnforceTargetPosition()
+        {
+            EnsureInit();
+            if (_rect == null) return;
+
+            EnsureLayoutIsolation();
+
+            if ((_rect.anchoredPosition - _targetPosition).sqrMagnitude > 0.01f)
+                _rect.anchoredPosition = _targetPosition;
+        }
+
+        private void EnsureLayoutIsolation()
+        {
+            if (_layoutElement == null)
+                _layoutElement = GetComponent<LayoutElement>();
+            if (_layoutElement == null)
+                _layoutElement = gameObject.AddComponent<LayoutElement>();
+
+            if (!_layoutElement.ignoreLayout)
+                _layoutElement.ignoreLayout = true;
+        }
+
+        public void EnforceLayoutNow()
+        {
+            if (!_hasTargetPosition) return;
+
+            EnsureLayoutIsolation();
+            Canvas.ForceUpdateCanvases();
+            EnforceTargetPosition();
         }
 
         public void OnDrag(PointerEventData eventData)
@@ -134,9 +181,7 @@ namespace fierrof.ActionBar
             _hasTargetPosition = true;
 
             // Tell parent LayoutGroups to ignore this element
-            var le = GetComponent<LayoutElement>();
-            if (le == null) le = gameObject.AddComponent<LayoutElement>();
-            le.ignoreLayout = true;
+            EnsureLayoutIsolation();
 
             var pos = GetPosition();
             Plugin.Log.LogMessage($"HUD '{ElementId}': moved to ({pos.x:F1}, {pos.y:F1}).");
@@ -362,9 +407,7 @@ namespace fierrof.ActionBar
             _rect.anchoredPosition = _targetPosition;
 
             // Tell parent LayoutGroups to ignore this element so they don't fight our position
-            var le = GetComponent<LayoutElement>();
-            if (le == null) le = gameObject.AddComponent<LayoutElement>();
-            le.ignoreLayout = true;
+            EnsureLayoutIsolation();
         }
 
         public Vector2 GetPosition()
@@ -381,8 +424,8 @@ namespace fierrof.ActionBar
             if (_rect != null) _rect.anchoredPosition = _originalAnchoredPos;
 
             // Re-enable parent layout control
-            var le = GetComponent<LayoutElement>();
-            if (le != null) le.ignoreLayout = false;
+            if (_layoutElement == null) _layoutElement = GetComponent<LayoutElement>();
+            if (_layoutElement != null) _layoutElement.ignoreLayout = false;
         }
 
         private static RectTransform FindContentChild(RectTransform parent)

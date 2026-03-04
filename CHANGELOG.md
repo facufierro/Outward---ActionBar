@@ -1,7 +1,9 @@
 # Changelog
-## 2.1.3
+## 2.2.0
 - Added keybind modifiers
 - Added mouse wheel resizing
+- Added middle/right click reset for size and postion
+- Added draggable items from the action bar
 - Fix sleep and thirst icon not showing
 - Fix hotkeys not being blocked when dialogs are open
 
