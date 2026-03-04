@@ -8,7 +8,7 @@ namespace fierrof.ActionBar
     /// Attached to a game HUD element to make it draggable in Edit Mode.
     /// Stores the original position so it can be reset.
     /// </summary>
-    public class HudMover : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    public class HudMover : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IScrollHandler
     {
         public string ElementId;
         public bool AnchorBottom;
@@ -18,6 +18,10 @@ namespace fierrof.ActionBar
         private Vector2 _originalAnchoredPos;
         private Vector2 _dragOffset;
         private bool _dragging;
+
+        // Persistent target position — enforced every LateUpdate so the game can't overwrite it
+        private Vector2 _targetPosition;
+        private bool _hasTargetPosition;
 
         private GameObject _handleObj;   // contains both highlight + label
         private Canvas _addedCanvas;
@@ -33,8 +37,6 @@ namespace fierrof.ActionBar
         private bool _hadSizeFitter;
         private MonoBehaviour _gameScript; // e.g. InteractionDisplay — repositions element each frame
         private bool _hadGameScript;
-        private bool _hasPositionOverride; // true if a game script fights our position
-        private Vector2 _positionOffset;   // user offset applied in LateUpdate
 
         void Awake()
         {
@@ -52,7 +54,20 @@ namespace fierrof.ActionBar
             _scalePercent = percent;
             if (_rect == null) return;
             float s = percent / 100f;
+
+            // Compensate position so the visual center stays in place
+            // (scaling happens around the pivot, which may not be centered)
+            Vector2 localCenter = _rect.rect.center;
+            Vector3 worldCenterBefore = _rect.TransformPoint(localCenter);
+
             _rect.localScale = new Vector3(s, s, 1f);
+
+            Vector3 worldCenterAfter = _rect.TransformPoint(localCenter);
+            _rect.position -= (worldCenterAfter - worldCenterBefore);
+
+            // Keep target in sync so LateUpdate doesn't fight
+            if (_hasTargetPosition)
+                _targetPosition = _rect.anchoredPosition;
         }
 
         // ── Drag handling ──────────────────────────────────
@@ -80,13 +95,11 @@ namespace fierrof.ActionBar
 
         void LateUpdate()
         {
-            // Apply user offset after game scripts reposition the element
-            if (_hasPositionOverride && !SlotDropHandler.IsEditMode && !_dragging && _rect != null)
+            // Persistently enforce saved position so the game's layout system can't overwrite it
+            if (_hasTargetPosition && !_dragging && _rect != null)
             {
-                // The game script sets anchoredPosition each frame; we add our offset on top
-                // Only apply if offset is non-zero to avoid unnecessary writes
-                if (_positionOffset.sqrMagnitude > 0.01f)
-                    _rect.anchoredPosition = _originalAnchoredPos + _positionOffset;
+                if ((_rect.anchoredPosition - _targetPosition).sqrMagnitude > 0.01f)
+                    _rect.anchoredPosition = _targetPosition;
             }
         }
 
@@ -101,11 +114,27 @@ namespace fierrof.ActionBar
             if (!_dragging) return;
             _dragging = false;
 
-            if (_hasPositionOverride)
-                _positionOffset = _rect.anchoredPosition - _originalAnchoredPos;
+            // Lock in the new position so LateUpdate enforces it
+            _targetPosition = _rect.anchoredPosition;
+            _hasTargetPosition = true;
 
             var pos = GetPosition();
             Plugin.Log.LogMessage($"HUD '{ElementId}': moved to ({pos.x:F1}, {pos.y:F1}).");
+            HudMoverManager.Instance?.SavePositions();
+        }
+
+        public void OnScroll(PointerEventData eventData)
+        {
+            if (!SlotDropHandler.IsEditMode) return;
+
+            int step = eventData.scrollDelta.y > 0 ? 5 : -5;
+            int newScale = Mathf.Clamp(_scalePercent + step, 10, 500);
+            SetScale(newScale);
+
+            // Sync the config entry if one exists
+            if (Plugin.HudElementScale.TryGetValue(ElementId, out var entry))
+                entry.Value = newScale;
+
             HudMoverManager.Instance?.SavePositions();
         }
 
@@ -166,7 +195,6 @@ namespace fierrof.ActionBar
                     _gameScript = mb;
                     _hadGameScript = mb.enabled;
                     mb.enabled = false;
-                    _hasPositionOverride = true;
                     break;
                 }
             }
@@ -356,23 +384,19 @@ namespace fierrof.ActionBar
 
         public void SetPosition(float x, float y)
         {
-            if (_hasPositionOverride)
-                _positionOffset = new Vector2(x, y) - _originalAnchoredPos;
-            else
-                _rect.anchoredPosition = new Vector2(x, y);
+            _targetPosition = new Vector2(x, y);
+            _hasTargetPosition = true;
+            _rect.anchoredPosition = _targetPosition;
         }
 
         public Vector2 GetPosition()
         {
-            if (_hasPositionOverride)
-                return _originalAnchoredPos + _positionOffset;
-            return _rect.anchoredPosition;
+            return _hasTargetPosition ? _targetPosition : _rect.anchoredPosition;
         }
 
         public void ResetToOriginal()
         {
-            _positionOffset = Vector2.zero;
-            _hasPositionOverride = false;
+            _hasTargetPosition = false;
             _rect.anchoredPosition = _originalAnchoredPos;
         }
 
