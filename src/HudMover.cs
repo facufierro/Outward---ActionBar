@@ -16,6 +16,7 @@ namespace fierrof.ActionBar
 
         private RectTransform _rect;
         private Vector2 _originalAnchoredPos;
+        private bool _originalPosCaptured;
         private Vector2 _dragOffset;
         private bool _dragging;
 
@@ -38,10 +39,25 @@ namespace fierrof.ActionBar
         private MonoBehaviour _gameScript; // e.g. InteractionDisplay — repositions element each frame
         private bool _hadGameScript;
 
+        /// <summary>
+        /// Lazily initializes _rect and captures the original position.
+        /// Safe to call multiple times — only captures on first successful init.
+        /// Needed because Awake() is deferred on inactive GameObjects.
+        /// </summary>
+        private void EnsureInit()
+        {
+            if (_rect == null)
+                _rect = GetComponent<RectTransform>();
+            if (_rect != null && !_originalPosCaptured)
+            {
+                _originalAnchoredPos = _rect.anchoredPosition;
+                _originalPosCaptured = true;
+            }
+        }
+
         void Awake()
         {
-            _rect = GetComponent<RectTransform>();
-            _originalAnchoredPos = _rect.anchoredPosition;
+            EnsureInit();
         }
 
         public Vector2 OriginalPosition => _originalAnchoredPos;
@@ -55,6 +71,7 @@ namespace fierrof.ActionBar
         public void SetScale(int percent)
         {
             _scalePercent = percent;
+            EnsureInit();
             if (_rect == null) return;
             float s = percent / 100f;
 
@@ -103,6 +120,9 @@ namespace fierrof.ActionBar
 
         void LateUpdate()
         {
+            // Lazy init — catches elements that were inactive when AddComponent ran
+            EnsureInit();
+
             // Persistently enforce saved position so the game's layout system can't overwrite it
             if (_hasTargetPosition && !_dragging && _rect != null)
             {
@@ -348,8 +368,10 @@ namespace fierrof.ActionBar
 
         public void SetPosition(float x, float y)
         {
+            EnsureInit();
             _targetPosition = new Vector2(x, y);
             _hasTargetPosition = true;
+            if (_rect == null) return;
             _rect.anchoredPosition = _targetPosition;
 
             // Tell parent LayoutGroups to ignore this element so they don't fight our position
@@ -360,13 +382,16 @@ namespace fierrof.ActionBar
 
         public Vector2 GetPosition()
         {
+            EnsureInit();
+            if (_rect == null) return _targetPosition;
             return _hasTargetPosition ? _targetPosition : _rect.anchoredPosition;
         }
 
         public void ResetToOriginal()
         {
+            EnsureInit();
             _hasTargetPosition = false;
-            _rect.anchoredPosition = _originalAnchoredPos;
+            if (_rect != null) _rect.anchoredPosition = _originalAnchoredPos;
 
             // Re-enable parent layout control
             var le = GetComponent<LayoutElement>();

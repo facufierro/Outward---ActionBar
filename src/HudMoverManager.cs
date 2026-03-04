@@ -353,14 +353,21 @@ namespace fierrof.ActionBar
                 foreach (var m in _movers)
                 {
                     if (m == null) continue;
-                    if (positions.TryGetValue(m.ElementId, out Vector2 pos))
+                    try
                     {
-                        m.SetPosition(pos.x, pos.y);
-                        Plugin.Log.LogMessage($"HUD '{m.ElementId}': restored to ({pos.x:F1}, {pos.y:F1}).");
+                        if (positions.TryGetValue(m.ElementId, out Vector2 pos))
+                        {
+                            m.SetPosition(pos.x, pos.y);
+                            Plugin.Log.LogMessage($"HUD '{m.ElementId}': restored to ({pos.x:F1}, {pos.y:F1}).");
+                        }
+                        if (scales.TryGetValue(m.ElementId, out int s))
+                        {
+                            m.SetScale(s);
+                        }
                     }
-                    if (scales.TryGetValue(m.ElementId, out int s))
+                    catch (Exception ex)
                     {
-                        m.SetScale(s);
+                        Plugin.Log.LogWarning($"Failed to restore HUD '{m.ElementId}': {ex.Message}");
                     }
                 }
             }
