@@ -43,8 +43,11 @@ namespace fierrof.ActionBar
 
         public static ConfigEntry<KeyCode>[][] SlotKeys = new ConfigEntry<KeyCode>[MAX_BARS][];
         private static KeyCode[][] RuntimeSlotKeys = new KeyCode[MAX_BARS][];
+        private static Modifiers[][] RuntimeSlotModifiers = new Modifiers[MAX_BARS][];
         private static string ExtraKeybindsPath =>
             Path.Combine(BepInEx.Paths.ConfigPath, "ActionBar_ExtraKeybinds.txt");
+        private static string ModifiersPath =>
+            Path.Combine(BepInEx.Paths.ConfigPath, "ActionBar_Modifiers.txt");
 
         private static readonly KeyCode[] DefaultKeys = {
             KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4,
@@ -232,16 +235,20 @@ namespace fierrof.ActionBar
             {
                 if (RuntimeSlotKeys[b] == null)
                     RuntimeSlotKeys[b] = new KeyCode[MAX_SLOTS_PER_BAR];
+                if (RuntimeSlotModifiers[b] == null)
+                    RuntimeSlotModifiers[b] = new Modifiers[MAX_SLOTS_PER_BAR];
 
                 for (int s = 0; s < MAX_SLOTS_PER_BAR; s++)
                 {
                     RuntimeSlotKeys[b][s] = s < MAX_BINDABLE_SLOTS
                         ? SlotKeys[b][s].Value
                         : KeyCode.None;
+                    RuntimeSlotModifiers[b][s] = Modifiers.None;
                 }
             }
 
             LoadExtraKeybinds();
+            LoadModifiers();
         }
 
         private static void LoadExtraKeybinds()
@@ -298,6 +305,67 @@ namespace fierrof.ActionBar
             catch (System.Exception ex)
             {
                 Log.LogWarning($"Failed to save extra keybinds: {ex.Message}");
+            }
+        }
+
+        private static void LoadModifiers()
+        {
+            if (!File.Exists(ModifiersPath)) return;
+
+            try
+            {
+                foreach (var rawLine in File.ReadAllLines(ModifiersPath))
+                {
+                    var line = rawLine.Trim();
+                    if (string.IsNullOrEmpty(line)) continue;
+
+                    var parts = line.Split('=');
+                    if (parts.Length != 2) continue;
+
+                    var indices = parts[0].Split(',');
+                    if (indices.Length != 2) continue;
+
+                    if (!int.TryParse(indices[0], out int barIndex)) continue;
+                    if (!int.TryParse(indices[1], out int slotIndex)) continue;
+                    if (barIndex < 0 || barIndex >= MAX_BARS) continue;
+                    if (slotIndex < 0 || slotIndex >= MAX_SLOTS_PER_BAR) continue;
+
+                    if (System.Enum.TryParse(parts[1], out Modifiers mods))
+                        RuntimeSlotModifiers[barIndex][slotIndex] = mods;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Log.LogWarning($"Failed to load modifiers: {ex.Message}");
+            }
+        }
+
+        private static void SaveModifiers()
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(ModifiersPath));
+
+                var lines = new System.Collections.Generic.List<string>();
+                for (int b = 0; b < MAX_BARS; b++)
+                {
+                    if (RuntimeSlotModifiers[b] == null) continue;
+                    for (int s = 0; s < MAX_SLOTS_PER_BAR; s++)
+                    {
+                        var mods = RuntimeSlotModifiers[b][s];
+                        if (mods == Modifiers.None) continue;
+                        lines.Add($"{b},{s}={mods}");
+                    }
+                }
+
+                if (lines.Count > 0)
+                    File.WriteAllLines(ModifiersPath, lines.ToArray());
+                else if (File.Exists(ModifiersPath))
+                    File.Delete(ModifiersPath);
+            }
+            catch (System.Exception ex)
+            {
+                Log.LogWarning($"Failed to save modifiers: {ex.Message}");
             }
         }
 
@@ -452,6 +520,14 @@ namespace fierrof.ActionBar
             return RuntimeSlotKeys[barIndex][slotIndex];
         }
 
+        public static Modifiers GetBoundModifiers(int barIndex, int slotIndex)
+        {
+            if (barIndex < 0 || barIndex >= MAX_BARS) return Modifiers.None;
+            if (slotIndex < 0 || slotIndex >= MAX_SLOTS_PER_BAR) return Modifiers.None;
+
+            return RuntimeSlotModifiers[barIndex][slotIndex];
+        }
+
         public static void SetBoundKey(int barIndex, int slotIndex, KeyCode key)
         {
             if (barIndex < 0 || barIndex >= MAX_BARS) return;
@@ -463,6 +539,15 @@ namespace fierrof.ActionBar
                 SlotKeys[barIndex][slotIndex].Value = key;
             else
                 SaveExtraKeybinds();
+        }
+
+        public static void SetBoundModifiers(int barIndex, int slotIndex, Modifiers mods)
+        {
+            if (barIndex < 0 || barIndex >= MAX_BARS) return;
+            if (slotIndex < 0 || slotIndex >= MAX_SLOTS_PER_BAR) return;
+
+            RuntimeSlotModifiers[barIndex][slotIndex] = mods;
+            SaveModifiers();
         }
     }
 }

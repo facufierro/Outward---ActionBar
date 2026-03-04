@@ -12,6 +12,7 @@ namespace fierrof.ActionBar
     {
         public string ElementId;
         public bool AnchorBottom;
+        public int SortPriority;
 
         private RectTransform _rect;
         private Vector2 _originalAnchoredPos;
@@ -121,7 +122,7 @@ namespace fierrof.ActionBar
             }
             // Always force high sort order so our handle is on top
             _addedCanvas.overrideSorting = true;
-            _addedCanvas.sortingOrder = 100;
+            _addedCanvas.sortingOrder = 100 + SortPriority;
 
             if (_addedRaycaster == null)
             {

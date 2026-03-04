@@ -199,6 +199,7 @@ namespace fierrof.ActionBar
                     {
                         mover = child.gameObject.AddComponent<HudMover>();
                         mover.ElementId = friendlyName;
+                        mover.SortPriority = depth;
 
                         if (name.StartsWith("Tutorialization"))
                             mover.AnchorBottom = true;

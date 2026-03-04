@@ -2,6 +2,8 @@
 ## 2.1.3
 - Fix sleep and thirst icon not showing
 - Fix hotkeys not being blocked when dialogs are open
+- Added keybind modifiers
+- 
 
 ## 2.1.2
 - Add mana/stamina checking for skills that require them

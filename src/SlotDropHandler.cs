@@ -196,7 +196,7 @@ namespace fierrof.ActionBar
                         if (!Input.GetKeyDown(key)) continue;
                         if (key == KeyCode.Mouse0 || key == KeyCode.Mouse1) continue;
                         if (IsModifierKey(key)) continue;
-                        SetKeybind(key);
+                        SetKeybind(key, GetCurrentModifiers());
                         return;
                     }
                 }
@@ -218,6 +218,8 @@ namespace fierrof.ActionBar
             {
                 if (!IsGameplay()) return;
                 if (IsMenuOpen()) return;
+                var boundMods = Plugin.GetBoundModifiers(BarIndex, SlotIndex);
+                if (GetCurrentModifiers() != boundMods) return;
                 AssignedItem.TryQuickSlotUse();
                 StartCoroutine(RefreshCountDelayed());
             }
@@ -543,7 +545,7 @@ namespace fierrof.ActionBar
 
         // ── Keybind management ─────────────────────────────
 
-        private void SetKeybind(KeyCode key)
+        private void SetKeybind(KeyCode key, Modifiers mods = Modifiers.None)
         {
             if (BarIndex >= Plugin.MAX_BARS || SlotIndex >= Plugin.MAX_SLOTS_PER_BAR) return;
 
@@ -551,19 +553,23 @@ namespace fierrof.ActionBar
             {
                 for (int b = 0; b < Plugin.MAX_BARS; b++)
                     for (int s = 0; s < Plugin.MAX_SLOTS_PER_BAR; s++)
-                        if ((b != BarIndex || s != SlotIndex) && Plugin.GetBoundKey(b, s) == key)
+                        if ((b != BarIndex || s != SlotIndex)
+                            && Plugin.GetBoundKey(b, s) == key
+                            && Plugin.GetBoundModifiers(b, s) == mods)
                         {
                             Plugin.SetBoundKey(b, s, KeyCode.None);
-                            Plugin.Log.LogMessage($"Bar {b + 1} Slot {s + 1}: unbound '{key}'.");
+                            Plugin.SetBoundModifiers(b, s, Modifiers.None);
+                            Plugin.Log.LogMessage($"Bar {b + 1} Slot {s + 1}: unbound '{FormatBinding(key, mods)}'.");
                         }
             }
 
             Plugin.SetBoundKey(BarIndex, SlotIndex, key);
+            Plugin.SetBoundModifiers(BarIndex, SlotIndex, mods);
 
             foreach (var handler in FindObjectsOfType<SlotDropHandler>())
                 handler.UpdateKeyLabel();
 
-            Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: bound to '{key}'.");
+            Plugin.Log.LogMessage($"Bar {BarIndex + 1} Slot {SlotIndex + 1}: bound to '{FormatBinding(key, mods)}'.");
         }
 
         public void UpdateKeyLabel()
@@ -575,7 +581,8 @@ namespace fierrof.ActionBar
                 return;
             }
             var key = Plugin.GetBoundKey(BarIndex, SlotIndex);
-            _keyLabel.text = key == KeyCode.None ? "" : FormatKeyName(key);
+            var mods = Plugin.GetBoundModifiers(BarIndex, SlotIndex);
+            _keyLabel.text = key == KeyCode.None ? "" : FormatBinding(key, mods);
         }
 
         private static string FormatKeyName(KeyCode key)
@@ -854,6 +861,24 @@ namespace fierrof.ActionBar
         }
 
         // ── Helpers ────────────────────────────────────────
+
+        private static Modifiers GetCurrentModifiers()
+        {
+            Modifiers m = Modifiers.None;
+            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) m |= Modifiers.Ctrl;
+            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) m |= Modifiers.Shift;
+            if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)) m |= Modifiers.Alt;
+            return m;
+        }
+
+        private static string FormatBinding(KeyCode key, Modifiers mods)
+        {
+            string prefix = "";
+            if ((mods & Modifiers.Ctrl) != 0) prefix += "C+";
+            if ((mods & Modifiers.Shift) != 0) prefix += "S+";
+            if ((mods & Modifiers.Alt) != 0) prefix += "A+";
+            return prefix + FormatKeyName(key);
+        }
 
         private static bool IsModifierKey(KeyCode key)
         {
