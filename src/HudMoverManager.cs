@@ -90,6 +90,16 @@ namespace fierrof.ActionBar
                 foreach (var m in _movers) m.DisableEditVisuals();
                 _wasEditMode = false;
             }
+
+            // Right-click / middle-click on HUD elements in edit mode
+            // Handled here so we can pick the TOPMOST element under the cursor
+            if (SlotDropHandler.IsEditMode)
+            {
+                if (Input.GetMouseButtonDown(1))
+                    HandleHudElementClick(1);
+                else if (Input.GetMouseButtonDown(2))
+                    HandleHudElementClick(2);
+            }
         }
 
         // LateUpdate runs AFTER the game's own Update/LateUpdate scripts,
@@ -146,6 +156,35 @@ namespace fierrof.ActionBar
                 }
             }
         }
+        private void HandleHudElementClick(int button)
+        {
+            // Find the topmost mover under the cursor (highest SortPriority = deepest in hierarchy)
+            HudMover best = null;
+            foreach (var m in _movers)
+            {
+                if (m == null) continue;
+                if (!m.IsMouseOver()) continue;
+                if (best == null || m.SortPriority > best.SortPriority)
+                    best = m;
+            }
+            if (best == null) return;
+
+            if (button == 1) // right-click: reset position
+            {
+                best.ResetToOriginal();
+                SavePositions();
+                Plugin.Log.LogMessage($"HUD '{best.ElementId}': position reset.");
+            }
+            else if (button == 2) // middle-click: reset scale
+            {
+                best.SetScale(100);
+                if (Plugin.HudElementScale.TryGetValue(best.ElementId, out var entry))
+                    entry.Value = 100;
+                SavePositions();
+                Plugin.Log.LogMessage($"HUD '{best.ElementId}': scale reset to 100%.");
+            }
+        }
+
         private void ForceVisible(GameObject go)
         {
             if (!go.activeSelf) go.SetActive(true);
@@ -255,15 +294,19 @@ namespace fierrof.ActionBar
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(SavePath));
-                
+
                 var lines = new List<string>();
                 foreach (var m in _movers)
                 {
+                    if (m == null) continue;
+                    // Only save elements the user has actually moved or scaled
+                    if (!m.IsCustomized) continue;
+
                     var pos = m.GetPosition();
                     // Format: ElementId=X,Y,Scale
                     lines.Add($"{m.ElementId}={pos.x:F2},{pos.y:F2},{m.ScalePercent}");
                 }
-                
+
                 File.WriteAllLines(SavePath, lines);
                 Plugin.Log.LogMessage($"HUD positions saved to {SavePath}.");
             }

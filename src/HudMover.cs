@@ -46,6 +46,9 @@ namespace fierrof.ActionBar
 
         public Vector2 OriginalPosition => _originalAnchoredPos;
 
+        /// <summary>True if the user has moved or scaled this element from its default.</summary>
+        public bool IsCustomized => _hasTargetPosition || _scalePercent != 100;
+
         private int _scalePercent = 100;
         public int ScalePercent => _scalePercent;
 
@@ -74,9 +77,6 @@ namespace fierrof.ActionBar
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            if (ElementId == "Interact Tooltip")
-                Plugin.Log.LogMessage($"[HudMover DEBUG] OnBeginDrag fired for {ElementId}, editMode={SlotDropHandler.IsEditMode}, button={eventData.button}, _rect null={_rect == null}");
-
             if (!SlotDropHandler.IsEditMode) return;
             if (eventData.button != PointerEventData.InputButton.Left) return;
 
@@ -86,11 +86,19 @@ namespace fierrof.ActionBar
 
         void Update()
         {
-            if (SlotDropHandler.IsEditMode)
-            {
-                // Keep CanvasGroup alpha up (manager handles gameObject.SetActive)
-                if (_canvasGroup != null && _canvasGroup.alpha < 0.05f) _canvasGroup.alpha = 1f;
-            }
+            if (!SlotDropHandler.IsEditMode) return;
+
+            // Keep CanvasGroup alpha up (manager handles gameObject.SetActive)
+            if (_canvasGroup != null && _canvasGroup.alpha < 0.05f) _canvasGroup.alpha = 1f;
+        }
+
+        public bool IsMouseOver()
+        {
+            if (_rect == null) return false;
+            var canvas = _rect.GetComponentInParent<Canvas>();
+            Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? canvas.worldCamera : null;
+            return RectTransformUtility.RectangleContainsScreenPoint(_rect, Input.mousePosition, cam);
         }
 
         void LateUpdate()
@@ -117,6 +125,11 @@ namespace fierrof.ActionBar
             // Lock in the new position so LateUpdate enforces it
             _targetPosition = _rect.anchoredPosition;
             _hasTargetPosition = true;
+
+            // Tell parent LayoutGroups to ignore this element
+            var le = GetComponent<LayoutElement>();
+            if (le == null) le = gameObject.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
 
             var pos = GetPosition();
             Plugin.Log.LogMessage($"HUD '{ElementId}': moved to ({pos.x:F1}, {pos.y:F1}).");
@@ -197,55 +210,6 @@ namespace fierrof.ActionBar
                     mb.enabled = false;
                     break;
                 }
-            }
-
-            // ── Debug dump for troubleshooting handle visibility ──
-            if (ElementId == "Interact Tooltip")
-            {
-                var sb = new System.Text.StringBuilder();
-                sb.AppendLine($"[HudMover DEBUG] === {ElementId} ===");
-                sb.AppendLine($"  GO active: {gameObject.activeSelf}, activeInHierarchy: {gameObject.activeInHierarchy}");
-                sb.AppendLine($"  _rect null: {_rect == null}");
-                if (_rect != null)
-                {
-                    sb.AppendLine($"  _rect.rect: w={_rect.rect.width}, h={_rect.rect.height}");
-                    sb.AppendLine($"  _rect.sizeDelta: {_rect.sizeDelta}");
-                    sb.AppendLine($"  _rect.anchorMin: {_rect.anchorMin}, anchorMax: {_rect.anchorMax}");
-                    sb.AppendLine($"  _rect.pivot: {_rect.pivot}");
-                    sb.AppendLine($"  _rect.localScale: {_rect.localScale}");
-                    sb.AppendLine($"  _rect.position: {_rect.position}");
-                    sb.AppendLine($"  _rect.anchoredPosition: {_rect.anchoredPosition}");
-                }
-                sb.AppendLine($"  AnchorBottom: {AnchorBottom}");
-                // Dump all components on this GO
-                var comps = gameObject.GetComponents<Component>();
-                sb.AppendLine($"  Components on GO ({comps.Length}):");
-                foreach (var c in comps)
-                    sb.AppendLine($"    - {c.GetType().Name}");
-                // Dump children
-                sb.AppendLine($"  Children ({transform.childCount}):");
-                for (int i = 0; i < transform.childCount; i++)
-                {
-                    var child = transform.GetChild(i);
-                    var cRect = child.GetComponent<RectTransform>();
-                    string size = cRect != null ? $"w={cRect.rect.width}, h={cRect.rect.height}, sizeDelta={cRect.sizeDelta}" : "no RectTransform";
-                    var childComps = child.GetComponents<Component>();
-                    string compNames = "";
-                    foreach (var cc in childComps) compNames += cc.GetType().Name + ", ";
-                    sb.AppendLine($"    [{i}] '{child.name}' active={child.gameObject.activeSelf} | {size} | {compNames}");
-                }
-                // Dump parent info
-                if (transform.parent != null)
-                {
-                    var pRect = transform.parent.GetComponent<RectTransform>();
-                    sb.AppendLine($"  Parent: '{transform.parent.name}'");
-                    if (pRect != null)
-                        sb.AppendLine($"    parent rect: w={pRect.rect.width}, h={pRect.rect.height}");
-                    var pComps = transform.parent.GetComponents<Component>();
-                    sb.AppendLine($"    parent components:");
-                    foreach (var pc in pComps) sb.AppendLine($"      - {pc.GetType().Name}");
-                }
-                Plugin.Log.LogMessage(sb.ToString());
             }
 
             // Build the handle (highlight + label in one GameObject)
@@ -387,6 +351,11 @@ namespace fierrof.ActionBar
             _targetPosition = new Vector2(x, y);
             _hasTargetPosition = true;
             _rect.anchoredPosition = _targetPosition;
+
+            // Tell parent LayoutGroups to ignore this element so they don't fight our position
+            var le = GetComponent<LayoutElement>();
+            if (le == null) le = gameObject.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
         }
 
         public Vector2 GetPosition()
@@ -398,6 +367,10 @@ namespace fierrof.ActionBar
         {
             _hasTargetPosition = false;
             _rect.anchoredPosition = _originalAnchoredPos;
+
+            // Re-enable parent layout control
+            var le = GetComponent<LayoutElement>();
+            if (le != null) le.ignoreLayout = false;
         }
 
         private static RectTransform FindContentChild(RectTransform parent)

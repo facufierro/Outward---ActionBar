@@ -163,8 +163,11 @@ namespace fierrof.ActionBar
                         "• Middle-Click a slot to toggle it Dynamic\n\n" +
                         "EDITOR MODE\n" +
                         "• Hover a slot & press a key to bind it\n" +
-                        "• Drag bars and ui elements to move them\n" +
-                        "• Right-Click a slot to Hide/Disable it" +
+                        "• Drag bars and HUD elements to move them\n" +
+                        "• Right-Click a slot to Hide/Disable it\n" +
+                        "• Scroll wheel on HUD element to resize\n" +
+                        "• Right-Click HUD element to reset position\n" +
+                        "• Middle-Click HUD element to reset scale" +
                         "</size>";
 
             var outline = textGO.AddComponent<Outline>();
